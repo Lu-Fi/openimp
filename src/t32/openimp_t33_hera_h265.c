@@ -49,6 +49,9 @@ typedef struct {
 #define MCE_END_C       0x3007cu
 #define MCE_RLUT_Y      0x30800u
 #define MCE_RLUT_C      0x30804u
+#define MCE_CFG4        0x30004u
+#define MCE_CFG48       0x30048u
+#define MCE_BFSH_CFG    0x301c0u
 #define MCE_SIZE2       0x3807cu
 #define MD_CTRL         0x40004u
 #define MD_CTB          0x40008u
@@ -296,10 +299,20 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
         return 0xf8080001u | (p->after_p ? 1u << 11 : 0u);
     case MCE_FRM_STRD:
         return w << 16 | w;
-    case MCE_RLUT_Y: case ODMA_BASE_Y:
+    case MCE_RLUT_Y:                    /* no share: this picture's reconstruction */
+        return t->noshare ? t->recon_y : p->ring_y;
+    case MCE_RLUT_C:
+        return t->noshare ? t->recon_c : p->ring_c;
+    case ODMA_BASE_Y:
         return p->ring_y;
-    case MCE_RLUT_C: case ODMA_BASE_C:
+    case ODMA_BASE_C:
         return p->ring_c;
+    case MCE_CFG4:                      /* no share: bit 26 off (vendor 06c22110 -> 02c22110) */
+        return t->noshare ? v & ~(1u << 26) : v;
+    case MCE_BFSH_CFG:                  /* no share: bits 18, 19 off (vendor 002c3114 -> 00203114) */
+        return t->noshare ? v & ~0xc0000u : v;
+    case MCE_CFG48:                     /* no share: vendor 00e00300 -> 03000300 */
+        return t->noshare ? (v & ~0x00e00000u) | 0x03000000u : v;
     case MCE_BFSH_ADRY:                 /* P: the reference (as H.264, #393) */
         return p->p_frame ? t->ref_y : 0u;
     case MCE_BFSH_ADRC:
@@ -309,9 +322,9 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     case MCE_END_C:
         return p->ring_c_end;
     case JRFD_CTRL:
-        return BUF_SHARE | JRFD_BIT27 | h16 << 14 | w;
+        return (t->noshare ? 0u : BUF_SHARE) | JRFD_BIT27 | h16 << 14 | w;
     case ODMA_CTRL:
-        return BUF_SHARE | DMA_BIT30 | h << 14 | w;
+        return (t->noshare ? 0u : BUF_SHARE) | DMA_BIT30 | h << 14 | w;
     case JRFD_REF_Y: case ODMA_REF_Y:
         return p->p_frame ? t->ref_y : p->ring_y;
     case JRFD_REF_C:
@@ -333,16 +346,18 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     case JRFD_RING_END: case ODMA_RING_END:
         return p->ring_c_end;
     case ODMA_BDYA:                     /* I: the area's base; P: the engine's read-back */
-        return p->p_frame ? t->recon_y : p->ring_y;
+        return p->p_frame || t->noshare ? t->recon_y : p->ring_y;
     case ODMA_BDCA:
-        return p->p_frame ? t->recon_c : p->ring_c;
-    case ODMA_SIZE_Y:                   /* what is left to the area's end */
-        return p->ring_y_end - (p->p_frame ? t->recon_y : p->ring_y);
+        return p->p_frame || t->noshare ? t->recon_c : p->ring_c;
+    case ODMA_SIZE_Y:                   /* what is left to the area's end (no share: 0 - recon) */
+        return p->ring_y_end - (p->p_frame || t->noshare ? t->recon_y : p->ring_y);
     case ODMA_SIZE_C:
-        return p->ring_c_end - (p->p_frame ? t->recon_c : p->ring_c);
+        return p->ring_c_end - (p->p_frame || t->noshare ? t->recon_c : p->ring_c);
     case ODMA_CMP:
         return w * h16 / 128u * 75u + (w * h16 % 128u) * 75u / 128u;
     case ODMA_FRM:
+        if (p->p_frame && t->noshare)
+            return 0u - t->recon_y;
         return p->p_frame ? p->ring_y : w * h16 * 3u / 2u;
     case EMC_CTRL:
         return p->p_frame ? 0x637u : 0x37u;

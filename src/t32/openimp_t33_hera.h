@@ -51,6 +51,11 @@ typedef struct {
     uint32_t hdr_ry, hdr_rc;            /* the set its reference wrote */
     uint32_t recon_y, recon_c;          /* P: where the reconstruction starts (engine read-back) */
     uint32_t ref_y, ref_c;              /* P: the reference's reconstruction (the last recon_*) */
+    /* IMP_Encoder_SetRdBufShare(0) (#736): BUF_SHARE (bit 31 of 0x10004 /
+     * 0x28004) off, two whole reconstruction pictures used in turn: recon_*
+     * on I and P, ref_* the other one, the area registers 0 (ring_* = 0),
+     * 0x30004 bit 26 and 0x301c0 bits 18, 19 off, no 0x30800 / 0x30804 */
+    int noshare;
 } T33HeraH264Pic;
 
 /* the list into @list (T32_HERA_LIST_MAX_PAIRS * 2 words): pairs written, 0 on bad input */

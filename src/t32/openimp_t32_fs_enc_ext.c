@@ -219,7 +219,7 @@ int IMP_FrameSource_SetJointBackground(uint32_t color)
 
 /* ============================================================ Encoder == */
 static struct {
-    int fisheye, rdbufshare, motion_quality, qpg_ai, resize;
+    int fisheye, rdbufshare_off, motion_quality, qpg_ai, resize;
     IMPEncoderAttrFrmUsed frm_used;
 } enc_ext[ENC_CHNS];
 static struct {
@@ -264,9 +264,27 @@ int IMP_Encoder_GetFisheyeEnableStatus(int encChn, int *enable)
     return 0;
 }
 
+/*
+ * Vendor 2.0.2.1 keeps the switch in the channel table (+0x14d8): -1 at init
+ * and DestroyChn, CreateChn takes -1 as 1 (share).  Here: rdbufshare_off set
+ * by SetRdBufShare(0) and taken (cleared) by CreateChn (#736).
+ */
 int IMP_Encoder_SetRdBufShare(int encChn, int bEnable)
 {
-    return enc_pre_create(encChn, ENC_CHN_OK(encChn) ? &enc_ext[encChn].rdbufshare : NULL, bEnable, E_ENC_STATE);
+    return enc_pre_create(encChn, ENC_CHN_OK(encChn) ? &enc_ext[encChn].rdbufshare_off : NULL, !bEnable, E_ENC_STATE);
+}
+
+int OpenIMP_T32_EncTakeRdBufShareOff(int encChn)
+{
+    int off;
+
+    if (!ENC_CHN_OK(encChn))
+        return 0;
+    pthread_mutex_lock(&ext_lock);
+    off = enc_ext[encChn].rdbufshare_off;
+    enc_ext[encChn].rdbufshare_off = 0;
+    pthread_mutex_unlock(&ext_lock);
+    return off;
 }
 
 int IMP_Encoder_SetMotionQualityEnable(int encChn, int enable)
