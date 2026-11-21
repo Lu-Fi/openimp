@@ -2306,7 +2306,7 @@ static void cs_faceae(void)
     NEED(IMP_ISP_Tuning_SetFaceAe) NEED(IMP_ISP_Tuning_GetFaceAe) {
         IMPISPFaceAttr o, f, g, bad, after;
         Fst base, lo, hi, back;
-        int r0, r1, r2, r3, r4, r5, ms, hold, lim;
+        int r0, r1, r2, r3, r4, r5, ms, hold, lim, lot;
         unsigned lm = 0, lt = 0;
 
         memset(&o, 0, sizeof(o)); memset(&g, 0, sizeof(g)); memset(&after, 0, sizeof(after));
@@ -2318,7 +2318,10 @@ static void cs_faceae(void)
         f.enable = IMPISP_TUNING_OPS_MODE_ENABLE;
         f.left = g_sw / 4; f.top = g_sh / 4; f.right = g_sw * 3 / 4; f.bottom = g_sh * 3 / 4;
         hold = getenv("APITEST_FACE_MS") ? atoi(getenv("APITEST_FACE_MS")) : 8000;   /* the face AE converges slowly (vendor AE steps): 9 s moves the centre ~17 levels */
-        f.target = 40; lo = face_hold(&f, hold, &r1); snap_y("faceae-1-target40");
+        /* at the exposure limit only a target below the AE's own mean can move the picture (darker): use 10 (driver clamp
+         * 10..200, tisp_ae_face_set) so the night run still proves that the window is metered (#685) */
+        lot = getenv("APITEST_FACE_LO") ? atoi(getenv("APITEST_FACE_LO")) : lim ? 10 : 40;
+        f.target = (unsigned)lot; lo = face_hold(&f, hold, &r1); snap_y("faceae-1-targetlo");
         r2 = IMP_ISP_Tuning_GetFaceAe(IMPVI_MAIN, &g);
         f.target = 180; hi = face_hold(&f, hold, &r3); snap_y("faceae-2-target180");
         bad = f; bad.left = f.right + 8;                                  /* empty window: refused, nothing changed */
@@ -2327,9 +2330,9 @@ static void cs_faceae(void)
         memset(&f, 0, sizeof(f)); f.enable = IMPISP_TUNING_OPS_MODE_DISABLE;
         r5 = IMP_ISP_Tuning_SetFaceAe(IMPVI_MAIN, &f);
         back = recover(base.y, &ms); snap_y("faceae-3-off");
-        rep(FN(IMP_ISP_Tuning_GetFaceAe), r0 | r2, (r0 == 0 && r2 == 0 && g.enable == IMPISP_TUNING_OPS_MODE_ENABLE && g.left == (unsigned)g_sw / 4 && g.bottom == (unsigned)g_sh * 3 / 4 && g.target == 40) ? V_PASS : V_FAIL,
-            "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u (set (%d,%d)-(%d,%d) 40)", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target,
-            g_sw / 4, g_sh / 4, g_sw * 3 / 4, g_sh * 3 / 4);
+        rep(FN(IMP_ISP_Tuning_GetFaceAe), r0 | r2, (r0 == 0 && r2 == 0 && g.enable == IMPISP_TUNING_OPS_MODE_ENABLE && g.left == (unsigned)g_sw / 4 && g.bottom == (unsigned)g_sh * 3 / 4 && g.target == (unsigned)lot) ? V_PASS : V_FAIL,
+            "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u (set (%d,%d)-(%d,%d) %d)", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target,
+            g_sw / 4, g_sh / 4, g_sw * 3 / 4, g_sh * 3 / 4, lot);
         {
 #ifdef APITEST_T33
             /* T33: the vendor libimp passes the empty window to the driver unchecked and tisp_ae_face_set returns 0 (tx-isp-t33.ko
@@ -2339,12 +2342,15 @@ static void cs_faceae(void)
             int refused = r4 != 0;
 #endif
             int ok = r1 == 0 && r3 == 0 && r5 == 0 && refused && after.target == 180 && lo.ok && hi.ok && hi.y > lo.y + 15 && ms >= 0 && flow();
-            int skip = !ok && lim && r1 == 0 && r3 == 0 && r5 == 0 && flow();    /* AE at its exposure limit: no target can move the picture */
+            /* AE at its exposure limit: target 180 cannot brighten; the low target must still darken the picture */
+            int dark = lim && r1 == 0 && r3 == 0 && r5 == 0 && refused && lo.ok && lo.y + 4 < base.y && ms >= 0 && flow();
+            int skip = !ok && !dark && lim && r1 == 0 && r3 == 0 && r5 == 0 && flow();
 
-            rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3 | r5, ok ? V_PASS : skip ? V_SKIP : V_FAIL,
-                "%scentre window metered: target 40 -> Y %.1f, target 180 -> Y %.1f (base %.1f); empty window %s (ret %d, target still %u); off: back to Y %.1f in %d ms, frames flow",
+            rep(FN(IMP_ISP_Tuning_SetFaceAe), r1 | r3 | r5, ok || dark ? V_PASS : skip ? V_SKIP : V_FAIL,
+                "%scentre window metered: target %d -> Y %.1f, target 180 -> Y %.1f (base %.1f); empty window %s (ret %d, target still %u); off: back to Y %.1f in %d ms, frames flow",
+                dark && !ok ? "AE at its exposure limit (dark scene): the low target darkens the metered window, target 180 cannot brighten; " :
                 skip ? "AE at its exposure limit (AE mean below 3/4 of its own target: dark scene), face target cannot move the picture, repeat in daylight; " : "",
-                lo.y, hi.y, base.y, r4 != 0 ? "refused" : "accepted as the vendor", r4, after.target, back.y, ms);
+                lot, lo.y, hi.y, base.y, r4 != 0 ? "refused" : "accepted as the vendor", r4, after.target, back.y, ms);
             if (lt) printf("[I] faceae: AE node mean %u target %u at base%s\n", lm, lt, lim ? " (at the exposure limit)" : "");
         }
     }
