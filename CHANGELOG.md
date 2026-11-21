@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T33 IMP_Encoder_Query status words like vendor 2.0.2.1 (#738)
+
+- **Cause:** T33 `IMP_Encoder_Query` reported `work_done` 0 for the whole time the channel received pictures and `curPacks` / `leftStreamBytes` from the queued streams (0 after GetStream). Vendor 2.0.2.1 has the encoder thread write the channel's status words after every picture (0xdd6bc / 0xdebf4: `curPacks` = the packs of that stream, `leftStreamBytes` = the channel's stream buffer size minus that stream's length), `work_done` 0 while a picture is coded and 1 otherwise (0xdd140 / 0xdd36c, 1 at CreateChn 0xe2ac0); GetStream only updates `leftStreamFrames`, `IMP_Encoder_Query` (0xe5444) copies the six words.
+- **Fix (T33 build):** the encoder thread keeps `curPacks`, `leftStreamBytes` and `work_done` as the vendor does; `registered`, `leftPics` and `leftStreamFrames` unchanged. T32 unchanged (vendor 2.2.0 not checked yet).
+- **Evidence:** QEMU -M ingenic-t33, H.264 1280x720, `T32_ENC_QUERY=1`: IDR `curPacks` 3, P 1, kept after GetStream / ReleaseStream, `work_done` 1 between pictures, as vendor 2.0.2.1 (v-bss). `leftStreamBytes` follows the vendor formula with OpenIMP's buffer size (921600 at 720p; the vendor's channel buffer word is larger, ~1.39 MB, #740).
+
 ## 2026-11-21: t32_trace_sample probes for the T33 matrix rows 37 and 44 (#736, #738)
 
 - `T32_ENC_RDBS=0|1` calls `IMP_Encoder_SetRdBufShare(0, v)` before CreateChn (row 37 QEMU list check: the vendor 2.0.2.1 clears BUF_SHARE bit 31 in ODMA_CTRL / JRFD_CTRL and uses separate reference surfaces, OpenIMP ignores the flag, #736; the default lists are equal).

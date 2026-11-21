@@ -191,6 +191,15 @@ struct t32_enc_chn {
     uint32_t frames, encoded, skipped, retries, errors;
     int size_logged;
     int ivdc;                           /* fed by the IVDC direct channel (#301) */
+#ifdef PLATFORM_T33
+    /* IMP_Encoder_Query of vendor 2.0.2.1 (#738): the encoder thread writes
+     * the channel's status words after every picture (0xdd6bc / 0xdebf4:
+     * packs and the stream buffer size minus the stream's length), work_done
+     * 0 while a picture is coded and 1 otherwise (0xdd140 / 0xdd36c, CreateChn
+     * 0xe2ac0); GetStream / ReleaseStream leave them */
+    uint32_t q_packs, q_bytes;
+    int q_done;
+#endif
 };
 
 struct t32_enc_grp {
@@ -1220,6 +1229,9 @@ static void *enc_thread(void *arg)
         fs = g->fs_chn;
         e->pending = 0;
         e->busy = 1;
+#ifdef PLATFORM_T33
+        e->q_done = 0;
+#endif
         si = slot_free_locked(e);       /* reserved by the sink */
         pthread_mutex_unlock(&enc_lock);
 
@@ -1246,6 +1258,10 @@ static void *enc_thread(void *arg)
                 s->ref = IMP_Encoder_FSTYPE_IDR;
             }
             s->seq = e->seq++;
+#ifdef PLATFORM_T33
+            e->q_packs = (uint32_t)s->npacks;
+            e->q_bytes = s->length < e->bs_size ? e->bs_size - s->length : 0u;
+#endif
             t32_encq_ready(&e->q, si);
             e->encoded++;
             if (write(e->pipefd[1], "s", 1) != 1)
@@ -1254,6 +1270,9 @@ static void *enc_thread(void *arg)
             e->errors++;
         }
         e->busy = 0;
+#ifdef PLATFORM_T33
+        e->q_done = 1;
+#endif
         if (--g->refs == 0) {
             g->frame = NULL;
             pthread_mutex_unlock(&enc_lock);
@@ -1707,6 +1726,9 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     }
     memset(e, 0, sizeof(*e));
     e->created = 1;                     /* reserved; the rest outside the lock */
+#ifdef PLATFORM_T33
+    e->q_done = 1;                      /* vendor CreateChn 0xe2ac0: work_done 1 */
+#endif
     e->attr = *attr;
     e->h264 = attr->encAttr.enType == PT_H264 || attr->encAttr.enType == PT_H265;
     e->hevc = attr->encAttr.enType == PT_H265;
@@ -2520,6 +2542,12 @@ int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
         stat->leftStreamFrames = (uint32_t)e->q.rcount;
         stat->curPacks = e->q.rcount ? e->slot[t32_encq_peek(&e->q, 0)].npacks : 0;
         stat->work_done = e->recv ? 0 : 1;
+#ifdef PLATFORM_T33
+        /* vendor 2.0.2.1 (#738): the words of the last coded picture */
+        stat->leftStreamBytes = e->q_bytes;
+        stat->curPacks = e->q_packs;
+        stat->work_done = (uint32_t)e->q_done;
+#endif
     }
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
