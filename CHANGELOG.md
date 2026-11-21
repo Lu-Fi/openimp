@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: matrix: T33 AEC cells rt -> nohw after #712 (no microphone / speaker on the T33L)
+
+- `IMP_AI_EnableAec`, `DisableAec`, `EnableAecRefFrame`, `DisableAecRefFrame` and `GetFrameAndRef` on T33: rt -> nohw. The AEC reference path of #712 (in next) runs on the T33L .122 with the /dev/dsp ioctl sequence and arguments of vendor 2.0.2.1 (LD_PRELOAD trace, apitest audio o712b); the echo reduction itself cannot be measured on a board without microphone and speaker. Feature 33 (AEC) T33 stays 🔧 (no ERLE comparison).
+
 ## 2026-11-21: T32/T33 AEC reference frames, AEC and AI/AO device fds like the vendor (#712)
 
 - **Reference:** IMP_AI_GetFrameAndRef now returns the playback reference the driver records with each frame (T33L: 1280 bytes, as the vendor 2.0.2.1; before: 0 bytes). While the AEC or reference frames are on, every AMIC_AI_GET_STREAM carries a reference slot (vendor `__ai_dev_read`, size = bytes / channels). A ring of depth reference frames sits next to the capture FIFO (vendor `_ai_ref_enable`).
