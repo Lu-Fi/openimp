@@ -4459,7 +4459,7 @@
   {
    "number": 392,
    "title": "T33: firmware profile for the T33L module and qemu_t33 (fork)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/392",
    "labels": [
     "prio:long-term",
@@ -5267,7 +5267,7 @@
   {
    "number": 502,
    "title": "[T33] H.264 default SPS level_idc and PPS pic_init_qp differ from vendor 2.0.2.1 (640x360 CBR)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/502",
    "labels": [
     "area:Encoder",
@@ -5314,7 +5314,7 @@
   {
    "number": 508,
    "title": "T33 HW: no frames from tx-isp-t33 on silicon (6 causes, fixed)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/508",
    "labels": [
     "area:Driver",
@@ -5346,7 +5346,7 @@
   {
    "number": 510,
    "title": "T33 HW: OpenIMP JPEG encoder returns length 0 (status 0x3) on the T33L",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/510",
    "labels": [
     "area:Encoder",
@@ -5362,7 +5362,7 @@
   {
    "number": 511,
    "title": "T33 image: no streamer, IQ bins only in /usr/share/sensor, sensor-vendor init check name",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/511",
    "labels": [
     "area:System",
@@ -5378,7 +5378,7 @@
   {
    "number": 512,
    "title": "T33 HW: H.264 P picture writes its reconstruction to address 0 (system hang)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/512",
    "labels": [
     "area:Encoder",
@@ -5410,7 +5410,7 @@
   {
    "number": 515,
    "title": "timps: does not build for T32/T33 (encoder API alias, PLATFORM_T33)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/515",
    "labels": [
     "area:System",
@@ -5442,7 +5442,7 @@
   {
    "number": 517,
    "title": "T33 HW: raptor JPEG snapshot (2nd encoder channel next to H.264) and raw GetFrame snapshot fail",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/517",
    "labels": [
     "area:Encoder",
@@ -5526,7 +5526,7 @@
   {
    "number": 522,
    "title": "T33 HW: SetChnMaxPictureSize does not limit pictures, SetMaxStreamCnt 4 reads back 3",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/522",
    "labels": [
     "area:Encoder",
@@ -5542,7 +5542,7 @@
   {
    "number": 523,
    "title": "T33 HW: OSD group callback never called, OSD regions only on 1 of 10 encoded frames",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/523",
    "labels": [
     "area:OSD",
@@ -5651,7 +5651,7 @@
   {
    "number": 530,
    "title": "T32/T33: LSC CT list pages and ISP alloc pages zeroed through the cache without write-back",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/530",
    "labels": [
     "area:Driver",
@@ -5754,7 +5754,7 @@
   {
    "number": 536,
    "title": "T33: CSCCR registers follow the IQ bin mode in ours, the vendor T33 always writes the fixed csccr_cp",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/536",
    "labels": [
     "repo:open-tx-isp",
@@ -5769,7 +5769,7 @@
   {
    "number": 538,
    "title": "T33: H.265 IMP_Encoder_SetChnMaxPictureSize is not applied (no I265e run-time reconfig in OpenIMP)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/538",
    "labels": [],
    "created": "2026-11-14T16:32:51Z",
@@ -5849,7 +5849,7 @@
   {
    "number": 549,
    "title": "T33L: IPU (0x13080000) does not take register writes; every OSD IPU job times out and the kernel IPU driver drops a gate_ipu reference per failure",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/549",
    "labels": [
     "area:OSD",
@@ -5975,7 +5975,7 @@
   {
    "number": 563,
    "title": "[T31] ADR per-frame path differs from the vendor (map not rebuilt when EV is unchanged; control words not from the IQ bin)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/563",
    "labels": [
     "area:ISP",
@@ -6792,7 +6792,7 @@
   {
    "number": 667,
    "title": "[T10-T31] AI: vendor skips NS/AGC/HPF on AEC frames, OpenIMP runs them after the AEC",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/667",
    "labels": [
     "area:Audio",
@@ -6864,9 +6864,26 @@
    "milestone": "Release 1"
   },
   {
+   "number": 686,
+   "title": "[T32] IMP_ISP_Tuning_SetFaceAe: tisp_ae_face_set is a store-only stub (no tisp_ae_sepc_area / ROI / face target)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/686",
+   "labels": [
+    "area:AE-AWB",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-17T23:08:37Z",
+   "closed": "2026-11-20T22:48:51Z",
+   "milestone": null
+  },
+  {
    "number": 692,
    "title": "[T33] open-tx-isp: SET_TIZIANO_PAR misses the vendor VIC hold flow (ispcore 0x100001e: VIC 0x4444, IPC-pos wait, event 0x1000007 {1})",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/692",
    "labels": [
     "area:ISP",
@@ -6927,6 +6944,22 @@
    "milestone": "Release 1"
   },
   {
+   "number": 707,
+   "title": "[T33] IMP_ISP_Tuning_SetSharpness has no picture effect on the open driver (vendor: detail energy 4.1 at 20, 29.2 at 235)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/707",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-20T20:56:05Z",
+   "closed": "2026-11-20T22:57:17Z",
+   "milestone": "Release 1"
+  },
+  {
    "number": 708,
    "title": "[T32 kernel] ipu v13: ipu_start error path drops the open file's IPU clock reference (ingenic_ipu_v13.c:1006)",
    "state": "open",
@@ -6939,6 +6972,39 @@
    ],
    "created": "2026-11-20T21:22:31Z",
    "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 709,
+   "title": "[T33] open tx-isp-t33: IMP_ISP_GetSensorRegister returns 0 / value 0 (vendor ko reads the cv2005 chip id 0x2005; QEMU reproduces)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/709",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-20T21:45:21Z",
+   "closed": "2026-11-20T22:57:16Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 710,
+   "title": "[T31] fix_point_mult2_32 / fix_point_div_32 / tisp_math_exp2 differ from the vendor outside the AE/ADR value ranges",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/710",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-11-20T22:21:58Z",
+   "closed": "2026-11-20T23:26:39Z",
    "milestone": null
   },
   {
@@ -6994,9 +7060,77 @@
    "milestone": null
   },
   {
+   "number": 716,
+   "title": "[T32] BCSH, sharpness and fps setters are constant stubs in the T32 build (sharpness = #711)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/716",
+   "labels": [],
+   "created": "2026-11-21T00:08:28Z",
+   "closed": "2026-11-21T01:33:05Z",
+   "milestone": null
+  },
+  {
+   "number": 717,
+   "title": "[T32] ported ISP API functions not wired: the T32 tunctl glue stores only (LSC hvflip, module control, line space, hv_flip, gamma, WDR output mode, autozoom)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/717",
+   "labels": [],
+   "created": "2026-11-21T00:08:29Z",
+   "closed": "2026-11-21T01:33:07Z",
+   "milestone": null
+  },
+  {
+   "number": 718,
+   "title": "[T33] H.265 run-time RC setters restart the controller (IDR QP 45), vendor 2.0.2.1 keeps its state (QP 23)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/718",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T00:16:51Z",
+   "closed": "2026-11-21T00:59:10Z",
+   "milestone": null
+  },
+  {
+   "number": 719,
+   "title": "[T33] H.265 MD 0x40500 QP table (controller motion level) stays 0 where vendor 2.0.2.1 drops the level to 5 / 4",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/719",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T00:18:17Z",
+   "closed": "2026-11-21T02:00:15Z",
+   "milestone": null
+  },
+  {
+   "number": 720,
+   "title": "[T32] H.265 rate control registers missing in the HERA list (revision 6 slice block, same gap as T33 #714)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/720",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-21T00:19:09Z",
+   "closed": "2026-11-21T02:00:17Z",
+   "milestone": null
+  },
+  {
    "number": 721,
    "title": "[T32] SetAutoZoom / GetAutoZoom store-only: no MSCA crop state, request not applied",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/721",
    "labels": [
     "area:ISP",
@@ -7007,6 +7141,86 @@
    ],
    "created": "2026-11-21T01:19:30Z",
    "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 722,
+   "title": "[T32] LSC hvflip glue not wired: a sensor mirror / flip leaves the LSC mesh unflipped",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/722",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T01:20:44Z",
+   "closed": "2026-11-21T02:19:54Z",
+   "milestone": null
+  },
+  {
+   "number": 724,
+   "title": "[T32] TX_ISP_EVENT_SYNC_SENSOR_ATTR ignored: the AE sensor block (stSensorAttr) is never re-synced after SetSensorFPS",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/724",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T01:21:37Z",
+   "closed": "2026-11-21T02:19:50Z",
+   "milestone": null
+  },
+  {
+   "number": 725,
+   "title": "[T33] SetSensorFPS does not run tisp_set_fps (T33 glue constant stub, cross-SoC of #716)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/725",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T01:21:43Z",
+   "closed": "2026-11-21T02:19:52Z",
+   "milestone": null
+  },
+  {
+   "number": 726,
+   "title": "[T33] Encoder ROI (SetChnROI) stored only: vendor 2.0.2.1 feeds the regions into the controller and the EFE ROI registers",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/726",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T01:46:33Z",
+   "closed": "2026-11-21T02:54:23Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 727,
+   "title": "[T33] LSC hvflip glue not wired: a sensor mirror / flip leaves the LSC mesh unflipped (cross-SoC of #722)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/727",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T02:01:20Z",
+   "closed": "2026-11-21T02:47:52Z",
    "milestone": null
   },
   {
@@ -7029,7 +7243,7 @@
   {
    "number": 730,
    "title": "[T32] MSCA channel start is the T23-style direct packing, not the vendor chx_cfg_load on st_msca_chx_cfg (blocks #721)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/730",
    "labels": [
     "area:ISP",
@@ -7043,9 +7257,25 @@
    "milestone": null
   },
   {
+   "number": 731,
+   "title": "[T33] FrameSource rotation: unified OpenIMP SetChnRotate software path (MXU2) on the T33 (vendor 2.0.2.1 has none)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/731",
+   "labels": [
+    "area:FrameSource",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T02:13:57Z",
+   "closed": "2026-11-21T02:54:25Z",
+   "milestone": "Release 1"
+  },
+  {
    "number": 732,
    "title": "[T33] open tx-isp MEMORY_MALLOC (0x800c543a) fails with order-6 page allocation after ~12 library cycles on the 44 MiB T33L; timps cannot start",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/732",
    "labels": [
     "area:Driver",
@@ -7061,7 +7291,7 @@
   {
    "number": 733,
    "title": "[T31] ispcore_sync_sensor_attr does not write the derived line time back into the sensor attribute (vendor: attr +0xbc)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/733",
    "labels": [
     "area:ISP",
@@ -7077,7 +7307,7 @@
   {
    "number": 734,
    "title": "[T32] Encoder ROI (SetChnROI) stored only on T32 too (cross-SoC of #726)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/734",
    "labels": [
     "area:Encoder",
@@ -7087,6 +7317,187 @@
     "type:gap"
    ],
    "created": "2026-11-21T02:33:19Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 736,
+   "title": "T33: IMP_Encoder_SetRdBufShare(0) is ignored, lists keep BUF_SHARE (vendor clears it)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/736",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T03:46:42Z",
+   "closed": "2026-11-21T05:00:19Z",
+   "milestone": null
+  },
+  {
+   "number": 737,
+   "title": "T33: software OSD costs ~14 % of the core in timps (row 38)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/737",
+   "labels": [
+    "area:OSD",
+    "severity:medium",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T03:46:44Z",
+   "closed": "2026-11-21T05:00:17Z",
+   "milestone": null
+  },
+  {
+   "number": 738,
+   "title": "T33: IMP_Encoder_Query work_done / curPacks differ from vendor 2.0.2.1",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/738",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T03:46:46Z",
+   "closed": "2026-11-21T05:00:20Z",
+   "milestone": null
+  },
+  {
+   "number": 740,
+   "title": "T33: encoder stream buffer size differs from vendor 2.0.2.1 (Query leftStreamBytes ~1.39 MB vs 921600 at 720p)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/740",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T04:34:52Z",
+   "closed": "2026-11-21T05:57:44Z",
+   "milestone": null
+  },
+  {
+   "number": 741,
+   "title": "T33: JPEG IMP_Encoder_Query words differ from vendor 2.0.2.1 (leftStreamFrames / work_done 0, values one picture late)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/741",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T05:18:25Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 742,
+   "title": "T33: H.264 pictures over one 250 KiB HERA section are lost on the T33L (no BSFULL, 'stream slot full')",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/742",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T05:20:28Z",
+   "closed": "2026-11-21T06:38:12Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 743,
+   "title": "T32: encoder stream buffer size differs from vendor 2.2.0 (same CreateChn formula as T33 #740)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/743",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T05:29:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 744,
+   "title": "[T20] jxf23 light box 5000 K: open picture darker than vendor at equal manual exposure (gain 1-4), noise/Y +13..43 %",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/744",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-21T05:45:22Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 745,
+   "title": "[T20] jxf23 light box: open AE/AWB settles 2-4 s slower than vendor (12 vs 10 s, WB preset 23 vs 17 s)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/745",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-21T05:45:23Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 746,
+   "title": "QEMU HERA model: BSFULL stop length has no overshoot into the next half (T33L silicon reports +33 bytes)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/746",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T06:15:51Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 747,
+   "title": "T32/T33: vendor PollingStream switches the caller thread to SCHED_RR max priority (OpenIMP keeps SCHED_OTHER)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/747",
+   "labels": [
+    "area:Encoder",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-21T06:50:38Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 748,
+   "title": "[T31] ae0_weight_mean2 differs from the vendor: 64-bit vs 32-bit accumulators, correction path without AePweightCalculate (#553)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/748",
+   "labels": [],
+   "created": "2026-11-21T07:23:42Z",
    "closed": null,
    "milestone": null
   }
