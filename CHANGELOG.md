@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32 online LDC at IMP_ISP_AddSensor, vendor 2.2.0 library branch (#751)
+
+- `OpenIMP_T32_LdcAddSensor` (src/t32/openimp_t32_isp_ctl.c) has the T32 branch of vendor 2.2.0 `IMP_ISP_AddSensor` (chip class 0, 0x139acc): after `IMP_ISP_LDC_SetMode(online)` + `IMP_ISP_LDC_OnlineInit` only `0xc00454ba` with the 24-byte block {VI, 0, enable 1 | file << 16, 0x10, 0x434, parameter block}; with `IMP_ISP_LDC_OnlineSetLut` the 0x444-byte parameter file is read and word 5 points at byte 0x10; without it words 3..5 stay 0 (the module answers EFAULT, logged, as the vendor). No 0xc00454b9 / bb on T32 (T33 path unchanged).
+- T32 API rules as 2.2.0 (0x144364 / 0x145050 / 0x144a38): `OnlineInit` accepts only LDC (func 4, "PRJ007 only supports LDC mode"); `OnlineSetLut` and `OnlineSetStrength` do not exclude each other (the strength is unused on T32).
+- Evidence (QEMU T32, open-tx-isp claude/751-t32-online-ldc): parameter-file and IQ-bin runs, the module's LDC and WDMA / RDMA writes equal the vendor flow (541 lines each), 10 / 10 frames. Vendor libimp 2.2.0 run not possible in QEMU (stock PRJ007 module oopses at load). No T32 camera.
+
 ## 2026-11-21: T32/T33 polling and encoder threads keep normal priority, vendor SCHED_RR not ported (#747, beyond vendor)
 
 - **Decision:** vendor `IMP_Encoder_PollingStream` sets `SCHED_RR` at the maximum priority on the caller thread (the JPEG thread does the same for itself); OpenIMP keeps `SCHED_OTHER`.

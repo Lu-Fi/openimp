@@ -676,7 +676,9 @@ done:
  * UpdateLutToJob f008 (not initialised) / f004 (NULL or unknown job).
  * Open module (open-tx-isp, #491): the T33 module answers the online LUT requests 0xc00454b9..bb
  * and registers /dev/offline_ldc as the vendor module.  IMP_ISP_AddSensor sends the online state
- * (OpenIMP_T32_LdcAddSensor below) and the offline job protocol follows the vendor (below). */
+ * (OpenIMP_T32_LdcAddSensor below) and the offline job protocol follows the vendor (below).
+ * T32 (2.2.0, #751): OnlineInit only func 4, SetLut / SetStrength independent, AddSensor sends
+ * only 0xc00454ba (ldc_t32_add_sensor); the open T32 module applies it at SET_ISP_IPC_MEM. */
 
 static struct {
     int init, func, size, angle;
@@ -710,7 +712,12 @@ int32_t IMP_ISP_LDC_OnlineInit(IMPVI_NUM num, IMPISPLDCInitOnlineAttr *attr)
         IMP_LOG_ERR(TAG, "LDC_OnlineInit: LDC mode is not online (IMP_ISP_LDC_SetMode)");
         return E_STATE;
     }
+#if defined(PLATFORM_T33)
     if (attr->func != IMPISP_I2D_MODE && attr->func != IMPISP_HLDC_MODE && attr->func != IMPISP_LDC_MODE) {
+#else
+    /* T32 2.2.0 (IMP_ISP_LDC_OnlineInit 0x144364, chip class 0): only LDC (4), it keeps no block size */
+    if (attr->func != IMPISP_LDC_MODE) {
+#endif
         pthread_mutex_unlock(&ctl_lock);
         IMP_LOG_ERR(TAG, "LDC_OnlineInit: func %d (I2D 1, HLDC 2, LDC 4)", (int)attr->func);
         return E_FIELD;
@@ -734,11 +741,14 @@ int32_t IMP_ISP_LDC_OnlineSetStrength(IMPVI_NUM num, double strength)
     pthread_mutex_lock(&ctl_lock);
     if (ldc_mode_rec != 0)
         rc = E_STATE;
+#if defined(PLATFORM_T33)
     else if (ldc_on[num].type == 1)
         rc = E_FIELD;               /* a LUT file is set: the two exclude each other */
+#endif
     else {
         ldc_on[num].strength = strength;
-        ldc_on[num].type = 2;
+        if (ldc_on[num].type != 1)  /* T32: the strength is not used, a LUT file stays */
+            ldc_on[num].type = 2;
     }
     pthread_mutex_unlock(&ctl_lock);
     return rc;
@@ -768,8 +778,10 @@ int32_t IMP_ISP_LDC_OnlineSetLut(IMPVI_NUM num, char lut_name[128])
     pthread_mutex_lock(&ctl_lock);
     if (ldc_mode_rec != 0)
         rc = E_STATE;
+#if defined(PLATFORM_T33)
     else if (ldc_on[num].type == 2)
         rc = E_FIELD;               /* a strength is set */
+#endif
     else if (!lut_name)
         rc = E_FIELD;
     else {
@@ -897,6 +909,53 @@ static void ldc_identity_lut(uint8_t *lut, uint32_t w, uint32_t h, uint32_t bs)
     hdr[1] = ldc_crc32(lut + 0x10, total - 0x10);
 }
 
+#if defined(PLATFORM_T33)
+#define LDC_T33_ADD 1
+#endif
+/* T32 2.2.0 IMP_ISP_AddSensor, chip class 0 branch (0x139acc, audit decompile t32add.c:455-500; no code
+ * copied): only 0xc00454ba with the 24-byte block {id, 0, u16 enable 1 | u16 file << 16, 0x10, 0x434,
+ * parameter block pointer}.  With a LUT file (IMP_ISP_LDC_OnlineSetLut) the library reads 0x444 bytes of it
+ * and points word 5 at byte 0x10 (word 3 = 0x10, word 4 = 0x434); without one words 3..5 stay 0 and the
+ * module's copy of the parameter block fails (EFAULT, logged; the module then runs LDC with its zero block,
+ * as the vendor).  The vendor leaves word 0 at 0 for every VI; here it is the VI number (one sensor: the
+ * same).  A file that cannot be opened is logged and no request is sent (vendor). */
+#if !defined(LDC_T33_ADD)
+static int ldc_t32_add_sensor(int fd, int vinum)
+{
+    uint32_t b[6];
+    uint8_t *par = NULL;
+    FILE *f;
+    int rc = 0;
+
+    memset(b, 0, sizeof(b));
+    b[0] = (uint32_t)vinum;
+    b[2] = 1u | (ldc_on[vinum].type == 1 ? 1u << 16 : 0u);
+    if (ldc_on[vinum].type == 1) {
+        par = calloc(1, 0x444);
+        f = par ? fopen(ldc_on[vinum].lut, "rb") : NULL;
+        if (!f) {
+            IMP_LOG_ERR(TAG, "LDC online VI%d: cannot open the parameter file %.128s", vinum, ldc_on[vinum].lut);
+            free(par);
+            return -1;
+        }
+        if (fread(par, 1, 0x444, f) != 0x444)
+            IMP_LOG_WARN(TAG, "LDC online VI%d: parameter file %.128s shorter than 0x444 bytes", vinum,
+                         ldc_on[vinum].lut);
+        fclose(f);
+        b[3] = 0x10;
+        b[4] = 0x444 - 0x10;
+        b[5] = (uint32_t)(uintptr_t)(par + 0x10);
+    }
+    if (ioctl(fd, 0xc00454bau, b) != 0) {
+        IMP_LOG_ERR(TAG, "LDC online VI%d: 0xc00454ba: %s", vinum, strerror(errno));
+        rc = -1;
+    }
+    free(par);
+    IMP_LOG_INFO(TAG, "LDC online VI%d (T32): %s", vinum, ldc_on[vinum].type == 1 ? "parameter file" : "IQ bin");
+    return rc;
+}
+#endif
+
 int OpenIMP_T32_LdcAddSensor(int fd, int vinum, uint32_t w, uint32_t h)
 {
     uint32_t b[12];
@@ -912,6 +971,12 @@ int OpenIMP_T32_LdcAddSensor(int fd, int vinum, uint32_t w, uint32_t h)
         pthread_mutex_unlock(&ctl_lock);
         return 0;
     }
+#if !defined(LDC_T33_ADD)
+    (void)w; (void)h; (void)base; (void)mlen; (void)lut; (void)mfd;
+    rc = ldc_t32_add_sensor(fd, vinum);
+    pthread_mutex_unlock(&ctl_lock);
+    return rc;
+#endif
     memset(b, 0, sizeof(b));
     b[0] = (uint32_t)vinum;
     b[1] = (uint32_t)ldc_on[vinum].func;
