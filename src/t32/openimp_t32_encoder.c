@@ -1101,6 +1101,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 #ifdef PLATFORM_T33
     n = t33_h265_list(e, &p, idr);
 #else
+    p.rc_slice = t32_rc_slice(&a->rc);  /* rate control (revision 6, #720) */
     n = (uint32_t)t32_hera_h265_list(&p, t32_vpu_buf_va(&a->list));
 #endif
     if (!n) {

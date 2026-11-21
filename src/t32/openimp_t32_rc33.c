@@ -1353,12 +1353,10 @@ uint32_t t32_rc65_rc_word(T32Rc65 *c, uint32_t off)
     return e33_ld_U32(&c->X, A5_RC + off);
 }
 
-#ifdef PLATFORM_T33
 const uint8_t *t32_rc65_slice(T32Rc65 *c)
 {
     return c->mem ? e33_at(&c->X, A5_SL, T65_SLICE_BYTES) : NULL;
 }
-#endif
 
 unsigned t32_rc65_idr_rows(T32Rc65 *c)
 {
