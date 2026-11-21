@@ -47,7 +47,7 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-16, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-21, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
@@ -60,7 +60,7 @@ Vendor IMP/SU functions per SoC on 2026-11-16, `next` after RC3 `v2026.11.07-rc3
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
 | T32 | 610 | 4 | 542 | 62 | 2 | in development |
-| T33 | 571 | 288 | 149 | 78 | 56 | in development |
+| T33 | 571 | 393 | 66 | 74 | 38 | in development |
 
 T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 288 "works" cells are device-tested (first full device API test on the module 2026-11-17: 227 cells, plus the tuning calls with picture effect of the device checks 2026-11-15 / 2026-11-16) or vendor no-ops; the module is on the bench, not in the light box.
 
