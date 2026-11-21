@@ -76,6 +76,7 @@
 #ifdef PLATFORM_T33
 #include "t32/openimp_t33_hera.h"
 #include "t32/openimp_t33_hera_h265.h"
+int OpenIMP_T32_EncTakeRdBufShareOff(int encChn);    /* openimp_t32_fs_enc_ext.c: SetRdBufShare(0) */
 #endif
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
@@ -152,6 +153,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
     uint32_t odma_y, odma_c;            /* HERA ODMA write position after the last picture */
     uint32_t recon_y, recon_c;          /* the last picture's reconstruction (the next reference) */
+    int noshare;                        /* SetRdBufShare(0) before CreateChn (#736) */
+    uint32_t pp;                        /* no share: the picture buffer the next picture writes */
     int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
 #endif
     /* vendor GetChnAttrRcMode reads the encoder's live parameters (i264e_get_param 3 =
@@ -772,6 +775,31 @@ static void rc_picture_lost(struct t32_enc_chn *e)
 static void t33_recon_addrs(struct t32_h264 *a, const T32HeraH264Pic *ring, int idr,
                             uint32_t *recon_y, uint32_t *recon_c, uint32_t *ref_y, uint32_t *ref_c);
 
+/*
+ * SetRdBufShare(0) (#736): vendor 2.0.2.1 (QEMU, 1280x720) gives up the
+ * shared compressed area and writes every picture into one of two whole
+ * pictures (luma w x h, chroma after it), in turn, the reference being the
+ * other one; the header sets follow the two pictures.  The pictures of this
+ * one and of its reference; returns where the header sets start.
+ */
+static uint32_t t33_noshare_bytes(uint32_t w, uint32_t h)
+{
+    return ALIGN16(w) * ALIGN16(h) * 3u / 2u;
+}
+
+static uint32_t t33_noshare_pics(const struct t32_h264 *a, uint32_t w, uint32_t h, uint32_t *recon_y,
+                                 uint32_t *recon_c, uint32_t *ref_y, uint32_t *ref_c)
+{
+    uint32_t base = t32_vpu_buf_pa(&a->ring), pic = t33_noshare_bytes(w, h), ysz = ALIGN16(w) * ALIGN16(h);
+    uint32_t cur = base + (a->pp & 1u) * pic, ref = base + ((a->pp & 1u) ^ 1u) * pic;
+
+    *recon_y = cur;
+    *recon_c = cur + ysz;
+    *ref_y = ref;
+    *ref_c = ref + ysz;
+    return base + 2u * pic;
+}
+
 static uint32_t t33_h264_list(struct t32_enc_chn *e, const T32HeraH264Pic *p, uint32_t w, uint32_t h, int idr)
 {
     struct t32_h264 *a = &e->avc;
@@ -783,21 +811,30 @@ static uint32_t t33_h264_list(struct t32_enc_chn *e, const T32HeraH264Pic *p, ui
     t33_hera_ring_layout(w, h, &r);
     memset(&t, 0, sizeof(t));
     t.pic = *p;
-    t.pic.ring_y = base;
-    t.pic.ring_y_end = t.pic.ring_c = base + r.y;
-    t.pic.ring_c_end = t.pic.ring_c + r.c;
-    hdr = t.pic.ring_c_end;
+    if (a->noshare) {
+        /* SetRdBufShare(0) (#736): no shared area, two whole pictures */
+        t.noshare = 1;
+        t.pic.ring_y = t.pic.ring_y_end = t.pic.ring_c = t.pic.ring_c_end = 0;
+        hdr = t33_noshare_pics(a, w, h, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
+    } else {
+        t.pic.ring_y = base;
+        t.pic.ring_y_end = t.pic.ring_c = base + r.y;
+        t.pic.ring_c_end = t.pic.ring_c + r.c;
+        hdr = t.pic.ring_c_end;
+    }
     set = a->hdr_set & 1u;
     t.hdr_wy = hdr + set * (r.hy + r.hc);
     t.hdr_wc = t.hdr_wy + r.hy;
     t.hdr_ry = hdr + (set ^ 1u) * (r.hy + r.hc);
     t.hdr_rc = t.hdr_ry + r.hy;
-    t33_recon_addrs(a, &t.pic, idr, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
+    if (!a->noshare)
+        t33_recon_addrs(a, &t.pic, idr, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
     n = t33_hera_h264_list(&t, t32_vpu_buf_va(&a->list));
     if (n) {
         a->hdr_set = set ^ 1u;
-        a->recon_y = idr ? t.pic.ring_y : t.recon_y;
-        a->recon_c = idr ? t.pic.ring_c : t.recon_c;
+        a->recon_y = idr && !a->noshare ? t.pic.ring_y : t.recon_y;
+        a->recon_c = idr && !a->noshare ? t.pic.ring_c : t.recon_c;
+        a->pp ^= 1u;
     }
     return (uint32_t)n;
 }
@@ -1046,10 +1083,27 @@ static uint32_t t33_h265_list(struct t32_enc_chn *e, const T32HeraH265Pic *p, in
     t33_hera_ring_layout(p->width, p->height, &r);
     memset(&t, 0, sizeof(t));
     t.pic = *p;
+    t.rc_slice = t32_rc_slice(&a->rc);  /* rate control (revision 7, #714) */
+    if (a->noshare) {
+        /* SetRdBufShare(0) (#736): two whole pictures, as H.264 */
+        uint32_t hdr = t33_noshare_pics(a, p->width, p->height, &t.recon_y, &t.recon_c, &t.ref_y, &t.ref_c);
+
+        t.noshare = 1;
+        t.pic.ring_y = t.pic.ring_y_end = t.pic.ring_c = t.pic.ring_c_end = 0;
+        t33_hera_h265_hdr(p->width, p->height, hdr, set, &t.hdr_wy, &t.hdr_wc);
+        t33_hera_h265_hdr(p->width, p->height, hdr, set ^ 1u, &t.hdr_ry, &t.hdr_rc);
+        n = t33_hera_h265_list(&t, t32_vpu_buf_va(&a->list));
+        if (n) {
+            a->hdr_set = set ^ 1u;
+            a->recon_y = t.recon_y;
+            a->recon_c = t.recon_c;
+            a->pp ^= 1u;
+        }
+        return (uint32_t)n;
+    }
     t.pic.ring_y = base;
     t.pic.ring_y_end = t.pic.ring_c = base + r.y;
     t.pic.ring_c_end = t.pic.ring_c + r.c;
-    t.rc_slice = t32_rc_slice(&a->rc);  /* rate control (revision 7, #714) */
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set, &t.hdr_wy, &t.hdr_wc);
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set ^ 1u, &t.hdr_ry, &t.hdr_rc);
     {
@@ -1560,8 +1614,17 @@ static int h264_setup(struct t32_enc_chn *e)
     }
     h264_set_qp(e, &at->rcAttr.attrRcMode);
 #ifdef PLATFORM_T33
-    /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8 */
+    /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8.
+     * SetRdBufShare(0) (#736): two whole pictures and the header sets */
+    a->noshare = OpenIMP_T32_EncTakeRdBufShareOff((int)(e - enc_chn));
+    a->pp = 0;
     ring_bytes = t33_hera_ring_bytes(w, ALIGN16(at->encAttr.picHeight));
+    if (a->noshare) {
+        T33HeraRing r;
+
+        t33_hera_ring_layout(w, ALIGN16(at->encAttr.picHeight), &r);
+        ring_bytes = 2u * t33_noshare_bytes(w, at->encAttr.picHeight) + 2u * (r.hy + r.hc);
+    }
 #endif
     if (OpenIMP_T32_VpuBufAlloc(&a->list, T32_HERA_LIST_BYTES, "t32_hera_list") != 0 ||
         OpenIMP_T32_VpuBufAlloc(&a->ring, ring_bytes, "t32_hera_ring") != 0 ||

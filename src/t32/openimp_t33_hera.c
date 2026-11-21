@@ -72,6 +72,8 @@ typedef struct {
 #define MCE_END_C       0x3007cu
 #define MCE_RLUT_Y      0x30800u
 #define MCE_RLUT_C      0x30804u
+#define MCE_CTRL        0x30004u
+#define MCE_BFSH_CFG    0x301c0u
 /* VMAU (v1.6 at 0x40400) and its tail */
 #define VMAU_FRM_SIZE   0x4040cu
 #define VMAU_MD_CFG0    0x40410u
@@ -184,21 +186,25 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
     case EFE_QPG_DLT:
         return t32_hera_qpg_dlt(qp);
     case ODMA_CTRL:
-        return BUF_SHARE | DMA_BIT30 | h << 14 | w;
+        return (t->noshare ? 0u : BUF_SHARE) | DMA_BIT30 | h << 14 | w;
     case JRFD_CTRL:
-        return BUF_SHARE | DMA_BIT30 | JRFD_BIT27 | h << 14 | w;
+        return (t->noshare ? 0u : BUF_SHARE) | DMA_BIT30 | JRFD_BIT27 | h << 14 | w;
     case ODMA_BDYA:                     /* I: the area's base; P: the engine's read-back */
-        return p->p_frame ? t->recon_y : p->ring_y;
+        return p->p_frame || t->noshare ? t->recon_y : p->ring_y;
     case ODMA_BDCA:
-        return p->p_frame ? t->recon_c : p->ring_c;
+        return p->p_frame || t->noshare ? t->recon_c : p->ring_c;
     case ODMA_HDR_Y:
         return t->hdr_wy;
     case ODMA_HDR_C:
         return t->hdr_wc;
-    case ODMA_SIZE_Y:                   /* what is left to the area's end */
-        return p->ring_y_end - (p->p_frame ? t->recon_y : p->ring_y);
+    case ODMA_SIZE_Y:                   /* what is left to the area's end (no share: 0 - recon) */
+        return p->ring_y_end - (p->p_frame || t->noshare ? t->recon_y : p->ring_y);
     case ODMA_SIZE_C:
-        return p->ring_c_end - (p->p_frame ? t->recon_c : p->ring_c);
+        return p->ring_c_end - (p->p_frame || t->noshare ? t->recon_c : p->ring_c);
+    case MCE_CTRL:                      /* no share: bit 26 off (vendor 06c22110 -> 02c22110) */
+        return t->noshare ? v & ~(1u << 26) : v;
+    case MCE_BFSH_CFG:                  /* no share: bits 18, 19 off (vendor 002c0000 -> 00200000) */
+        return t->noshare ? v & ~0xc0000u : v;
     case JRFD_HDR_Y:
         return t->hdr_ry;
     case JRFD_HDR_C:
@@ -276,6 +282,9 @@ size_t t33_hera_h264_list(const T33HeraH264Pic *t, uint32_t *list)
         uint32_t def = p->p_frame ? e->vp : e->vi;
 
         if (!(e->when & want))
+            continue;
+        /* SetRdBufShare(0): the vendor writes no reference look-up (#736) */
+        if (t->noshare && (e->reg == MCE_RLUT_Y || e->reg == MCE_RLUT_C))
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->reg == SDE_CTX_TBL ? e->reg + 4u * k : e->reg;

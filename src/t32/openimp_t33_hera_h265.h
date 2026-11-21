@@ -31,6 +31,11 @@ typedef struct {
     uint32_t ref_y, ref_c;              /* P: the reference's reconstruction (the last recon_*) */
     const uint8_t *rc_slice;            /* NULL (FIXQP), or the H.265 controller's slice block
                                          * (T65_SLICE_BYTES, vendor layout; rate control, #714) */
+    /* IMP_Encoder_SetRdBufShare(0) (#736), as on H.264 (openimp_t33_hera.h):
+     * BUF_SHARE off, recon_* on I and P, ring_* = 0; 0x30800 / 0x30804 the
+     * reconstruction, P 0x10188 = 0 - recon_y, 0x30004 bit 26 / 0x301c0 bits
+     * 18, 19 off, 0x30048 0x00e00300 -> 0x03000300 */
+    int noshare;
 } T33HeraH265Pic;
 
 /* the header sets of an H.265 area of @width x @height after @hdr: set @set's
