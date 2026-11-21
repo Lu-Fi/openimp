@@ -17,7 +17,7 @@
    "total": 1591,
    "branch": "claude/t32-ds-batch",
    "date": "2026-11-13",
-   "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; the 1591 counts every reference function a conf links (REFS); recount 2026-11-20 (open-tx-isp tests/t32_oracle/refs_audit.py, openimp #645): of 1574 distinct names 1287 are called by an oracle, 158 only named, 129 only linked as callees, and the T33-style real-body audit of T32 is not done"
+   "note": "bit-exact against the recovered vendor C on the host; merged into open-tx-isp next; reference-C oracles stay on the T32 branch until upstream PR #15; host-proven, not device-tested; the 1591 counts every reference function a conf links (REFS); recount 2026-11-20 (open-tx-isp tests/t32_oracle/refs_audit.py, openimp #645): of 1574 distinct names 1287 are called by an oracle, 158 only named, 129 only linked as callees, real-body audit 2026-11-21 (open-tx-isp tests/t32_oracle/real_audit.py, T32 build): 1281 of the 1574 names are proven against a driver function with a real body, 7 weak (isp_info print helpers), 158 named-only, 128 callee-only (compared through their caller); 20 of 79 T32 API glue entry points are constant or store-only stubs (#716 BCSH / sharpness / fps, #717 ported but not wired, #289 deliberate)"
   }
  },
  "asof": "2026-11-16",
