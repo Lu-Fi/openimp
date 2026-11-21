@@ -978,6 +978,10 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
     uint32_t *st = rc->stash;
     T33Pending *p = rc->t33 ? &rc->t33->pend : &rc->pend;
 
+#ifdef PLATFORM_T33
+    if (rc->hevc && rc->on && rc->t65)
+        return id >= 0x11 && id <= 0x14 ? t32_rc65_set_param(rc->t65, id, a) : -1;
+#endif
     if (rc->hevc || !rc->have_stash || id < 0x11 || id > 0x14)
         return -1;
     /* the vendor setters write the fields of the reconfiguration copy that

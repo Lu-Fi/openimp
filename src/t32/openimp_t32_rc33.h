@@ -190,6 +190,20 @@ enum {
 #define T65_PSIZE 0x378u
 #define T65_RC_STATS 38         /* engine statistics after each picture (vendor read list) */
 
+#ifdef PLATFORM_T33
+#define T65_SET_BITRATE  0x40000u       /* P+0x60 <- target (CBR) / max (VBR, SMART) kbit/s (+0x1b8 / +0x1bc) */
+#define T65_SET_QPBOUND  0x80000u       /* P+0xac / +0xb4 <- max / min QP (+0x1c0 / +0x1c4) */
+#define T65_SET_IQPBOUND 0x100000u      /* P+0xb0 / +0xb8 <- max / min I QP; FIXQP: P+0x4c / +0x50 <- max I / max P */
+#define T65_SET_PICSIZE  0x200000u      /* P+0xdc / +0xe0 <- max I / P picture size (+0x1d8 / +0x1dc) */
+typedef struct {
+    uint32_t flags;
+    uint32_t kbps, kbps_max;
+    uint32_t max_qp, min_qp;
+    uint32_t max_iqp, min_iqp, max_pqp, min_pqp;
+    uint32_t pic_i, pic_p;
+} T65Pending;
+#endif
+
 typedef struct {
     E33 X;
     uint8_t *mem;               /* region 0: handle (parameters, rate control), picture, lists, maps, buffers */
@@ -198,7 +212,24 @@ typedef struct {
     uint32_t n;                 /* pictures since init */
     int qp;                     /* QP of the last rcStart */
     int type;                   /* picture type the controller chose at the last rcStart (2 I) */
+#ifdef PLATFORM_T33
+    T65Pending pend;            /* run-time changes for the next IDR (#718) */
+#endif
 } T32Rc65;
+
+#ifdef PLATFORM_T33
+/* Run-time rate-control setters of the T33 H.265 channel (vendor 2.0.2.1
+ * IMP_Encoder_SetChnBitRate / _SetChnQpBounds / _SetChnQpBoundsPerFrame /
+ * _SetChnMaxPictureSize -> i265e_set_param 0x12..0x15 ->
+ * I265eReconfig::setBitrate 0x8a9f0 / setQpbound / setPerQpbound /
+ * setMaxPicSize (flags of the reconfig word +0x1c), taken at the next IDR by
+ * ReconfigIdrFrame 0x88628, which copies them into the parameter block and,
+ * these four needing no rcInit, runs reset_without_rcinit (I265e_configure);
+ * the IDR's rcStart then loads the new limits (F+0x22ed, set at every IDR by
+ * decTypeAndRef).  @id: the T32 IMP setter id 0x11..0x14, @a its words;
+ * 0, -1 for an unknown id. */
+int t32_rc65_set_param(T32Rc65 *c, unsigned id, const uint32_t *a);
+#endif
 
 /* Arena, i265e_param_default and the words channel_i265e_encoder_init sets
  * for every channel (@width x @height the attribute's picture size); the

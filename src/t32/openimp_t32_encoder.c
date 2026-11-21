@@ -700,15 +700,24 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         uint32_t mask, args[4][4];
         unsigned k;
 
-        /* run-time setters (H.264): to the controller, which takes them at the next IDR */
+        /* run-time setters (H.264; T33 H.265 too, #718): to the controller, which takes them at the next IDR */
         pthread_mutex_lock(&enc_lock);
         mask = a->set_mask;
         memcpy(args, a->set_args, sizeof(args));
         a->set_mask = 0;
         pthread_mutex_unlock(&enc_lock);
         for (k = 0; k < 4; k++)
-            if (mask & 1u << k)
+            if (mask & 1u << k) {
+#ifdef PLATFORM_T33
+                if (t32_rc_set_param(&a->rc, 0x11u + k, args[k]) != 0 && e->hevc) {
+                    pthread_mutex_lock(&enc_lock);
+                    a->rc_restart = 1;  /* H.265 without a controller */
+                    pthread_mutex_unlock(&enc_lock);
+                }
+#else
                 (void)t32_rc_set_param(&a->rc, 0x11u + k, args[k]);
+#endif
+            }
     }
     if (idr) {
         IMPEncoderAttrRcMode m;
@@ -2063,12 +2072,20 @@ static int rc_setter(int encChn, unsigned id, const uint32_t a[4], int fixqp_ok)
         }
         break;
     }
+#ifdef PLATFORM_T33
+    /* H.265 too: to the controller, which takes them at the next IDR
+     * (vendor 2.0.2.1 I265eReconfig, #718); without one (FIXQP) the
+     * picture loop starts the rate control again */
+    memcpy(e->avc.set_args[id - 0x11], a, sizeof(e->avc.set_args[0]));
+    e->avc.set_mask |= 1u << (id - 0x11);
+#else
     if (e->hevc) {
         e->avc.rc_restart = 1;
     } else {
         memcpy(e->avc.set_args[id - 0x11], a, sizeof(e->avc.set_args[0]));
         e->avc.set_mask |= 1u << (id - 0x11);
     }
+#endif
     pthread_mutex_unlock(&enc_lock);
     return 0;
 }
