@@ -77,6 +77,7 @@
 #include "t32/openimp_t33_hera.h"
 #include "t32/openimp_t33_hera_h265.h"
 int OpenIMP_T32_EncTakeRdBufShareOff(int encChn);    /* openimp_t32_fs_enc_ext.c: SetRdBufShare(0) */
+int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c: SetJpegMultiSectionMode */
 #endif
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
@@ -1523,6 +1524,43 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     return 0;
 }
 
+#ifdef PLATFORM_T33
+/*
+ * Vendor 2.0.2.1 CreateChn (#740): the channel's stream buffer size (channel table word +0xc, what Query's
+ * leftStreamBytes counts down from).  No encAttr.bufSize: w x h x 3 x 0.5 + 8192 + 128 for every type.  An
+ * H.264 / H.265 bufSize is raised to (w x h x 3 x 0.5 / f) x 0.5 + 8320, at least 0x4100, f = 2.0 up to
+ * 1920x1088 (H.264, RdBufShare on) or 800x600 (H.264 RdBufShare off, H.265), else 2.5 / 3.0.  JPEG: capped at
+ * the JPEG limit (SetJpegBsSize, default 512000) only with the multi-section mode off (system_get_cpu_type()
+ * 1 and data byte +0x2ff0 0; the byte is 1 until SetJpegMultiSectionMode(0)).  Rounded up to 4 bytes; the
+ * double arithmetic is the vendor's (trunc toward zero).
+ */
+static uint32_t t33_bs_size(const IMPEncoderCHNAttr *a, int share)
+{
+    uint32_t w = a->encAttr.picWidth, h = a->encAttr.picHeight, size = a->encAttr.bufSize;
+    uint32_t cap = enc_jpeg_bs_size ? enc_jpeg_bs_size : T32_JPEG_BS_1080P;
+    double area = (double)w * (double)h * 3.0 * 0.5;
+    int jpeg = a->encAttr.enType == PT_JPEG, jcap = jpeg && !OpenIMP_T32_EncJpegMultiSection();
+
+    if (!size) {
+        size = (uint32_t)(area + 8192.0 + 128.0);
+        if (jcap && size > cap)
+            size = cap;
+    } else if (jpeg) {
+        if (jcap && size > cap)
+            size = cap;
+    } else {
+        double f = a->encAttr.enType == PT_H264 && share ? (w < 1921u && h < 1089u ? 2.0 : 2.5) :
+                   (w < 801u && h < 601u ? 2.0 : 3.0);
+        int min = (int)(area / f * 0.5 + 8192.0 + 128.0);
+
+        if (min < 0x4100)
+            min = 0x4100;
+        if (size < (uint32_t)min)
+            size = (uint32_t)min;
+    }
+    return (size + 3u) & ~3u;
+}
+#else
 static uint32_t jpeg_bs_size(const IMPEncoderCHNAttr *a)
 {
     uint64_t area = (uint64_t)a->encAttr.picWidth * a->encAttr.picHeight, size;
@@ -1544,6 +1582,7 @@ static uint32_t h264_bs_size(const IMPEncoderCHNAttr *a)
     size = (size + 4095u) & ~4095u;
     return size < 262144u ? 262144u : size;
 }
+#endif
 
 /* the HERA section buffer: per channel; on the T33 the engine's shared one (#391) */
 static int ebs_alloc(struct t32_enc_chn *e)
@@ -1807,7 +1846,9 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 #else
     e->max_streams = T32_ENC_DEF_STREAMS;
 #endif
+#ifndef PLATFORM_T33
     e->bs_size = e->h264 ? h264_bs_size(attr) : jpeg_bs_size(attr);
+#endif
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
     chn_info(encChn, e, &ci);
@@ -1823,6 +1864,8 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
         OpenIMP_T32_VpuBufAlloc(&e->job, T32_JPEG_JOB_BYTES, "t32_jpeg_job") != 0)
         goto fail_bufs;
 #ifdef PLATFORM_T33
+    /* after h264_setup: it took the SetRdBufShare switch (#736) */
+    e->bs_size = t33_bs_size(attr, !(e->h264 && e->avc.noshare));
     /* JPEG out through 2 x 250 KiB sections, as the vendor (jpegBs, #391) */
     e->avc.section_kb = T32_HERA_SECTION_KB;
     if (!e->h264 && t33_bs_get(e) != 0)

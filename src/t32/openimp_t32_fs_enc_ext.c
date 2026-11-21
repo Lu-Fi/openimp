@@ -225,7 +225,7 @@ static struct {
 static struct {
     uint32_t ivpu_bs_size;
     int ms_on, ms_size, ms_cnt;          /* SetMultiSectionMode */
-    int jms_on, jms_size;                /* SetJpegMultiSectionMode */
+    int jms_on, jms_size, jms_set;       /* SetJpegMultiSectionMode */
     int qpg_ai_yuv, mq_yuv, mq_yuv_mode;
 } enc_glob;
 
@@ -397,8 +397,20 @@ int IMP_Encoder_SetJpegMultiSectionMode(int mode, int size, int cnt)
     pthread_mutex_lock(&ext_lock);
     enc_glob.jms_on = mode != 0;
     enc_glob.jms_size = size;
+    enc_glob.jms_set = 1;
     pthread_mutex_unlock(&ext_lock);
     return 0;
+}
+
+/* vendor 2.0.2.1 (T33, cpu type 1): the multi-section byte (data +0x2ff0) is 1 until SetJpegMultiSectionMode (#740) */
+int OpenIMP_T32_EncJpegMultiSection(void)
+{
+    int on;
+
+    pthread_mutex_lock(&ext_lock);
+    on = enc_glob.jms_set ? enc_glob.jms_on : 1;
+    pthread_mutex_unlock(&ext_lock);
+    return on;
 }
 
 /* the YUV (unbound) encoder flags: void / 0, stored only */
