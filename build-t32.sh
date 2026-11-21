@@ -169,6 +169,15 @@ then
     exit 1
 fi
 
+# timps identifies OpenIMP by OpenIMP_P0_GetState (src/hal/libimp_check.h); without
+# it an OpenIMP-flavour timpsd refuses this libimp (exit 78, #545).
+if ! "${TOOLCHAIN_PREFIX}-nm" -D --defined-only "$output_dir/libimp.so" |
+    awk '{print $3}' | grep -qx OpenIMP_P0_GetState
+then
+    echo "build has no OpenIMP_P0_GetState export (timps marker, #545)" >&2
+    exit 1
+fi
+
 echo "T32 skeleton: $(readelf --dyn-syms --wide "$output_dir/libimp.so" |
     awk '$7 != "UND" && $5 == "GLOBAL" && $8 ~ /^IMP_/' | wc -l) IMP_ exports"
 sha256sum "$output_dir/libimp.so" "$output_dir/libimp.a"

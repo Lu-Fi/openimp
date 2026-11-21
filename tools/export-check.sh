@@ -5,6 +5,10 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 ec=$here/tools/export-check
 NM=${NM:-nm}
 SOCS=${SOCS:-"T10 T20 T21 T23 T30 T31 T40 T41"}
+# timps (src/hal/libimp_check.h) treats a libimp as OpenIMP when ANY of these is
+# exported; OpenIMP_P0_GetState is the one every SoC build exports (#545), so a
+# build without it makes an OpenIMP-flavour timpsd refuse to start (exit 78).
+OPENIMP_MARKER=${OPENIMP_MARKER:-OpenIMP_P0_GetState}
 STREAMER_DIRS=${STREAMER_DIRS:-}
 BUILD=${BUILD:-$here/build}
 if [ -z "$STREAMER_DIRS" ]; then
@@ -28,6 +32,9 @@ for soc in $SOCS; do
     echo "$soc: no $lib (build it first)"; [ -n "${EXPORT_CHECK_STRICT:-}" ] && rc=1; continue
   fi
   $NM -D --defined-only "$lib" 2>/dev/null | awk '$2 ~ /^[TWDBR]$/ && $3 ~ /^IMP_/ {print $3}' | sort -u > "$tmp/open"
+  if ! $NM -D --defined-only "$lib" 2>/dev/null | awk '{print $3}' | grep -qx "$OPENIMP_MARKER"; then
+    echo "  FAIL $soc: $OPENIMP_MARKER not exported (timps identity marker, #545)"; rc=1
+  fi
   sed 's/[[:space:]].*//' "$vend" | grep '^IMP_' | sort -u > "$tmp/vend"
   ign=$ec/streamer-ignore-$soc.txt
   { [ -f "$ign" ] && sed 's/#.*//; s/[[:space:]]//g' "$ign" | grep -v '^$' || true; } | sort -u > "$tmp/ign"

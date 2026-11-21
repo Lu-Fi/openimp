@@ -24,3 +24,11 @@ Planned SoCs (T32, T33; not in the default `SOCS`, not a release gate): `SOCS="T
 after `build-t32.sh` / `build-t33.sh`. State 2026-11-12: T32 372 of 556 vendor names exported, T33 374 of 575 (`vendor-T33.txt` = T33
 2.0.2.1 libimp); both miss the same 8 streamer-used names (`IMP_Encoder_SetChnBitRate`, `SetChnQpBounds`, `SetChnROI`,
 `SetFisheyeEnableStatus`, `SetMbRC`, `IMP_FrameSource_Get/SetChnFifoAttr`, `SetI2dAttr`), the T32 encoder / FrameSource gaps (#391).
+State 2026-11-21: T32 535 of 556, T33 519 of 575, 0 streamer-used names missing (timps sources).
+
+OpenIMP identity marker (#545): timps (`src/hal/libimp_check.h`) treats a libimp as OpenIMP when it exports any of `OpenIMP_P0_GetState`,
+`OpenIMP_AVC_Create`, `OpenIMP_Tuning_Create`; otherwise an OpenIMP-flavour timpsd refuses to start (exit 78). The script fails every SoC
+whose `libimp.so` does not export `OpenIMP_P0_GetState` (`OPENIMP_MARKER=` overrides the name); `build-t32.sh` / `build-t33.sh` check the
+same at link time. T32/T33 export only `OpenIMP_P0_GetState` of the three on purpose: `OpenIMP_AVC_Create` is the AVPU / Helix-T40 codec
+path (`src/t40/openimp_avc.c`, `/dev/avpu` or the T2x/T30 dmabuf device) and `OpenIMP_Tuning_Create` the T40 ISP-device controller
+(`src/openimp_tuning.c`, `/dev/isp-m0`); neither device exists on the HERA-based T32/T33, so exporting them would be stubs that always fail.
