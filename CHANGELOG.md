@@ -25,6 +25,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Evidence (QEMU T32, open-tx-isp claude/751-t32-online-ldc): parameter-file and IQ-bin runs, the module's LDC and WDMA / RDMA writes equal the vendor flow (541 lines each), 10 / 10 frames. Vendor libimp 2.2.0 run not possible in QEMU (stock PRJ007 module oopses at load). No T32 camera.
 ## 2026-11-21: apitest face AE proves the metered window at night too (T33, #685)
 - `cs_faceae`: when the AE is at its exposure limit (open module node: AE mean below 3/4 of its target) the low target is 10 (driver clamp 10..200) instead of 40, and the case PASSes when that target darkens the picture (target 180 cannot brighten at the limit). `APITEST_FACE_LO` overrides the low target (for the vendor module, whose node the test cannot read).
+- Beyond vendor (user OK 2026-11-21): vendor 2.0.2.1 face AE has no effect at night (Y 57.3 both), open follows the window (36.5 vs 69.3); docs/OPENIMP_BEYOND_VENDOR.md 6.14.
 - T33L night run (open ko + OpenIMP 9c8126ff): target 10 -> Y 36.5, target 180 -> Y 69.0, base 69.3 (AE node mean 34 / target 56): the face window is metered. Before, the night result was SKIP ("repeat in daylight").
 
 ## 2026-11-21: T32/T33 polling and encoder threads keep normal priority, vendor SCHED_RR not ported (#747, beyond vendor)
