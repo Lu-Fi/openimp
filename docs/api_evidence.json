@@ -14239,7 +14239,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14285,7 +14285,7 @@
         "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no microphone and no speaker (user 2026-11-20), so the echo reduction itself is not verifiable; #712 (OpenIMP next a93260a4): apitest audio 2026-11-21 .122 (audit/t33-func-1120c o712b, LD_PRELOAD /dev/dsp trace) with the AEC reference path of vendor 2.0.2.1: own AI (O_RDONLY) / AO (O_WRONLY) fds, ioctl sequence and arguments equal to the vendor run, EnableAec 0, GetFrameAndRef frame 1280 / reference 1280 bytes, EnableAecRefFrame -1 with the AEC on (as the vendor), DisableAecRefFrame / DisableAec 0"
       }
     },
     "AI_DisableAecRefFrame": {
@@ -14298,7 +14298,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14345,7 +14345,7 @@
         "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no microphone and no speaker (user 2026-11-20), so the echo reduction itself is not verifiable; #712 (OpenIMP next a93260a4): apitest audio 2026-11-21 .122 (audit/t33-func-1120c o712b, LD_PRELOAD /dev/dsp trace) with the AEC reference path of vendor 2.0.2.1: own AI (O_RDONLY) / AO (O_WRONLY) fds, ioctl sequence and arguments equal to the vendor run, EnableAec 0, GetFrameAndRef frame 1280 / reference 1280 bytes, EnableAecRefFrame -1 with the AEC on (as the vendor), DisableAecRefFrame / DisableAec 0"
       }
     },
     "AI_DisableAgc": {
@@ -14824,7 +14824,7 @@
         "T30": "rt",
         "T31": "dev",
         "T32": "?",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14864,7 +14864,7 @@
         "T40": "apitest rc3-cases/T40-audio 2026-10-27 .184 (API round trip, no visible effect expected; muted, volume at the minimum, zero-filled PCM only; the audible effect and the echo cancellation are not tested by the no-sound rule)",
         "T41": "apitest rc3-cases 2026-10-27 .34 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T33": "apitest t33-1118 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no microphone and no speaker (user 2026-11-20), so the echo reduction itself is not verifiable; #712 (OpenIMP next a93260a4): apitest audio 2026-11-21 .122 (audit/t33-func-1120c o712b, LD_PRELOAD /dev/dsp trace) with the AEC reference path of vendor 2.0.2.1: own AI (O_RDONLY) / AO (O_WRONLY) fds, ioctl sequence and arguments equal to the vendor run, EnableAec 0, GetFrameAndRef frame 1280 / reference 1280 bytes, EnableAecRefFrame -1 with the AEC on (as the vendor), DisableAecRefFrame / DisableAec 0"
       }
     },
     "AI_EnableAecRefFrame": {
@@ -14877,7 +14877,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "?",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -14923,7 +14923,7 @@
         "T31": "apitest rc3-cases 2026-10-27 .26 (API round trip, no visible effect expected)",
         "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T33": "apitest t33-1118 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no microphone and no speaker (user 2026-11-20), so the echo reduction itself is not verifiable; #712 (OpenIMP next a93260a4): apitest audio 2026-11-21 .122 (audit/t33-func-1120c o712b, LD_PRELOAD /dev/dsp trace) with the AEC reference path of vendor 2.0.2.1: own AI (O_RDONLY) / AO (O_WRONLY) fds, ioctl sequence and arguments equal to the vendor run, EnableAec 0, GetFrameAndRef frame 1280 / reference 1280 bytes, EnableAecRefFrame -1 with the AEC on (as the vendor), DisableAecRefFrame / DisableAec 0"
       }
     },
     "AI_EnableAgc": {
@@ -15793,7 +15793,7 @@
         "T30": "rt",
         "T31": "rt",
         "T32": "qemu",
-        "T33": "rt",
+        "T33": "nohw",
         "T40": "rt",
         "T41": "rt"
       },
@@ -15840,7 +15840,7 @@
         "T23": "apitest rc3-cases 2026-10-27 .30 (API round trip, no visible effect expected)",
         "T30": "apitest t30b27 2026-11-05 .231 (API round trip, no visible effect expected)",
         "T32": "apitest t32-297 2026-11-11 QEMU (no camera)",
-        "T33": "apitest t33-silent-ao 2026-11-17 .122 (API round trip, no visible effect expected)"
+        "T33": "nohw: T33L .122 has no microphone and no speaker (user 2026-11-20), so the echo reduction itself is not verifiable; #712 (OpenIMP next a93260a4): apitest audio 2026-11-21 .122 (audit/t33-func-1120c o712b, LD_PRELOAD /dev/dsp trace) with the AEC reference path of vendor 2.0.2.1: own AI (O_RDONLY) / AO (O_WRONLY) fds, ioctl sequence and arguments equal to the vendor run, EnableAec 0, GetFrameAndRef frame 1280 / reference 1280 bytes, EnableAecRefFrame -1 with the AEC on (as the vendor), DisableAecRefFrame / DisableAec 0"
       }
     },
     "AI_PollingFrame": {

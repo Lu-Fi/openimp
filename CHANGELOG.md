@@ -23,6 +23,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - **QEMU (vendor 2.0.2.1 vs OpenIMP, H.265 CBR 1920x1080, MaxPictureSize 31 kbit at picture 10):** I list 608 pairs, P 643 on both stacks (before: 591 / 626); pictures 0-5 have equal lists apart from buffer addresses, all rate-control registers and the 17 unit targets are equal on pictures 0-9 and after the change; the picture QPs follow the vendor (45, 42, 39 .. 26; before: 45 then 15 on every P picture).
 - **Device (T33L .122, apitest enc):** H.265 SetChnMaxPictureSize PASS: limit 7375 B, biggest picture 7911 B (before 14953 B / 15206 B for 7125 B). H.264 unchanged (3474 B for 4125 B).
 - **Open:** the 0x40500 run (the controller's motion-level QP table) stays 0 from picture 6 on, where the vendor's level drops to 5 / 4; a run-time setter restarts the H.265 controller (IDR QP 45, the vendor keeps its state: 23); the IDR after a setter comes one picture earlier than on the vendor (as H.264). Tracked as #719 (QP table) and #718 (setters); the T32 H.265 list has the same gap on revision 6 (#720).
+## 2026-11-21: matrix: T33 AEC cells rt -> nohw after #712 (no microphone / speaker on the T33L)
+
+- `IMP_AI_EnableAec`, `DisableAec`, `EnableAecRefFrame`, `DisableAecRefFrame` and `GetFrameAndRef` on T33: rt -> nohw. The AEC reference path of #712 (in next) runs on the T33L .122 with the /dev/dsp ioctl sequence and arguments of vendor 2.0.2.1 (LD_PRELOAD trace, apitest audio o712b); the echo reduction itself cannot be measured on a board without microphone and speaker. Feature 33 (AEC) T33 stays 🔧 (no ERLE comparison).
 
 ## 2026-11-21: T32/T33 AEC reference frames, AEC and AI/AO device fds like the vendor (#712)
 
