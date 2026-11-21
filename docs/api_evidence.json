@@ -11350,7 +11350,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11358,9 +11358,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "ISP_Tuning_SetOsdPoolSize": {
       "area": "OSD",
@@ -11676,7 +11677,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11684,9 +11685,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_DestroyGroup": {
       "area": "OSD",
@@ -11858,7 +11860,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -11866,9 +11868,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_Exit_ISP": {
       "area": "OSD",
@@ -11880,16 +11883,17 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34 .32",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
-        "T40": "apitest t40pass 2026-11-04 .184"
+        "T40": "apitest t40pass 2026-11-04 .184",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Exit after the ISP-OSD regions were destroyed (new report line in the isposdapi case), frames still flow. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Exit after the ISP-OSD regions were destroyed, frames flow. T32 (2026-11-11 #300 follow-up): implemented in src/t32/openimp_t32_isp_osd.c (#336) and called by the ISP exit path in every QEMU run; no direct API call in a sample."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Exit after the ISP-OSD regions were destroyed (new report line in the isposdapi case), frames still flow. | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Exit after the ISP-OSD regions were destroyed, frames flow. T32 (2026-11-11 #300 follow-up): implemented in src/t32/openimp_t32_isp_osd.c (#336) and called by the ISP exit path in every QEMU run; no direct API call in a sample. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_Get/SetGrpRgnAttr": {
       "area": "OSD",
@@ -12106,7 +12110,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12114,9 +12118,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_RegisterRgn": {
       "area": "OSD",
@@ -12378,16 +12383,17 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera.",
+      "note": "T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T23: ISP OSD pictures from the pool (claude/t23t31-cacheonly, not in agg-25) T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\".",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       }
     },
     "OSD_SetRgnAttrWithTimestamp": {
@@ -12460,7 +12466,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12468,9 +12474,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T23 2026-11-04 (T23 cameras; new check in apitest case isppicupd_t23, QEMU T23 first): a white 128x64 ISP picture at (256,128) is shown: luma 137.5 -> 234.0 on the camera without ISP flip. Finding: on the camera whose ISP mirrors both axes (module parameter msca_flip_state = 12) the same call puts the picture at the mirrored position (1536,888 of 1920x1080; luma 95.2 -> 234.0 there, unchanged at the requested place), while the draw and mask blocks follow the requested coordinates; whether the stock T23 behaves like that is not known (no stock-stack T23 camera), the apitest measures at the flipped place when the flip bits are set. Issue #207. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T23 2026-11-04 (T23 cameras; new check in apitest case isppicupd_t23, QEMU T23 first): a white 128x64 ISP picture at (256,128) is shown: luma 137.5 -> 234.0 on the camera without ISP flip. Finding: on the camera whose ISP mirrors both axes (module parameter msca_flip_state = 12) the same call puts the picture at the mirrored position (1536,888 of 1920x1080; luma 95.2 -> 234.0 there, unchanged at the requested place), while the draw and mask blocks follow the requested coordinates; whether the stock T23 behaves like that is not known (no stock-stack T23 camera), the apitest measures at the flipped place when the flip bits are set. Issue #207. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_ShowRgn": {
       "area": "OSD",
@@ -12562,7 +12569,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -12570,9 +12577,10 @@
         "T41": "apitest t41pass 2026-11-04 .34",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest agg62 2026-10-31 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_Start": {
       "area": "OSD",
@@ -17632,7 +17640,7 @@
         "T30": "nohw",
         "T31": "rt",
         "T32": "aud",
-        "T33": "?",
+        "T33": "rt",
         "T40": "rt",
         "T41": "rt"
       },
@@ -17660,9 +17668,10 @@
         "T31": "apitest dmic 2026-10-27 .26 + QEMU T31: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
         "T40": "apitest dmic 2026-10-27 .184 + QEMU T40: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
         "T41": "apitest dmic 2026-10-27 .34 + QEMU T41: API round trip (argument validation, Set/Get, not-enabled paths), no DMIC hardware on the test board",
-        "T30": "2026-11-05, user decision (RC3 gate): counted as done but NOT verified on hardware: the T30X lab board has no DMIC node (b27/b28 probe: only /dev/dsp with the vendor audio module); code path audited only. To be verified when a T30 camera with a digital microphone is available."
+        "T30": "2026-11-05, user decision (RC3 gate): counted as done but NOT verified on hardware: the T30X lab board has no DMIC node (b27/b28 probe: only /dev/dsp with the vendor audio module); code path audited only. To be verified when a T30 camera with a digital microphone is available.",
+        "T33": "apitest dmic 2026-11-21 QEMU -M ingenic-t33 (#754)"
       },
-      "note": "vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board T32 (2026-11-11 #300 follow-up): run-oi-dmicx (#329/#330) drives 22 of the 28 vendor DMIC names (Enable/Disable/Chn/PubAttr/Agc/Ns/Hpf/Gain/Vol/GetFrame) against the vendor audio.ko with dmic_enable=1; EnableAec/DisableAec/AecRefFrame/GetChnParam/GetFrameAndRef/GetPubAttr not called. | T33 (2026-11-13, #481): not provable in the T33 QEMU guest: with the vendor audio.ko H20250929a (no dmic_enable parameter) the vendor 2.0.2.1 DMIC_Enable/EnableChn return -1 and delivers no frame in dmicx (runs d1-vend, hung until the timeout); OpenIMP answers the same -1; cell stays ?, needs a T33 board or a DMIC model for that kernel."
+      "note": "vendor dmic.c rebuilt (T31 oss2 and T40/T41 OSS3 ioctls); T40/T41 refuse Enable when the audio module has dmic_enable=0 (the driver would oops, seen in QEMU); stream path (Enable..GetFrame, gain, AEC) is not run without a DMIC board T32 (2026-11-11 #300 follow-up): run-oi-dmicx (#329/#330) drives 22 of the 28 vendor DMIC names (Enable/Disable/Chn/PubAttr/Agc/Ns/Hpf/Gain/Vol/GetFrame) against the vendor audio.ko with dmic_enable=1; EnableAec/DisableAec/AecRefFrame/GetChnParam/GetFrameAndRef/GetPubAttr not called. | T33 (2026-11-13, #481): not provable in the T33 QEMU guest: with the vendor audio.ko H20250929a (no dmic_enable parameter) the vendor 2.0.2.1 DMIC_Enable/EnableChn return -1 and delivers no frame in dmicx (runs d1-vend, hung until the timeout); OpenIMP answers the same -1; cell stays ?, needs a T33 board or a DMIC model for that kernel. T33 (2026-11-21, #754): OpenIMP round trip without a DMIC board passes (SetPubAttr..Disable, 19 names); the vendor 2.0.2.1 library segfaults in QEMU after SetUserInfo, so there is no vendor reference: rt, not qemu."
     },
     "DMIC_DisableAecRefFrame": {
       "area": "Audio",
@@ -22447,7 +22456,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "?",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
@@ -22456,9 +22465,10 @@
         "T41": "apitest t41pass 2026-11-04 .34 .32",
         "T23": "apitest isposd 2026-10-27 .30 (open-tx-isp 8cb942a7, #127): luma 111.3 -> 234.0, hide 111.2, destroy, frames flow; stock agg47 ko draws nothing",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T32": "QEMU #336 2026-11-11"
+        "T32": "QEMU #336 2026-11-11",
+        "T33": "apitest isposd,isposdapi 2026-11-21 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 library on the vendor module vs OpenIMP on open-tx-isp next 91ba82936 (audit/issue754 vend3 / open4)"
       },
-      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed."
+      "note": "T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested: Init twice returns 0 (isposdapi case, regions created and destroyed afterwards, frames flow). | T41 pass 2026-11-04 (Cinnado .34 and Vanhua .32, OpenIMP libimp of next loaded from /tmp, apitest): case isposdapi: Init twice returns 0, regions created and destroyed afterwards, frames flow. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (2026-11-17, #99 round 13): QEMU ours vs vendor 2.0.2.1 differ: IMP_OSD_SetPoolSize_ISP before IMP_OSD_Init_ISP is not applied (the pool stays the 1-byte default made by IMP_System_Init, picture regions fail \"no pool space\", #679) and frames stop after IMP_OSD_Exit_ISP (#680); the cases isposd / isposdapi are not run on the module until both are fixed. T33 (2026-11-21, #754): 42 [A] lines of the two runs equal (return codes, stored attributes, GetOSDBlock geometry) except the region luma of the frame-less IVDC direct channel (-1 vs 0, QEMU cannot judge the picture). Fixed: IMP_OSD_Init_ISP takes 4 regions per channel on the T33 (vendor 0x179c14, system_get_cpu_type 1), OpenIMP had 8; both runs now \"channel 1 takes 4 regions\"."
     },
     "OSD_UpdateRgnAttrData_ISP": {
       "area": "OSD",
@@ -22479,7 +22489,7 @@
         "T23": "apitest t23pass 2026-11-04 .30",
         "T32": "QEMU #336 2026-11-11"
       },
-      "note": "T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched): device PASS on both cameras: a white 128x64 picture region shown through IMP_OSD_*_ISP raises the luma at its place (122.1 -> 234.0), UpdateRgnAttrData with black bytes of the same size takes it back (122.0), another size and NULL are refused (-1, -1). The agg62 FAIL (luma 115.0 -> 115.0) did not reproduce with the agg67 driver (ISP picture commits counted in the module parameter osd_commits); on the camera with the ISP flip on (both axes) the picture sits at the mirrored position, see SetRgnAttr_PicISP. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera."
+      "note": "T23 2026-11-04 (T23 cameras; OpenIMP T23 build of next loaded from /tmp, installed library, modules and flash untouched): device PASS on both cameras: a white 128x64 picture region shown through IMP_OSD_*_ISP raises the luma at its place (122.1 -> 234.0), UpdateRgnAttrData with black bytes of the same size takes it back (122.0), another size and NULL are refused (-1, -1). The agg62 FAIL (luma 115.0 -> 115.0) did not reproduce with the agg67 driver (ISP picture commits counted in the module parameter osd_commits); on the camera with the ISP flip on (both axes) the picture sits at the mirrored position, see SetRgnAttr_PicISP. T32 (2026-11-11 matrix-x): QEMU #336: 20/20 requests identical to vendor 2.2.0 with open-tx-isp claude/t32-ispOSD, final OSD registers identical; no T32 camera. T33 (#754): not exercised by the isposdapi case, stays aud."
     },
     "Phys_to_Virt": {
       "area": "System",

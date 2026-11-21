@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T33 ISP OSD takes 4 regions per channel like vendor 2.0.2.1 (#754)
+
+QEMU T33, vendor library vs OpenIMP through the same apitest (`isposd`, `isposdapi`): everything equal except the region count: vendor `IMP_OSD_Init_ISP` (0x179c14) takes 4 per channel for CPU type 1 (T33), OpenIMP had 8. Fixed; apitest prints `channel 1 takes N regions`. ISP-OSD matrix cells T33 `qemu`, `DMIC_*` `rt` (the vendor library crashes in QEMU on the DMIC calls).
+
 ## 2026-11-21: API evidence cells refreshed from the closed T32/T33 issues (#753)
 
 `docs/api_evidence.json` and the generated matrix: T33 `Encoder_SetChnMaxPictureSize` err -> dev (#706/#714), T33 `Encoder_Get/SetChnROI` cache -> dev and T32 -> qemu (#726/#734), T33 `Encoder_SetRdBufShare` cache -> dev (#736), T32 `ISP_Tuning_SetAutoZoom` host -> qemu (#721). Only rows whose closing comment names device, QEMU or oracle evidence.
