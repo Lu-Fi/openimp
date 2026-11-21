@@ -172,8 +172,8 @@ features:
       issues:
       - 296
     T33:
-      sym: 🔧
-      text: 'in development (T33, not a release gate): OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      sym: ✅
+      text: '2026-11-21 (#739, T33L module .122, image claude/t33-thingino e684bc2 with S10isp-guard via the local fragment): guard trips on a reset before 300 s (planned sysrq-b: next boot skips the ISP stack, /etc/isp-guard/tripped), `S10isp-guard clear; load` brings the picture back, a boot that stays up 300 s with timps clears the pending mark, planned reboots (rcK stop) never trip. Lab note: the vendor cv2005 sensor module (S12sensor-vendor) is not in the guard''s load path.'
     T40:
       sym: ✅
       text: '2026-10-25 (RC2): the boot guard (`S10isp-guard`, optional package in upstream thingino `aperto`, default off) is SoC-independent shell logic; checked by a dry run (user decision 2026-10-25); no T40 boot loop occurred in any test run. Earlier: not documented'
@@ -1732,8 +1732,8 @@ features:
       issues:
       - 300
     T33:
-      sym: 📋
-      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      sym: ✅
+      text: '2026-11-21 (#736): default = vendor 2.0.2.1 (BUF_SHARE set, the compressed shared area; QEMU lists equal). `IMP_Encoder_SetRdBufShare(0)` before CreateChn now switches to two whole reconstruction pictures like the vendor: QEMU -M ingenic-t33 1280x720 H.264 and H.265 lists equal to the vendor in every non-address word (BUF_SHARE off, area registers 0, 0x30004 / 0x301c0 / 0x30048 / 0x10188 as the vendor). T33L .122: 1080p H.264 / H.265 with share on and off decode clean with the same picture (SSIM 0.97..0.99 per frame index). Branch claude/t33-rdbufshare-736.'
     T40:
       sym: —
       text: '2026-10-24: the vendor T40 libimp 1.3.1 (disassembled) has no reference-frame sharing either (AVPU keeps its own reference buffers), so not applicable. The default stream count 2 per channel is in the unmerged branch `claude/t4x-bufshare` (T40 and T41). Earlier (history): not documented'
@@ -1769,8 +1769,8 @@ features:
       issues:
       - 300
     T33:
-      sym: 📋
-      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      sym: ✅+
+      text: '2026-11-21 (#737, T33L .122, timps default overlays): timpsd 1.2 % of the core without OSD (vendor streamer 3.34 % with OSD off on the 2026-11-17 bench A/B; the vendor OSD thread crashes with timps OSD, so no vendor figure with OSD), 8.3 % with the timps OSD after #737 (15.6 % before). The software OSD draw of the timps stream-0 regions: vendor 2.0.2.1 `osd_draw_pic` 3.92 ms/frame, OpenIMP 1.39 ms, pixel-equal (frame CRC equal, 2000-case oracle). Branch claude/t33-osd-cpu-737.'
     T40:
       sym: ✅
       text: '2026-11-07 (#84 fair pass, Eufy T40 camera, same streamer build on both stacks): streamer process CPU 0.34 % open vs 2.26 % vendor. Earlier: 2026-10-31 (Eufy T40, #133 and #149 closed): the open stack is vendor-like on CPU. ISP busy 1.6 % against 1.4 % for the vendor (#133); encoder load of the same encload binary 0.71 % against 0.77 / 0.84 % for the vendor (#149); the blocking DQBUF option `t40_dqbuf_wait_ms` stays at its default 0 because it is not needed. Earlier: 2026-10-30 (Eufy T40, same encload binary on both stacks, H.264 1080p20 CBR 2 Mbit/s GOP 40, frames dropped, 60 s, 20.0 fps): encload user process open 0.90 % (day) / 0.93 % (night) vs vendor 0.77 / 0.84 %, after the 1 ms polling loop of the T40 frame wait was removed (frame_source_wait 34 -> 1 per frame, encoder_poll 2269 -> 615 us/frame; it was 2.67 / 2.72 % before, #149); ISP kernel threads 2.2-3.0 % open vs 3.55-3.57 % vendor; idle encoder (no stream): open 0.6 % vs vendor 1.4 % busy. Open: blocking DQBUF in open-tx-isp for full parity (#149 part 2), same polling path on T31/T41 not checked. Earlier: 2026-10-27: #81: the ISP event thread sleeps until an event is queued (about 20 wake-ups per second instead of a 1 ms poll; QEMU 50 -> 1, state D -> S), the load average is no longer pinned at 1. The per-frame cost of the translated vendor AWB in that thread (about 30 ms CPU per frame, 60 % of one core at 20 fps) is only partly fixed: #133 (C ct_detect, merged) brings it from about 35 to about 27 ms CPU per frame in day mode on the Eufy, still far above the vendor (the per-frame vendor AWB/ADR chain); ⚠️ until it is vendor-like. Earlier: timpsd about 5.4-6.2 % of one core with a ch1 client on the Eufy (open driver, motion off/on, 2026-10-18); vendor comparison not measured'
@@ -2034,8 +2034,8 @@ features:
       issues:
       - 300
     T33:
-      sym: 📋
-      text: 'in development (T33, not a release gate), this function is not started yet; platform status: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      sym: ✅
+      text: '2026-11-21 (#738): `IMP_Encoder_Query` follows the vendor 2.0.2.1 encoder thread: curPacks of the last coded stream (IDR 3, P 1), kept after GetStream / ReleaseStream, work_done 0 only while a picture is coded; QEMU 720p equal to the vendor, T33L 1080p 60/60. leftStreamBytes = stream buffer size - stream length as the vendor, but the buffer size itself differs (vendor ~1.39 MB at 720p, OpenIMP 921600; #740). Branch claude/t33-query-738.'
     T40:
       sym: ✅
       text: 'Update 2026-10-24, evening: `Encoder_Query` `work_done`/`leftPics` follow the codec activity (busy in 17.5 % of the samples at 20 fps = 8.7 ms per frame, before always idle), `OpenIMP_Encoder_GetTelemetry` counts 139 frames = consumer count at 20.02 fps / 2099 kbit/s, `GetChnAveBitrate` 1920 against 2033 kbit/s measured. Older text: host (night 2026-10-12): `Encoder_Query` with the vendor 1.3.1 field semantics (`leftStreamBytes`/`curPacks` always 0, `leftStreamFrames` 1 while a finished stream waits for `GetStream`, `work_done`); OpenIMP encodes on demand, so `leftPics` is 0; `Encoder_GetChnEvalInfo`, `GetChnAveBitrate` exported, no test result'

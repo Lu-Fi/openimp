@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: docs: T33 matrix rows 3, 37, 38, 44 on device / QEMU evidence (#739, #736, #737, #738)
+
+- Row 3 boot guard T33 🔧 -> ✅ (#739: trip / clear / stable / planned reboot on the T33L), row 37 reference-frame sharing T33 📋 -> ✅ (#736: default and SetRdBufShare(0) lists = vendor 2.0.2.1 in QEMU, T33L streams both ways), row 38 CPU load T33 📋 -> ✅+ (#737: OSD draw 1.39 ms against the vendor's 3.92 ms, timpsd 8.3 % with OSD, 1.2 % without against the vendor's 3.34 %), row 44 encoder telemetry T33 📋 -> ✅ (#738: Query status words as the vendor; buffer size #740). Rows 37, 38 and 44 need the branches claude/t33-rdbufshare-736, claude/t33-osd-cpu-737, claude/t33-query-738 merged. Matrix regenerated.
+
 ## 2026-11-21: t32_trace_sample probes for the T33 matrix rows 37 and 44 (#736, #738)
 
 - `T32_ENC_RDBS=0|1` calls `IMP_Encoder_SetRdBufShare(0, v)` before CreateChn (row 37 QEMU list check: the vendor 2.0.2.1 clears BUF_SHARE bit 31 in ODMA_CTRL / JRFD_CTRL and uses separate reference surfaces, OpenIMP ignores the flag, #736; the default lists are equal).
