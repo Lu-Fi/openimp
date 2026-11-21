@@ -1029,6 +1029,7 @@ static uint32_t t33_h265_list(struct t32_enc_chn *e, const T32HeraH265Pic *p, in
     t.pic.ring_y = base;
     t.pic.ring_y_end = t.pic.ring_c = base + r.y;
     t.pic.ring_c_end = t.pic.ring_c + r.c;
+    t.rc_slice = t32_rc_slice(&a->rc);  /* rate control (revision 7, #714) */
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set, &t.hdr_wy, &t.hdr_wc);
     t33_hera_h265_hdr(p->width, p->height, t.pic.ring_c_end, set ^ 1u, &t.hdr_ry, &t.hdr_rc);
     {
@@ -1138,9 +1139,19 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
         for (r = 0; r < nrows; r++) {
             rows[r] = 0;
+#ifdef PLATFORM_T33
+            {                           /* revision 7: the T33 row window (#714) */
+                uint32_t sel, sv, reg;
+
+                t32_rc_row_regs(&a->rc, r, &sel, &sv, &reg);
+                if (OpenIMP_T32_VpuWriteReg(sel, sv) != 0 || OpenIMP_T32_VpuReadReg(reg, &rows[r]) != 0)
+                    rows[r] = 0;
+            }
+#else
             if (OpenIMP_T32_VpuWriteReg(T33_HERA_ROW_SEL, T33_HERA_ROW(r)) != 0 ||
                 OpenIMP_T32_VpuReadReg(T33_HERA_ROW(r), &rows[r]) != 0)
                 rows[r] = 0;
+#endif
         }
         t32_rc_end_rows(&a->rc, at - i, a->stats, T32_HERA5_STATS, rows, nrows);
     }

@@ -220,14 +220,21 @@ int t32_rc65_init(T32Rc65 *c);
  * picture) or P: the picture QP, -1 when the controller's picture type
  * differs (the vendor aborts; the QP of the last picture stays in c->qp) */
 int t32_rc65_start(T32Rc65 *c, int idr);
-/* HERA (revision 6) after an I picture: the coded size of every 64-line
- * row as for H.264 (T33_HERA_ROW_SEL / T33_HERA_ROW); 0: none */
+/* the row words rcEnd reads: revision 6 after an I picture the coded size
+ * of every 64-line row as for H.264 (T33_HERA_ROW_SEL / T33_HERA_ROW);
+ * revision 7 two words a row after every picture; 0: none */
 unsigned t32_rc65_idr_rows(T32Rc65 *c);
+/* the register pair that gives row word @j (as t32_rc33_row_regs; T33 build) */
+void t32_rc65_row_regs(T32Rc65 *c, unsigned j, uint32_t *sel, uint32_t *sel_val, uint32_t *reg);
 /* I265eRatectrl_rcEnd after the picture: coded size in bytes, @stats the
  * T65_RC_STATS engine statistics (vendor order) or NULL, the rows */
 void t32_rc65_end_rows(T32Rc65 *c, uint32_t bytes, const uint32_t *stats, const uint32_t *rows, unsigned nrows);
 /* a word of the rate-control block (vendor H+0x2030; host tests: +0x224 the
  * IDR row-size sum) */
 uint32_t t32_rc65_rc_word(T32Rc65 *c, uint32_t off);
+/* the slice block the controller fills for vendor H265E_T32V_SliceInit
+ * (revision s+0xdbc, rate control s+0x90a..s+0xb5f; #714) */
+#define T65_SLICE_BYTES 0xdc0u
+const uint8_t *t32_rc65_slice(T32Rc65 *c);  /* T33 build */
 
 #endif
