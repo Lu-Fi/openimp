@@ -637,10 +637,21 @@ static int region_draws_ipu(const struct t23_osd_region *r)
  * CPU drawers below; the four-corner rectangle and the ISP types are not drawn
  * by this update (the ISP draws its own).  Called with osd_lock held.
  */
+/* T33 (#737): the cache work of one row band [y0, y1) of the frame (luma
+ * rows and their chroma rows), dir 2 invalidate before / 1 write back after */
+static void osd_t33_flush_band(const T23Frame *f, uint32_t y0, uint32_t y1, int dir)
+{
+    if (y1 <= y0)
+        return;
+    DMA_RmemFlushCache(f->y + y0 * f->pitch, (y1 - y0) * f->pitch, dir);
+    DMA_RmemFlushCache(f->uv + y0 / 2u * f->pitch, (y1 - y0) / 2u * f->pitch, dir);
+}
+
 static void osd_apply_draw_t33(int group, uint32_t width, uint32_t height, uint32_t virt, uint32_t pitch)
 {
     int order[T23_OSD_REGIONS];
-    int count = 0, i;
+    uint16_t bands[T23_OSD_REGIONS][2];     /* merged even-aligned row bands, ascending */
+    int count = 0, nb = 0, i;
     uint32_t bg_h = (height + 15u) & ~15u;
     T33OsdFrame sf;
     T23Frame f;
@@ -704,8 +715,34 @@ static void osd_apply_draw_t33(int group, uint32_t width, uint32_t height, uint3
             a = a < 0 ? 0 : a;
             b = b > (int32_t)height ? (int32_t)height : b;
             if (a < b) {
+                /* the region's own band (#737: a top text and a bottom logo
+                 * no longer flush every row between them), kept sorted and
+                 * merged with the bands it overlaps or touches */
+                uint32_t ba = (uint32_t)a & ~1u, bb = ((uint32_t)b + 1u) & ~1u;
+                int j, k;
+
                 lo = (uint32_t)a < lo ? (uint32_t)a : lo;
                 hi = (uint32_t)b > hi ? (uint32_t)b : hi;
+                for (j = 0; j < nb && bands[j][1] < ba; j++)
+                    ;
+                if (j < nb && bands[j][0] <= bb) {
+                    if (ba < bands[j][0])
+                        bands[j][0] = (uint16_t)ba;
+                    if (bb > bands[j][1])
+                        bands[j][1] = (uint16_t)bb;
+                    for (k = j + 1; k < nb && bands[k][0] <= bands[j][1]; k++)
+                        if (bands[k][1] > bands[j][1])
+                            bands[j][1] = bands[k][1];
+                    if (k > j + 1) {
+                        memmove(&bands[j + 1], &bands[k], (size_t)(nb - k) * sizeof(bands[0]));
+                        nb -= k - j - 1;
+                    }
+                } else {
+                    memmove(&bands[j + 1], &bands[j], (size_t)(nb - j) * sizeof(bands[0]));
+                    bands[j][0] = (uint16_t)ba;
+                    bands[j][1] = (uint16_t)bb;
+                    nb++;
+                }
             }
         }
         if (lo >= hi)
@@ -714,8 +751,8 @@ static void osd_apply_draw_t33(int group, uint32_t width, uint32_t height, uint3
         f.band_y1 = (hi + 1u) & ~1u;
     }
     /* the CPU reads the frame the ISP wrote: drop stale cache lines first */
-    DMA_RmemFlushCache(f.y + f.band_y0 * pitch, (f.band_y1 - f.band_y0) * pitch, 2);
-    DMA_RmemFlushCache(f.uv + f.band_y0 / 2u * pitch, (f.band_y1 - f.band_y0) / 2u * pitch, 2);
+    for (i = 0; i < nb; i++)
+        osd_t33_flush_band(&f, bands[i][0], bands[i][1], 2);
     for (i = 0; i < count; i++) {
         struct t23_osd_region *r = osd_regions[order[i]];
         IMPOSDGrpRgnAttr *g = &r->grp[group];
@@ -761,9 +798,12 @@ static void osd_apply_draw_t33(int group, uint32_t width, uint32_t height, uint3
             break;
         }
     }
-    /* write the drawn rows back for the encoder / JPEG DMA */
-    DMA_RmemFlushCache(f.y + f.band_y0 * pitch, (f.band_y1 - f.band_y0) * pitch, 1);
-    DMA_RmemFlushCache(f.uv + f.band_y0 / 2u * pitch, (f.band_y1 - f.band_y0) / 2u * pitch, 1);
+    /* write the drawn rows back for the encoder / JPEG DMA; rows a line
+     * drawer reported outside the precomputed union (f.band_*) as well */
+    for (i = 0; i < nb; i++)
+        osd_t33_flush_band(&f, bands[i][0], bands[i][1], 1);
+    osd_t33_flush_band(&f, f.band_y0 & ~1u, bands[0][0], 1);
+    osd_t33_flush_band(&f, bands[nb - 1][1], (f.band_y1 + 1u) & ~1u, 1);
 }
 #endif
 
