@@ -23,6 +23,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `OpenIMP_T32_LdcAddSensor` (src/t32/openimp_t32_isp_ctl.c) has the T32 branch of vendor 2.2.0 `IMP_ISP_AddSensor` (chip class 0, 0x139acc): after `IMP_ISP_LDC_SetMode(online)` + `IMP_ISP_LDC_OnlineInit` only `0xc00454ba` with the 24-byte block {VI, 0, enable 1 | file << 16, 0x10, 0x434, parameter block}; with `IMP_ISP_LDC_OnlineSetLut` the 0x444-byte parameter file is read and word 5 points at byte 0x10; without it words 3..5 stay 0 (the module answers EFAULT, logged, as the vendor). No 0xc00454b9 / bb on T32 (T33 path unchanged).
 - T32 API rules as 2.2.0 (0x144364 / 0x145050 / 0x144a38): `OnlineInit` accepts only LDC (func 4, "PRJ007 only supports LDC mode"); `OnlineSetLut` and `OnlineSetStrength` do not exclude each other (the strength is unused on T32).
 - Evidence (QEMU T32, open-tx-isp claude/751-t32-online-ldc): parameter-file and IQ-bin runs, the module's LDC and WDMA / RDMA writes equal the vendor flow (541 lines each), 10 / 10 frames. Vendor libimp 2.2.0 run not possible in QEMU (stock PRJ007 module oopses at load). No T32 camera.
+## 2026-11-21: apitest face AE proves the metered window at night too (T33, #685)
+- `cs_faceae`: when the AE is at its exposure limit (open module node: AE mean below 3/4 of its target) the low target is 10 (driver clamp 10..200) instead of 40, and the case PASSes when that target darkens the picture (target 180 cannot brighten at the limit). `APITEST_FACE_LO` overrides the low target (for the vendor module, whose node the test cannot read).
+- T33L night run (open ko + OpenIMP 9c8126ff): target 10 -> Y 36.5, target 180 -> Y 69.0, base 69.3 (AE node mean 34 / target 56): the face window is metered. Before, the night result was SKIP ("repeat in daylight").
 
 ## 2026-11-21: T32/T33 polling and encoder threads keep normal priority, vendor SCHED_RR not ported (#747, beyond vendor)
 
