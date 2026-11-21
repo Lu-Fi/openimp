@@ -105,7 +105,8 @@ T32 support is in development (QEMU only, no T32 camera yet); this is not a rele
   the QP of every picture equal (without the second start 36 of the 40 runs differ). QEMU apitest (`enc` area): SetChnBitRate reads back the new rate at once (vendor 2.2.0 still the old one until the IDR; it writes the attribute, its getter reads elsewhere), SetChnQpBoundsPerFrame 0, SetChnMaxPictureSize the same picture-size FAIL as the vendor (no re-encoding in either).
 - H.265 QP check: `tools/eprc_t33_h265_oracle.py --scenarios` / `--rows` runs the vendor i265e glue and controller
   under unicorn on the synthetic size and statistics model; `rc65_test` on `vendor-2.2.0-rc65-h265.txt.gz`
-  (164 scenarios, modes 1..5, 640x360 .. 2560x1440, 21740 pictures, 40 with per-row IDR sizes): the picture type
+  (164 scenarios, modes 1..5, 640x360 .. 2560x1440, 21740 pictures, 40 with per-row IDR sizes; the harness sets
+  the per-picture motion mode 2 of `I265eFrame_recvPic`, F+0x22ec, as the vendor does, #719): the picture type
   and QP of every picture and the row-size sum (rc+0x224) equal, 0 accesses outside the arena. QEMU (640x360,
   CBR / VBR 1000 kbit/s, 30 pictures): decodes clean, colour bars intact, EFE_FRM_QP == slice QP for every
   picture and equal to the vendor controller replayed on the run's slice sizes (the QEMU HERA returns zero

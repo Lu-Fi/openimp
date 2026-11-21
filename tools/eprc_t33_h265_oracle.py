@@ -124,6 +124,9 @@ class T33H265:
         L = self.L
         idr = self.n % self.gop == 0 if self.gop else self.n == 0
         L.w32(self.F + 0x1de * 4, 2 if idr else 1)
+        # I265eFrame_recvPic (0x97d10): the motion mode of every picture,
+        # F+0x21f0+0xfc = 2 (rcStart: rc+0x3cc, the controller's cur+0x340, #719)
+        L.w8(self.F + 0x22ec, 2)
         L.call('I265eRatectrl_rcStart', self.H + RC, self.H + 0x390, self.H + 0x378)
         return idr
 

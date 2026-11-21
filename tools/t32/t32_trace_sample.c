@@ -43,6 +43,7 @@
  * T32_ENC_RC=<n> is SetDefaultParam's rc mode (IMPEncoderRcMode number;
  * default FIXQP for jpeg, CBR otherwise; #293 compares H.264 at FIXQP).
  * T32_ENC_W / T32_ENC_H: FrameSource channel 0 and encoder size (1920x1080).
+ * T32_ENC_KBPS: SetDefaultParam's target bit rate (1000 kbit/s; #719).
  * T32_ENC_QPS=a-b repeats the FrameSource + encoder channel cycle (N
  * streams each) for every initial QP a..b in one process ("T32Q <qp> done").
  *
@@ -629,6 +630,7 @@ int main(int argc, char **argv)
                           prof == T32_PROFILE_JPEG ? IMP_ENC_RC_MODE_FIXQP : IMP_ENC_RC_MODE_CBR;
     int enc_w = getenv("T32_ENC_W") ? atoi(getenv("T32_ENC_W")) : 1920;
     int enc_h = getenv("T32_ENC_H") ? atoi(getenv("T32_ENC_H")) : 1080;
+    int kbps = getenv("T32_ENC_KBPS") ? atoi(getenv("T32_ENC_KBPS")) : 1000;
     int qp_cur = getenv("T32_ENC_QP") ? atoi(getenv("T32_ENC_QP")) : -1, qp_last = qp_cur;
     int i, got = 0;
     long wait_max = 0;
@@ -778,7 +780,7 @@ again:
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
-        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, 1000));
+        MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, kbps));
         {                               /* the default channel attribute, as words */
             const uint32_t *w = (const uint32_t *)(const void *)&ea;
             unsigned k;

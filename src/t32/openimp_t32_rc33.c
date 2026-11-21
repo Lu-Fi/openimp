@@ -1263,6 +1263,11 @@ int t32_rc65_start(T32Rc65 *c, int idr)
         t65_take_pending(c);
 #endif
     e33_st_U32(X, A5_F + 0x1de * 4, type);
+    /* I265eFrame::recvPic (2.2.0 0x97d10, 2.0.2.1 0x9b3d0): the motion mode
+     * of every picture, frame +0xfc = 2 (F+0x21f0+0xfc); rcStart hands it
+     * to the controller (cur+0x340), which steps the motion level and with
+     * it the slice block's QP table (0x40500 on the T33, #719) */
+    e33_st_U8(X, A5_F + 0x22ec, 2);
     if ((F8(0x22d8) == 0 && F8(0x22d9) == 0) ? F8(0x22da) != 0 : 1)
         SP8(0x341, 0);
     RC8(0xaa, F32(0x8af * 4));
