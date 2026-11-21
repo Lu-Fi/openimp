@@ -9,6 +9,11 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T33 OPENIMP_T32_HERA_SECTION_KB test knob works for H.264 / H.265 again; #742 reproducible in QEMU (#746)
+
+- **Fix (T33 build, test knob only):** CreateChn set the 250 KiB half for every codec after `h264_setup` had taken the knob; now only for JPEG. Default behaviour unchanged.
+- **QEMU:** Lu-Fi/qemu branch `hera-bsfull-overshoot` 8521a701e9 models the T33L stop length past the half (`x-bsfull-overshoot`, default 33). QEMU T33 H.264 1080p QP 4, 1 KiB halves (audit/issue746/run.sh): pre-#742 lib 1/3 streams (stops 1057 at a 1024 half refused, as on the T33L), #742 lib 3/3; pre-#742 lib on the old model (stop 1024) 3/3.
+
 ## 2026-11-21: T32/T33 NS / AGC / HPF also run after the AEC, as on T10-T31 (#667, beyond vendor)
 
 - The vendor record thread (T32 2.2.0, T33 2.0.2.1) skips NS / AGC / HPF on a frame the AEC processed; #712 had made T32/T33 vendor-equal there. User decision 2026-11-21: keep them on T32/T33 too, like T10-T31 (#667). Streamers that enable NS / AGC together with the AEC keep them.

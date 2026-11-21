@@ -1952,8 +1952,10 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
 #ifdef PLATFORM_T33
     /* after h264_setup: it took the SetRdBufShare switch (#736) */
     e->bs_size = t33_bs_size(attr, !(e->h264 && e->avc.noshare));
-    /* JPEG out through 2 x 250 KiB sections, as the vendor (jpegBs, #391) */
-    e->avc.section_kb = T32_HERA_SECTION_KB;
+    /* JPEG out through 2 x 250 KiB sections, as the vendor (jpegBs, #391);
+     * H.26x keeps h264_setup's (the OPENIMP_T32_HERA_SECTION_KB test knob, #746) */
+    if (!e->h264)
+        e->avc.section_kb = T32_HERA_SECTION_KB;
     if (!e->h264 && t33_bs_get(e) != 0)
         goto fail_bufs;
 #endif
