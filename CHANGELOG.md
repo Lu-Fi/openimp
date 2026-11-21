@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.2.0 (#734)
+
+- **Cause:** the #726 port was T33 only; on T32 `IMP_Encoder_SetChnROI` still only stored the regions and the T32 H.264 / H.265 lists kept the defaults of 0x200c0, 0x20064..0x200a0 and computed 0x20054..0x20060 from the picture QP.
+- **Fix (T32 build):** the encoder thread hands the region records to the controller on T32 too (vendor 2.2.0 `i264e_reconfig` 0x7ed74: h+0x2a64 -> P+0x1c0 after the start, the same offsets as 2.0.2.1; H.265 `I265e_reconfig` 0x8fe40 before `I265e_rcStart`). The T32 lists take 0x200c0, 0x20054..0x20060, 0x20064..0x200a0 and the ROI bit of 0x2029c from the revision 6 slice block (s+0x54 H.264, `H264E_T32V_SliceInit` 0x48968; s+0x55 / s+0x1c9 H.265, `H265E_T32V_SliceInit` 0x565c8).
+- **Evidence:** QEMU -M ingenic-t32 (PRJ007, open tx-isp-t32), CBR, `T32_ENC_CHANGES=2:R0/1/0/20/320/160/960/640`: H.264 vendor and OpenIMP ROI registers equal in all 12 jobs (0x2029c bit 3, 0x200c0 = 1, 0x20064 = 0x280a3c14, region byte of 0x20054 = max(slot QP, 20)), the rest of the list differs only in buffer addresses; H.265 the same values, the vendor starts one picture later (job 3 vs 2: the asynchronous call against the vendor's overlapped encode, the same shift as #726 on T33). No T32 device. T33 unchanged.
+
 ## 2026-11-21: T33 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.0.2.1 (#726)
 
 - **Cause:** T33 `IMP_Encoder_SetChnROI` only stored the 16 regions for the getter; the controller's ROI table (parameter block +0x1c0 H.264 / +0x110 H.265) stayed zero and the HERA list kept the defaults of 0x20054..0x200c0.

@@ -34,6 +34,8 @@ typedef struct {
 #define EFE_ROI_INFOA   0x20054u        /* ..D 0x20060 */
 #define EFE_ROI_INFOD   0x20060u
 #define EFE_QPG_DLT     0x20300u
+#define EFE_ROI_RECT    0x20064u        /* ..0x200a0: 16 region rectangles (MBs) */
+#define EFE_ROI_EN      0x200c0u        /* one enable bit a region */
 #define EFE_MBQP_CFG    0x2029cu        /* MB QP clamp and map enables (rate control) */
 /* RC: the controller's row budgets */
 #define RC_ROW_CFG      0x40100u        /* rows, MBs a row, enables */
@@ -209,11 +211,32 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
         case RC_ROW_SHIFT:
             return (sl[0x769] & 0x1fu) << 5 | (sl[0x768] & 0x1fu) | (sl[0x76a] & 0x1fu) << 10 |
                    (sl[0x76b] & 7u) << 15 | (sl[0x76c] & 7u) << 18 | (sl[0x534] & 7u) << 21;
+        /* ROI regions (#734, vendor 2.2.0 H264E_T32V_SliceInit 0x48968): s+0x54 + 7 i = enable, mode, QP,
+         * x0, x1, y0, y1 */
+        case EFE_ROI_EN: {
+            uint32_t m = 0;
+
+            for (unsigned i = 0; i < 16u; i++)
+                m += (uint32_t)sl[0x54 + 7u * i] << i;
+            return m;
+        }
+        case EFE_ROI_INFOA: case EFE_ROI_INFOA + 4: case EFE_ROI_INFOA + 8: case EFE_ROI_INFOD: {
+            unsigned i0 = (reg - EFE_ROI_INFOA) / 4u * 4u;
+            uint32_t m = 0;
+
+            for (unsigned i = 0; i < 4u; i++)
+                m += (((uint32_t)(sl[0x56 + 7u * (i0 + i)] & 0x3fu) << 2) + sl[0x55 + 7u * (i0 + i)]) << (8u * i);
+            return m;
+        }
         case RC_ROW_TGT:
             return rd32(sl + 0x536);
         case RC_ROW_TGT + 0xc: case RC_ROW_TGT + 0x10: case RC_ROW_TGT + 0x14: case RC_ROW_TGT + 0x18:
         case RC_ROW_TGT_END:
             return rd32(sl + 0x53a + (reg - (RC_ROW_TGT + 0xc)));
+        default:
+            if (reg >= EFE_ROI_RECT && reg < EFE_ROI_RECT + 0x40u && !(reg & 3u))
+                return rd32(sl + 0x57 + 7u * ((reg - EFE_ROI_RECT) / 4u));
+            break;
         }
     }
     switch (reg) {

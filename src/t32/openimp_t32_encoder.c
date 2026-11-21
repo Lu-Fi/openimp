@@ -737,23 +737,19 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         if (t32_rc_fixqp_take(&a->rc, &a->qp_i, &a->qp_p))
             qp = a->qp_i;
     }
-#ifdef PLATFORM_T33
-    /* ROI regions (#726) into the parameter block's ROI table: H.265 before
-     * the controller's start (I265e::reconfig, then rcStart), H.264 after it
-     * (i264e_encode: ratecontrol_start, then i264e_reconfig), so the next
-     * start takes them; T32: its lists do not carry the ROI registers yet */
+    /* ROI regions (#726, T32 #734) into the parameter block's ROI table:
+     * H.265 before the controller's start (I265e::reconfig, then rcStart),
+     * H.264 after it (i264e_encode: ratecontrol_start, then i264e_reconfig,
+     * the same in vendor 2.2.0 0x7ed74), so the next start takes them */
     uint8_t roi[16][9];
     int roi_new = OpenIMP_T32_E1RoiTake((int)(e - enc_chn), roi);
 
     if (roi_new && e->hevc)
         t32_rc_roi(&a->rc, roi);
-#endif
     if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
         qp = q;
-#ifdef PLATFORM_T33
     if (roi_new && !e->hevc)
         t32_rc_roi(&a->rc, roi);
-#endif
     return qp;
 }
 

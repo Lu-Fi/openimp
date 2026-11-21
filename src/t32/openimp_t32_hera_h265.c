@@ -102,6 +102,8 @@ typedef struct {
 #define RC_ROW_TGT_END  0x40124u        /* the unit targets follow */
 #define RC_ROW_BITS     0x40900u        /* one target a unit, s+0x948 */
 #define RC_ROWS_MAX     128u            /* s+0x948..0xb47 */
+#define EFE_ROI_RECT    0x20064u        /* ..0x200a0: 16 region rectangles (MBs) */
+#define EFE_ROI_EN      0x200c0u        /* one enable bit a region */
 #define EFE_MBQP_CFG    0x2029cu        /* MB QP clamp and row enable (rate control fields) */
 #define EFE_MBQP_RC     (1u << 22 | 0x3fu << 16 | 0x3fu << 10 | 1u << 9)
 
@@ -167,10 +169,28 @@ static const uint8_t *rc_slice6(const T32HeraH265Pic *p)
  * is one of them */
 static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
 {
+    /* ROI regions (#734, vendor 2.2.0 H265E_T32V_SliceInit): s+0x55 + 7 i = enable, mode, QP, x0, x1, y0, y1 */
+    if (reg >= EFE_ROI_RECT && reg < EFE_ROI_RECT + 0x40u && !(reg & 3u)) {
+        *v = rd32(sl + 0x58 + 7u * ((reg - EFE_ROI_RECT) / 4u));
+        return 1;
+    }
+    if (reg >= EFE_ROI_INFOA && reg <= EFE_ROI_INFOD && !(reg & 3u)) {
+        unsigned i0 = (reg - EFE_ROI_INFOA) / 4u * 4u;
+
+        *v = 0;
+        for (unsigned i = 0; i < 4u; i++)
+            *v += ((uint32_t)(sl[0x57 + 7u * (i0 + i)] & 0x3fu) << 2 | (sl[0x56 + 7u * (i0 + i)] & 3u)) << (8u * i);
+        return 1;
+    }
     switch (reg) {
-    case EFE_MBQP_CFG:                  /* the rate-control fields; the rest stays the default */
-        *v = (*v & ~EFE_MBQP_RC) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
-             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9;
+    case EFE_ROI_EN:
+        *v = 0;
+        for (unsigned i = 0; i < 16u; i++)
+            *v += (uint32_t)(sl[0x55 + 7u * i] & 1u) << i;
+        return 1;
+    case EFE_MBQP_CFG:                  /* the rate-control fields and the ROI enable (s+0x1c9) */
+        *v = (*v & ~(EFE_MBQP_RC | 1u << 3)) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
+             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9 | (sl[0x1c9] & 1u) << 3;
         return 1;
     case RC_ROW_CFG:
         *v = (uint32_t)sl[0x910] << 23 | (sl[0x90a] & 1u) | 0x500000u | ((rd32(sl + 0x90c) - 1u) & 0xffffu) << 4;
