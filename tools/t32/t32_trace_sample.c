@@ -789,6 +789,32 @@ again:
                 printf(" %08x", w[k]);
             printf("\n");
         }
+        if (getenv("T32_ENC_RCP")) {    /* row 27: RC parameters "ip=N,pp=N,ib=N,st=N,fl=N,ql=N,cp=N" */
+            IMPEncoderAttrRcMode *m = &ea.rcAttr.attrRcMode;
+            const char *p = getenv("T32_ENC_RCP");
+            char k[3];
+            int v, n;
+
+            while (p && sscanf(p, "%2[a-z]=%d%n", k, &v, &n) == 2) {
+                if (m->rcMode == IMP_ENC_RC_MODE_CBR) {
+                    IMPEncoderAttrH264CBR *c = &m->attrH264Cbr;
+                    if (!strcmp(k, "ip")) c->IPfrmQPDelta = (uint16_t)v;
+                    else if (!strcmp(k, "pp")) c->PPfrmQPDelta = (uint16_t)v;
+                    else if (!strcmp(k, "ib")) c->iBiasLvl = (int8_t)v;
+                    else if (!strcmp(k, "st")) c->staticTime = (uint32_t)v;
+                    else if (!strcmp(k, "fl")) c->flucLvl = (uint8_t)v;
+                    else if (!strcmp(k, "ql")) c->qualityLvl = (uint32_t)v;
+                } else if (m->rcMode == IMP_ENC_RC_MODE_VBR) {
+                    IMPEncoderAttrH264VBR *b = &m->attrH264Vbr;
+                    if (!strcmp(k, "ib")) b->iBiasLvl = (int8_t)v;
+                    else if (!strcmp(k, "st")) b->staticTime = (uint32_t)v;
+                    else if (!strcmp(k, "ql")) b->qualityLvl = (uint32_t)v;
+                    else if (!strcmp(k, "cp")) b->changePos = (uint32_t)v;
+                }
+                printf("T32S rc param %s = %d (mode %d)\n", k, v, (int)m->rcMode);
+                p = strchr(p + n, ',') ? strchr(p + n, ',') + 1 : NULL;
+            }
+        }
         if (getenv("T32_ENC_IVDC"))     /* #301: ISP -> encoder direct (IVDC) */
             ea.bEnableIvdc = atoi(getenv("T32_ENC_IVDC")) != 0;
         MUST(IMP_Encoder_CreateChn(0, &ea));
