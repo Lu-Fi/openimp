@@ -307,7 +307,7 @@ when one of these matters to the user.
 
 | SoC | Item | Evidence |
 |---|---|---|
-| all | **Release 1 is not reached**: the 14-day run without an unplanned reset on the RC3 image is still open; the open stack is a release candidate | release gates |
+| all | **Release 1 is not reached**: the light-box run and the 72 h run without an unplanned reset per SoC on the RC3 image are still open; the open stack is a release candidate | release gates |
 | T30 | ⚠️ WDR / RawDRC (unlimit strength above the vendor); auto exposure about 0.3 EV off the vendor in the dark (#202); 🔧 anti-flicker, DPC, front crop / CSC presets, OSD in the picture, IVS, rate-control modes (FixQP/SMART not run), RC parameters, ROI, audio output, AEC; `?` for 13 cells (for example IR cut, CCM/LSC, privacy mask); fixed on 2026-11-07/08: AWB presets, Temper / P-picture size (#236), module reload; one lab camera only | matrix T30 column, RC3 known limitations |
 | T20 | temporal noise 15-22 % higher than the vendor at matched exposure, day AE about 7 % darker (open: closer to the chart colours, more saturated) | light box 2026-11-08 |
 | T10 | night picture brighter than the vendor (Y 87 vs 76, longer exposure, less noise; accepted); tone curve differs at matched exposure | light box 2026-11-07 |

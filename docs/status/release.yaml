@@ -55,7 +55,9 @@ gates:
     title: Release 1
     milestone: Release 1
     requires: rc3
-    # The 14-day counter starts only when RC3 is published (user decision 2026-10-26): set rc3_tag to the
+    # Decision 2026-11-21 (#760): the 14-day soak is replaced by, per gate SoC, (a) one green light-box run and
+    # (b) >= 3 days (72 h) on >= 1 camera with 0 unplanned reboots and 0 oops. The RC3 precondition is unchanged.
+    # The stable-day counter starts only when RC3 is published (user decision 2026-10-26): set rc3_tag to the
     # published tag and release_image to the image tag built from it; until then Release 1 shows "not started".
     # RC3 was published on 2026-11-07 (tag v2026.11.07-rc3 in both repositories). release_image is set once the
     # image built from that tag runs on the fleet and the soak sampler logs it (docs/status/soak.json "image").
@@ -66,9 +68,22 @@ gates:
         text: RC3 is green and published (tag); the stable days count only from then, on the image built from the RC3 tag.
       - id: release1.stable-days
         text: >-
-          The release image ran at least 14 days without a reset on the fleet (a reset is an unplanned reboot,
+          The release image ran at least 3 days (72 h) without a reset on the fleet (a reset is an unplanned reboot,
           an oops, or a new image, which restarts the counter).
-        min_stable_days: 14
+        min_stable_days: 3
+      - id: release1.lightbox
+        text: >-
+          Per gate SoC one green light-box run (decision 2026-11-21): a published report under docs/lightbox/ where the open stack is
+          vendor-equal or better and has no open-only fail rows. lightbox_runs maps each gate SoC to the report path (null = none yet).
+        lightbox_runs:
+          T10: null
+          T20: null
+          T21: null
+          T23: null
+          T30: null
+          T31: null
+          T40: null
+          T41: null
       - id: release1.cameras-per-soc
         text: At least 1 camera per gate SoC reaches the stable days (counted per camera; a SoC is as good as its best camera).
         min_cameras_per_soc: 1

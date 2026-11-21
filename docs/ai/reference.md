@@ -94,9 +94,10 @@ Tags: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, **RC3 `v2026.11.07-rc3`**.
   RC3 milestone empty. "Works" includes the evidence level "API round trip"
   (for example `DMIC_*` on T31/T40/T41) and matched vendor no-ops; the matrix
   shows which.
-- **Release 1 (not reached):** the image built from the RC3 tag runs 14 days
-  without an unplanned reboot or oops on at least one camera per gate SoC,
-  plus the fair light-box comparison against the vendor on every SoC (#230).
+- **Release 1 (not reached):** per gate SoC one green light-box run
+  (`lightbox_runs` in docs/status/release.yaml) and the image built from the RC3
+  tag runs 3 days (72 h) without an unplanned reboot or oops on at least one
+  camera (decision 2026-11-21, #760; replaces the 14-day soak).
   A new image or an unplanned reset restarts the counter.
 - Rules are machine-readable in `docs/status/release.yaml`.
 

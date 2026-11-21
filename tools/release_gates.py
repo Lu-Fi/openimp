@@ -79,6 +79,7 @@ class Gates:
         self.min_cams = rule(self.rel, r1, "min_cameras_per_soc")
         self.max_reb = rule(self.rel, r1, "max_unplanned_reboots")
         self.max_oops = rule(self.rel, r1, "max_oops")
+        self.lb_runs = rule(self.rel, r1, "lightbox_runs") or {}
         self._rc3()
         self._r1()
 
@@ -140,7 +141,10 @@ class Gates:
                     if e["kind"] != "flash":
                         events.append((c["camera"], e))
             self.r1[s] = dict(cams=cs, best=best, nok=nok, events=sorted(events, key=lambda x: x[1]["time"]),
+                              box=self.lb_runs.get(s),
+                              box_ok=bool(self.lb_runs.get(s)) and os.path.exists(os.path.join(sd.ROOT, self.lb_runs[s])),
                               ok=nok >= self.min_cams and best >= self.min_days)
+            self.r1[s]["ok"] = self.r1[s]["ok"] and self.r1[s]["box_ok"]
         self.r1_ok = bool(self.soak) and self.rc3_ok and all(v["ok"] for v in self.r1.values())
 
     # ------------------------------------------------------------ helpers
@@ -187,7 +191,7 @@ class Gates:
         o.append("  - (c) no open issue in milestone RC3: %s %d open" % ("🟢" if e["milestone"] else "🔴", len(bl["milestone"])))
         nsoc = sum(1 for v in self.r1.values() if v["ok"])
         asof = self.soak["asof"] if self.soak else "no soak data"
-        o.append("- **Release 1: %s %s** (%d of %d SoCs reached %d stable days; image %s, soak as of %s)" % (
+        o.append("- **Release 1: %s %s** (%d of %d SoCs have a green light-box run and %d stable days; image %s, soak as of %s)" % (
             "🟢" if self.r1_ok else "🔴", self.verdict(self.r1_ok), nsoc, len(self.socs), self.min_days,
             self.r1_image or "–", asof))
         if not self.r1_started:
@@ -230,11 +234,11 @@ class Gates:
         o += ["", "### Release 1: stable days on the release image", "",
               "Stable days = days since the later of: the image first ran on the camera, its last unplanned reboot, its last oops "
               "(the best camera of a SoC counts). Cameras are named by the last octet of their LAN address.", "",
-              "| SoC | cameras | best stable days | progress | unplanned reboots | oops |", "|---|---|--:|---|--:|--:|"]
+              "| SoC | light-box run | cameras | best stable days | progress | unplanned reboots | oops |", "|---|---|---|--:|---|--:|--:|"]
         for s in self.socs:
             v = self.r1[s]
-            o.append("| %s | %s | %.1f/%d | `%s` | %d | %d |" % (
-                s, " ".join(c["camera"] for c in v["cams"]) or "–", v["best"], self.min_days,
+            o.append("| %s | %s | %s | %.1f/%d | `%s` | %d | %d |" % (
+                s, ("🟢 [report](%s)" % v["box"]) if v["box_ok"] else "🔴 none", " ".join(c["camera"] for c in v["cams"]) or "–", v["best"], self.min_days,
                 bar(min(v["best"], self.min_days), self.min_days), sum(c["unplanned_reboots"] for c in v["cams"]),
                 sum(c["oops"] for c in v["cams"])))
         o.append("")
@@ -319,11 +323,11 @@ class Gates:
         rows = []
         for s in self.socs:
             v = self.r1[s]
-            rows.append("<tr><td>%s</td><td>%s</td><td class='c'>%.1f/%d</td><td>%s</td><td class='c'>%d</td><td class='c'>%d</td></tr>" % (
-                s, " ".join(c["camera"] for c in v["cams"]) or "&ndash;", v["best"], self.min_days,
+            rows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td class='c'>%.1f/%d</td><td>%s</td><td class='c'>%d</td><td class='c'>%d</td></tr>" % (
+                s, ("&#x1F7E2; <a href='%s'>report</a>" % esc(v["box"])) if v["box_ok"] else "&#x1F534; none", " ".join(c["camera"] for c in v["cams"]) or "&ndash;", v["best"], self.min_days,
                 self._pb(min(v["best"], self.min_days) and int(round(min(v["best"], self.min_days) * 100)), self.min_days * 100),
                 sum(c["unplanned_reboots"] for c in v["cams"]), sum(c["oops"] for c in v["cams"])))
-        h.append('<table class="mi"><thead><tr><th>SoC</th><th>cameras</th><th>stable days</th><th>progress</th><th>unplanned reboots</th><th>oops</th></tr></thead>'
+        h.append('<table class="mi"><thead><tr><th>SoC</th><th>light-box run</th><th>cameras</th><th>stable days</th><th>progress</th><th>unplanned reboots</th><th>oops</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
         ev = [(s, t) for s in self.socs for t in self.r1_events_text(s)]
         h.append("<details class='prio'%s><summary><b>Reset events</b> of the release image (%d)</summary><ul class='pl'>%s</ul></details>" % (
