@@ -107,6 +107,9 @@ objects="$objects $output_dir/t32_tuning.o"
 objects="$objects $output_dir/t32_isp_osd.o"
 # FrameSource on the 2.x framechan ABI, System bind (#290)
 compile t32_fs src/t32/openimp_t32_fs.c
+# software rotation for SetChnRotate (#731, the unified OpenIMP path): NV12 kernels, MXU2 (T33 toolchain mxu2)
+compile nv12_rotate src/framesource/nv12_rotate.c -O2 -Werror
+compile core_mxu2 src/core/openimp_mxu2.c -Werror
 # IVDC direct mode (#301): ISP channel 0 -> encoder without frame buffers
 compile t32_ivdc src/t32/openimp_t32_ivdc.c
 # soc_vpu channel layer (#291) and the JPEG encoder on the JPEG v1.2 engine (#292)

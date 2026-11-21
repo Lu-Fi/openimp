@@ -776,6 +776,19 @@ int main(int argc, char **argv)
         goto teardown;
     }
 again:
+    if (getenv("T32_FS_ROTATE") && qp_cur == qp_last) {      /* #731 (not with T32_ENC_QPS): OpenIMP SetChnRotate (1 = 90 CCW, 2 = 90 CW, 3 = 180) */
+        int rmode = atoi(getenv("T32_FS_ROTATE")), rrc = -1;
+        int (*rot)(int, int, int, int) = (int (*)(int, int, int, int))dlsym(RTLD_DEFAULT,
+                                                                           "IMP_FrameSource_SetChnRotate");
+        if (rot)
+            rrc = rot(0, rmode, enc_w, enc_h);
+        printf("T32S SetChnRotate(0, %d, %d, %d) rc=%d\n", rmode, enc_w, enc_h, rrc);
+        if (rrc == 0 && (rmode == 1 || rmode == 2)) {
+            int t = enc_w;
+            enc_w = enc_h;
+            enc_h = t;
+        }
+    }
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
     if (enc) {

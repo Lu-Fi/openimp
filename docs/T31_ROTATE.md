@@ -404,3 +404,34 @@ on the T30X).
   at 15 fps with 20-23.5 %. Valid H.264 for both streams.
 
 Running channel: `SetChnRotate` may switch 90 <-> 270 and back to 0 while frames flow; a switch to or from 180 changes the output size and is refused (-1) once a rotated frame has gone out (#219 B2).
+
+## T33 (OpenIMP extension, device-tested 2026-11-21, #731)
+
+The vendor T33 libimp (2.0.2.1) has no `IMP_FrameSource_SetChnRotate`, and
+its `SetI2dAttr` switches the I2D off on the T33L (cpu type 1), so the
+vendor library cannot rotate on the T33. Following the unified rotation
+path (user decision 2026-11-05), the T33 build has the same OpenIMP call:
+`src/t32/openimp_t32_fs.c` (PLATFORM_T33) with the shared `nv12_rotate`
+kernels (`nv12_rotate.o` + `core_mxu2.o` in `build-t33.sh`; the T33
+toolchain is an mxu2 one and the selftest selects MXU2 bit-exact on the
+T33L).
+
+- Rules: vendor enum (1 = 90 CCW, 2 = 90 CW, OpenIMP 3 = 180), call before
+  `EnableChn` with the channel's (landscape) size, create the encoder with the
+  rotated size; width and height multiples of 16, at most 1280x720 pixels
+  (`OPENIMP_FS_ROTATE_MAX_PIXELS` for measurements); `OpenIMP_Cap_FsRotate`
+  and `OpenIMP_FS_RotateLimits` (1280x720, align 16, no fps cap). The setting
+  takes effect at `EnableChn` (not on a running channel).
+- Mechanism: like the T32 I2D pass, not the copy back of the T31 path: every
+  capture buffer gets a second rmem buffer of the rotated size; the frame
+  thread rotates into it and the frame record of the consumers (encoder,
+  OSD, GetFrame copies) points there with the rotated size. The delay FIFO
+  and `SnapFrame` copy the unrotated capture.
+- Device (T33L .122 cv2005, `audit/t33-func-1121f` d-731a/b/c, own sample,
+  H.264 CBR at 15 fps): 640x368 modes 1 / 2 / 3 deliver 368x640 / 368x640 /
+  640x368, 150/150 and 300/300 streams, decode clean, picture direction
+  correct (correlation with the host-rotated unrotated picture 0.964 /
+  0.966 / 0.965 against -0.03..0.10 for the wrong directions); process CPU
+  2.0 % unrotated, 4.2 % rot90, 3.9 % rot180 at 640x368, 2.1 % -> 12.0 %
+  for 1280x720 rot90 (about 6.6 ms per frame), 15.0 fps in every case.
+
