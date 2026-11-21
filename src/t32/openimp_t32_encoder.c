@@ -233,14 +233,55 @@ static struct {
                 { PTHREAD_MUTEX_INITIALIZER, { { "", "", 0, 0, 0, 0, 0 }, 0 }, 0 } };
 static pthread_mutex_t t33_bs_refs = PTHREAD_MUTEX_INITIALIZER;
 
+/*
+ * Test only (#742): OPENIMP_T33_BS_GUARD=<KiB> puts a guard area of that
+ * size behind each shared section buffer, filled with T33_BS_GUARD_BYTE;
+ * after every picture a changed guard byte (the engine wrote past the two
+ * halves into rmem) is logged and the area filled again.
+ */
+#define T33_BS_GUARD_BYTE 0x5au
+static uint32_t t33_bs_guard;
+
+static void t33_bs_guard_fill(const T32VpuBuf *b)
+{
+    uint8_t *g = (uint8_t *)t32_vpu_buf_va(b) + 2u * T32_HERA_SECTION_KB * 1024u;
+
+    memset(g, T33_BS_GUARD_BYTE, t33_bs_guard);
+    OpenIMP_T32_VpuFlush(g, t33_bs_guard, OI_T32_VPU_FLUSH_WBACK);
+}
+
+static void t33_bs_guard_check(struct t32_enc_chn *e)
+{
+    const T32VpuBuf *b = &t33_bs[e->avc.bs_engine - 1].buf;
+    const uint8_t *g = (const uint8_t *)t32_vpu_buf_va(b) + 2u * T32_HERA_SECTION_KB * 1024u;
+    uint32_t i, bad = 0, first = 0;
+
+    if (!t33_bs_guard)
+        return;
+    OpenIMP_T32_VpuFlush(g, t33_bs_guard, OI_T32_VPU_FLUSH_INV);
+    for (i = 0; i < t33_bs_guard; i++)
+        if (g[i] != T33_BS_GUARD_BYTE && !bad++)
+            first = i;
+    if (bad) {
+        IMP_LOG_ERR(TAG, "section buffer guard: %u of %u bytes changed (first at +%u)", bad, t33_bs_guard, first);
+        t33_bs_guard_fill(b);
+    }
+}
+
 static int t33_bs_get(struct t32_enc_chn *e)
 {
     int k = e->h264 ? 0 : 1, rc = 0;
 
     pthread_mutex_lock(&t33_bs_refs);
-    if (!t33_bs[k].refs)
-        rc = OpenIMP_T32_VpuBufAlloc(&t33_bs[k].buf, 2u * T32_HERA_SECTION_KB * 1024u,
+    if (!t33_bs[k].refs) {
+        const char *g = getenv("OPENIMP_T33_BS_GUARD");
+
+        t33_bs_guard = g ? (uint32_t)atoi(g) * 1024u : 0u;
+        rc = OpenIMP_T32_VpuBufAlloc(&t33_bs[k].buf, 2u * T32_HERA_SECTION_KB * 1024u + t33_bs_guard,
                                      k ? "t33_jpeg_bs" : "t33_hera_bs");
+        if (rc == 0 && t33_bs_guard)
+            t33_bs_guard_fill(&t33_bs[k].buf);
+    }
     if (rc == 0) {
         t33_bs[k].refs++;
         e->avc.ebs = t33_bs[k].buf;
@@ -417,8 +458,8 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
 
     for (;;) {
         T32IocJpegRegInfo *j = t32_vpu_buf_va(&e->job);
-        uint32_t at = 0, taken = 0;
-        int half = 0, full = 0, esc = 0;
+        uint32_t at = 0, k = 0, sec = e->avc.section_kb * 1024u;
+        int full = 0, esc = 0;
 
         jpeg_fill_job(e, f, &e->avc.ebs, index);
         /* control word as vendor 2.0.2.1 on the T33L silicon (job dump,
@@ -436,16 +477,20 @@ static int jpeg_encode_sections(struct t32_enc_chn *e, const IMPFrameInfo *f, st
                 return -1;
             if (r.rc != OI_T32_VPU_RET_HERA_BSFULL)
                 break;
-            if (h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, taken, r.output_len, half, &esc) != 0)
-                full = 1;
-            taken = r.output_len;
-            half ^= 1;
-            e->avc.sections++;
+            /* a full half, as vendor ijpege_encode (#742) */
+            if (r.output_len >= (k + 1u) * sec) {
+                if (h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, (k + 1u) * sec,
+                              (int)(k & 1u), &esc) != 0)
+                    full = 1;
+                k++;
+                e->avc.sections++;
+            }
             if (OpenIMP_T32_VpuSetBsFull(&e->vpu) != 0)
                 return -1;
         }
         if (r.rc == 0 && r.output_len > 0 && !full &&
-            h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, taken, r.output_len, half, &esc) == 0) {
+            h264_take(e, t32_vpu_buf_va(&s->bs), s->bs.size, &at, k * sec, r.output_len, (int)(k & 1u),
+                      &esc) == 0) {
             *len = at;
             return 0;
         }
@@ -470,6 +515,8 @@ static int jpeg_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     pthread_mutex_lock(&t33_bs[1].lock);
     rc = jpeg_encode_sections(e, f, s, len);
+    if (e->avc.bs_engine)
+        t33_bs_guard_check(e);
     pthread_mutex_unlock(&t33_bs[1].lock);
     return rc;
 }
@@ -607,8 +654,10 @@ static int hera_run_shared(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, 
     if (e->avc.bs_engine)
         pthread_mutex_lock(&t33_bs[e->avc.bs_engine - 1].lock);
     rc = hera_run(e, pairs, out, cap, at, esc, stat_regs, nstats);
-    if (e->avc.bs_engine)
+    if (e->avc.bs_engine) {
+        t33_bs_guard_check(e);
         pthread_mutex_unlock(&t33_bs[e->avc.bs_engine - 1].lock);
+    }
     return rc;
 #else
     return hera_run(e, pairs, out, cap, at, esc, stat_regs, nstats);
@@ -1030,8 +1079,8 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
                     int *esc, const uint32_t *stat_regs, unsigned nstats)
 {
     struct t32_h264 *a = &e->avc;
-    uint32_t taken = 0, n;
-    int half = 0, full = 0;
+    uint32_t k = 0, sec = a->section_kb * 1024u, n;
+    int full = 0;
     T32VpuResult r;
 
     OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&a->list), pairs * 8u, OI_T32_VPU_FLUSH_WBACK);
@@ -1043,11 +1092,16 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
             return -1;
         if (r.rc != OI_T32_VPU_RET_HERA_BSFULL)
             break;
-        if (h264_take(e, out, cap, at, taken, r.output_len, half, esc) != 0)
-            full = 1;
-        taken = r.output_len;
-        half ^= 1;
-        a->sections++;
+        /* vendor i264e (#742): the length at a BSFULL stop already counts
+         * the first bytes of the next half (T33L: 256033 at the first
+         * 256000 byte stop), so each stop takes exactly one full half;
+         * a stop before the half is full takes nothing */
+        if (r.output_len >= (k + 1u) * sec) {
+            if (h264_take(e, out, cap, at, k * sec, (k + 1u) * sec, (int)(k & 1u), esc) != 0)
+                full = 1;
+            k++;
+            a->sections++;
+        }
         if (OpenIMP_T32_VpuSetBsFull(&e->vpu) != 0)
             return -1;
     }
@@ -1069,7 +1123,7 @@ static int hera_run(struct t32_enc_chn *e, uint32_t pairs, uint8_t *out, uint32_
         OpenIMP_T32_VpuReadReg(T33_HERA_ODMA_POS_C, &a->odma_c);
 #endif
     if (r.rc != 0 || !r.output_len || full ||
-        h264_take(e, out, cap, at, taken, r.output_len, half, esc) != 0) {
+        h264_take(e, out, cap, at, k * sec, r.output_len, (int)(k & 1u), esc) != 0) {
         if (full || r.rc == 0)
             a->overflows++;
         IMP_LOG_ERR(TAG, "HERA picture: result 0x%lx status 0x%x length %u%s", r.rc, r.status,

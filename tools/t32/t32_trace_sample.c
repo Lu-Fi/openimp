@@ -163,17 +163,22 @@ static void stream_dump(int n, const IMPEncoderStream *st)
     fflush(stdout);
 }
 
-/* after the teardown: the dump file to physical 0x7800000 (rmem top, unused
- * now) for the host's pmemsave (/dev/mem read/write stop at kernel RAM's
+/* after the teardown: the dump file to physical 0x7800000 (QEMU only: rmem
+ * top, unused now; T32_NO_COPYOUT=1 on a camera skips it) for the host's pmemsave (/dev/mem read/write stop at kernel RAM's
  * end; mmap does not) */
 static void stream_copy_out(void)
 {
     const char *path = getenv("T32_STREAM_DUMP");
-    FILE *f = path ? fopen(path, "rb") : NULL;
+    FILE *f;
     long size;
     int fd;
     void *m;
 
+    if (path && getenv("T32_NO_COPYOUT")) {     /* real camera (#742): 0x7800000 is live RAM / rmem there */
+        printf("T32J out skipped\n");
+        return;
+    }
+    f = path ? fopen(path, "rb") : NULL;
     if (!f)
         return;
     fseek(f, 0, SEEK_END);
