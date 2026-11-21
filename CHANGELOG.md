@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32/T33 polling and encoder threads keep normal priority, vendor SCHED_RR not ported (#747, beyond vendor)
+
+- **Decision:** vendor `IMP_Encoder_PollingStream` sets `SCHED_RR` at the maximum priority on the caller thread (the JPEG thread does the same for itself); OpenIMP keeps `SCHED_OTHER`.
+- **Evidence (T33L, 1080p25 H.264 CBR 8000 kbps + JPEG loop, 300 s):** stock priority 24.99 fps, 0 gaps over 100 ms, 246 / 246 snapshots; RR 99 on the stream threads gave equal jitter, slower web / ssh and a hang with a watchdog reboot after about 193 s.
+- **Docs:** `docs/OPENIMP_BEYOND_VENDOR.md` section 6.11.
+
 ## 2026-11-21: T33 ISP OSD device-tested on the T33L, vendor equal (#754)
 
 Apitest `isposd`/`isposdapi` on .122 with the vendor libimp 2.0.2.1 and with OpenIMP: all result lines equal, the ISP-drawn picture is visible (luma 48.6 -> 233.0). Nine ISP-OSD matrix cells T33 `dev`; `IMP_OSD_UpdateRgnAttrData_ISP` is not part of the case and stays `aud`.

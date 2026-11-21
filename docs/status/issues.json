@@ -6173,7 +6173,7 @@
   {
    "number": 589,
    "title": "T33: tuning node (/dev/isp-m0 ioctl/write/mmap) and /proc/tisp debug functions not ported (27 reachable vendor functions)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/589",
    "labels": [
     "area:Driver",
@@ -6715,7 +6715,7 @@
   {
    "number": 658,
    "title": "[T33] MSCA channel path low notes (code check 2026-11-17): attr publish before init, stream-off wait on a gated ISP, unlocked wait window, snapshot stop without wait",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/658",
    "labels": [
     "area:Driver",
@@ -6731,7 +6731,7 @@
   {
    "number": 659,
    "title": "[T33] open isp-m0 node lacks the vendor ISP INFO block; its 'again' is the sensor gain register code, not the vendor x1024 AeAGain",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/659",
    "labels": [
     "area:ISP",
@@ -6757,7 +6757,7 @@
   {
    "number": 664,
    "title": "[T10][T20] vdiff --ext (all five extra scenarios): apical_interrupt_frame_end last call differs in one data word (V 0xac / O 0xad)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/664",
    "labels": [
     "area:Driver",
@@ -7226,7 +7226,7 @@
   {
    "number": 728,
    "title": "[T32/T33] Vendor LSC mirror_flip: no mesh effect with ring-format bins, and toggles add up (vendor behaviour, kept)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/728",
    "labels": [
     "area:ISP",
@@ -7383,7 +7383,7 @@
   {
    "number": 741,
    "title": "T33: JPEG IMP_Encoder_Query words differ from vendor 2.0.2.1 (leftStreamFrames / work_done 0, values one picture late)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/741",
    "labels": [
     "area:Encoder",
@@ -7413,7 +7413,7 @@
   {
    "number": 743,
    "title": "T32: encoder stream buffer size differs from vendor 2.2.0 (same CreateChn formula as T33 #740)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/743",
    "labels": [
     "area:Encoder",
@@ -7428,7 +7428,7 @@
   {
    "number": 744,
    "title": "[T20] jxf23 light box 5000 K: open picture darker than vendor at equal manual exposure (gain 1-4), noise/Y +13..43 %",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/744",
    "labels": [
     "area:AE-AWB",
@@ -7445,7 +7445,7 @@
   {
    "number": 745,
    "title": "[T20] jxf23 light box: open AE/AWB settles 2-4 s slower than vendor (12 vs 10 s, WB preset 23 vs 17 s)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/745",
    "labels": [
     "area:AE-AWB",
@@ -7462,7 +7462,7 @@
   {
    "number": 746,
    "title": "QEMU HERA model: BSFULL stop length has no overshoot into the next half (T33L silicon reports +33 bytes)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/746",
    "labels": [
     "area:Encoder",
@@ -7478,7 +7478,7 @@
   {
    "number": 747,
    "title": "T32/T33: vendor PollingStream switches the caller thread to SCHED_RR max priority (OpenIMP keeps SCHED_OTHER)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/747",
    "labels": [
     "area:Encoder",
@@ -7494,10 +7494,93 @@
   {
    "number": 748,
    "title": "[T31] ae0_weight_mean2 differs from the vendor: 64-bit vs 32-bit accumulators, correction path without AePweightCalculate (#553)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/748",
    "labels": [],
    "created": "2026-11-21T07:23:42Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 749,
+   "title": "T40: manual AE (AeFreeze/SetAeExprInfo) survives a timps restart -> white picture until fair auto",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/749",
+   "labels": [],
+   "created": "2026-11-21T08:18:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 751,
+   "title": "[T32] online LDC at ISP init not wired (library branch + module dma cfg)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/751",
+   "labels": [
+    "soc:T32",
+    "soc:T33"
+   ],
+   "created": "2026-11-21T09:29:34Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 752,
+   "title": "[T32/T33] Encoder_Yuv*/InputJpege/QpgAI_Yuv not exported: port or mark n.a.",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/752",
+   "labels": [
+    "soc:T32",
+    "soc:T33"
+   ],
+   "created": "2026-11-21T09:29:35Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 753,
+   "title": "[T33] api_evidence.json cells stale after 2026-11-20/21 merges; resolve T33 ? rows",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/753",
+   "labels": [
+    "soc:T32",
+    "soc:T33"
+   ],
+   "created": "2026-11-21T09:29:36Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 755,
+   "title": "[T33] MDNS / CSCCR register lists run fewer times than the vendor (QEMU, /proc/tisp counters)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/755",
+   "labels": [
+    "area:Driver",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T11:08:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 756,
+   "title": "T33/T32 IVDC: unbounded soft-reset poll locks the streamer thread when the IVDC reset does not complete",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/756",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T32",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T13:45:37Z",
    "closed": null,
    "milestone": null
   }

@@ -464,6 +464,10 @@ T10/T20 (vendor libimp 3.12.0, T10 = T20 binary; user OK 2026-11-16, #633): here
 
 The driver answers control 0x08000028 with 8 bytes: vendor tx-isp-t33.ko `tx_isp_core_ops_g_ctrl` case 0x28 copies 8 bytes to the user (`li a2,8`, word 1 is stale kernel stack), and open-tx-isp does the same (`driver/t32/tx_isp_t32_txgctrl.h`). `IMPISPFlickerFlag` is one `int`. The vendor libimp T33 2.0.2.1 hands the caller's pointer straight to the ioctl, so it overwrites the 4 bytes behind the caller's structure. OpenIMP reads into a local 8-byte block and copies only the flag (`src/t32/openimp_t32_tuning.c`). The flag value and the return codes are the vendor's. No switch.
 
+### 6.11 Polling and encoder threads keep normal scheduling priority (T32/T33, 2026-11-21, #747)
+
+Vendor `IMP_Encoder_PollingStream` (T33 2.0.2.1, T32 2.2.0) switches the calling thread to `SCHED_RR` at the maximum priority before it waits on the stream semaphore, and the vendor JPEG thread does the same for itself. OpenIMP keeps `SCHED_OTHER` on the polling caller and the encoder threads. Measured on the T33L (1080p25 H.264 CBR 8000 kbps plus a JPEG snapshot loop, 300 s): with RR 99 on the video / JPEG / encoder threads the frame jitter was the same as with the stock priority, web and ssh latency got worse, and after about 193 s the camera stopped answering (RTSP, JPEG, web, ssh) and the watchdog rebooted it: real-time priority on the stream threads starves the rest of the system on this single core. Stock priority: 24.99 fps, 0 gaps over 100 ms, 246 of 246 snapshots, camera responsive. Rated dev+ (no behaviour the client sees is lost; the vendor's wakeup preemption is not reproduced). The T31/T40/T41 vendor PollingStream was not checked.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

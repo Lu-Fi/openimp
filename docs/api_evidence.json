@@ -8526,7 +8526,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (chn 0 running: registered 1 leftPics 0 leftBytes 0 leftFrames 0 curPacks 0 work_done 1).",
+      "note": "2026-11-21 (#741, QEMU): T33 JPEG status words (leftStreamBytes, curPacks, leftStreamFrames, work_done) like vendor 2.0.2.1 incl. the vendor's pre-write signal window; 12 of 12 Query lines equal to the vendor lib in QEMU, no device re-run, symbol unchanged. audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (chn 0 running: registered 1 leftPics 0 leftBytes 0 leftFrames 0 curPacks 0 work_done 1).",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
