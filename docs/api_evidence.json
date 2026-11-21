@@ -8304,8 +8304,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "host",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8316,8 +8316,11 @@
       },
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)",
+        "T33": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)"
+      },
+      "note": " 2026-11-21 (#752 stage 1): exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010, codec/alignment/foreign handle 0x80040002, init failure 0x80048000); no encoder back end yet (no handle is ever created), so the cell is host, not rt."
     },
     "Encoder_InputJpege_Ex": {
       "area": "Encoder",
@@ -9726,8 +9729,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "host",
+        "T33": "host",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9739,8 +9742,11 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)",
+        "T33": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)"
+      },
+      "note": " 2026-11-21 (#752 stage 1): exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010, codec/alignment/foreign handle 0x80040002, init failure 0x80048000); no encoder back end yet (no handle is ever created), so the cell is host, not rt."
     },
     "Encoder_YuvEncode_Ex": {
       "area": "Encoder",
@@ -9771,8 +9777,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "host",
+        "T33": "host",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9784,8 +9790,11 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)",
+        "T33": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)"
+      },
+      "note": " 2026-11-21 (#752 stage 1): exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010, codec/alignment/foreign handle 0x80040002, init failure 0x80048000); no encoder back end yet (no handle is ever created), so the cell is host, not rt."
     },
     "Encoder_YuvExit_Ex": {
       "area": "Encoder",
@@ -9835,8 +9844,8 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "host",
+        "T33": "host",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9848,8 +9857,11 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T41": "apitest t41pass 2026-11-04 .34"
-      }
+        "T41": "apitest t41pass 2026-11-04 .34",
+        "T32": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)",
+        "T33": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)"
+      },
+      "note": " 2026-11-21 (#752 stage 1): exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010, codec/alignment/foreign handle 0x80040002, init failure 0x80048000); no encoder back end yet (no handle is ever created), so the cell is host, not rt."
     },
     "Encoder_YuvInit_Ex": {
       "area": "Encoder",
@@ -20448,12 +20460,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
-        "T33": "miss",
+        "T32": "host",
+        "T33": "host",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "auto": true
+      "auto": true,
+      "ref": {
+        "T32": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)",
+        "T33": "host test tests/t33/yuv_stub_test.c 2026-11-21 (#752 stage 1)"
+      },
+      "note": " 2026-11-21 (#752 stage 1): exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010, codec/alignment/foreign handle 0x80040002, init failure 0x80048000); no encoder back end yet (no handle is ever created), so the cell is host, not rt."
     },
     "Encoder_SetChnRcTrigLevel": {
       "area": "Encoder",

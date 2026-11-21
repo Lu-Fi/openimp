@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: T32/T33 unbound YUV / JPEG encoder exports, stage 1 (#752)
+
+`IMP_Encoder_YuvInit/YuvEncode/YuvExit`, `IMP_Encoder_InputJpege` and `IMP_Encoder_SetChnQpgAI_Yuv` are exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010; codec other than H.264/H.265, width % 16, odd height 0x80040002; init failure 0x80048000). No encoder back end yet: no handle is ever created. Host test `tests/t33/yuv_stub_test.c`, apitest case in `at_t33.c`; matrix cells `host`.
+
 ## 2026-11-21: T32 encoder stream buffers in process memory, size like vendor 2.2.0 (#743)
 
 - **Cause:** T32 CreateChn allocated every stream slot in rmem (ALIGN16(w) x ALIGN16(h), at least 256 KiB, for H.264 / H.265; 512000 scaled by the area for JPEG), and each H.264 / H.265 channel had its own 2 x 250 KiB HERA section buffer. Vendor T32 2.2.0 mallocs the stream buffer (internal create 0xd6cc0, pointer chn+500, size chn+504; the only rmem IMP_Alloc of CreateChn is a 0xb000 buffer at 0xd73e0) with the #740 size formula (CreateChn 0xdbe7c: 801 / 601 at 0xdc22c / 0xdc60c, 0x4100 at 0xdc658, 1921 / 1089 at 0xdc6e4).

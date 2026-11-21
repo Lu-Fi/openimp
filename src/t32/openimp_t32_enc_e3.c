@@ -310,6 +310,62 @@ int IMP_Encoder_InputJpege_Ex(uint8_t *src, uint8_t *dst, int src_w, int src_h, 
     return 0;
 }
 
+/* ---- unbound YUV / JPEG encoder, stage 1 (#752): argument checks and return codes only ----
+ * Vendor 2.0.2.1 (T33 libimp, audit t33backlog/v33_backlog.c): YuvInit 0x1040c4, YuvEncode 0x104b4c,
+ * YuvExit 0x105248, InputJpege 0x105430, SetChnQpgAI_Yuv 0x1048ac.  The encoder back end (HERA job on
+ * a caller buffer, ijpege) is not here, so no handle ever exists:
+ *   YuvInit: codec (type) other than 1 / 2 (H.264 / H.265), width % 16, height odd: 0x80040002 (the
+ *     vendor checks codec 1/2 first, then the alignment, both 0x80040002); a valid request would
+ *     reach i264e_init / i265e_init: here 0x80048000 (the vendor's init-failed code), *h untouched.
+ *     NULL h / encIn: the vendor dereferences them (crash); here 0x80040002.
+ *   YuvEncode / YuvExit: NULL handle 0x80040010 (vendor), any other handle 0x80040002 (vendor: codec
+ *     word neither 1 nor 2; the stub never hands out a handle, so it is foreign and is not read).
+ *   InputJpege: width % 16 or height odd 0x80040002 (vendor 0x242e), else ijpege_init cannot run:
+ *     0x80048000 (vendor failure return of the same function).
+ *   SetChnQpgAI_Yuv: only valid on a handle: 0x80040002 (vendor: unknown codec).
+ */
+#include "t32/openimp_t32_yuvstub.h"
+
+int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight, IMPEncoderYuvIn *encIn)
+{
+    (void)h;
+    int r = yuvstub_init_rc(encIn != NULL, encIn ? (int)encIn->type : 0, inWidth, inHeight);
+
+    IMP_LOG_ERR(TAG, "YuvInit: %dx%d: 0x%x (unbound encoder not implemented on T32/T33)", inWidth, inHeight, r);
+    return r;
+}
+
+int IMP_Encoder_YuvEncode(void *h, IMPFrameInfo frame, IMPEncoderYuvOut *encOut)
+{
+    (void)frame;
+    (void)encOut;
+    return yuvstub_handle_rc(h != NULL);
+}
+
+int IMP_Encoder_YuvExit(void *h)
+{
+    return yuvstub_handle_rc(h != NULL);
+}
+
+int IMP_Encoder_InputJpege(uint8_t *src, uint8_t *dst, int src_w, int src_h, int q, int *stream_length)
+{
+    (void)src;
+    (void)dst;
+    (void)q;
+    (void)stream_length;
+    int r = yuvstub_jpege_rc(src_w, src_h);
+
+    IMP_LOG_ERR(TAG, "InputJpege: %dx%d: 0x%x (not implemented on T32/T33)", src_w, src_h, r);
+    return r;
+}
+
+int IMP_Encoder_SetChnQpgAI_Yuv(void *h, IMPEncoderQpgAICfg *q)
+{
+    (void)h;
+    (void)q;
+    return YUVSTUB_E_PARAM;
+}
+
 /* ---- multi-process server --------------------------------------------------- */
 #define MP_VBM_SLOTS 16
 static struct {
