@@ -19,6 +19,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - **Before:** the T33 build had no `IMP_FrameSource_SetChnRotate`; the vendor 2.0.2.1 has none either and switches its I2D off on the T33L.
 - **Now (OpenIMP extension, user decision 2026-11-05 "one rotation path"):** `SetChnRotate` (1 = 90 CCW, 2 = 90 CW, 3 = 180) before EnableChn, both sides multiples of 16, at most 1280x720 pixels; the T32/T33 FrameSource rotates each capture buffer with the shared `nv12_rotate` kernels (MXU2 selected bit-exact on the T33L) into a second buffer that the consumers get with the rotated size; `OpenIMP_Cap_FsRotate` and `OpenIMP_FS_RotateLimits` exported. `t32_trace_sample`: `T32_FS_ROTATE=<mode>`.
 - **Evidence:** T33L .122: 640x368 modes 1/2/3 -> 368x640 / 368x640 / 640x368, directions correct (correlation 0.96), 300/300 streams at 15.0 fps, decode clean; CPU 2.0 -> 4.2 % (640x368 rot90), 2.1 -> 12.0 % (1280x720 rot90). docs/T31_ROTATE.md "T33", docs/OPENIMP_BEYOND_VENDOR.md.
+## 2026-11-21: T33 RC parameters device check on the T33L (matrix row 27; tooling only)
+
+- `t32_trace_sample`: `T32_ENC_RCP="ip=N,pp=N,ib=N,st=N,fl=N,ql=N,cp=N"` sets IPfrmQPDelta, PPfrmQPDelta, iBiasLvl, staticTime, flucLvl, qualityLvl (CBR) and iBiasLvl, staticTime, qualityLvl, changePos (VBR) after `SetDefaultParam`.
+- T33L .122, installed OpenIMP, H.264 1920x1080 at 15 fps, 1000 kbit/s, 150 pictures per case (pictures 30.. counted): CBR iBiasLvl -3 / +3: I QP 32.5 / 37.1, I picture 71.6 / 29.0 KB, P-I QP gap 5.8 / 0.0 at 1004 / 1029 kbit/s; VBR changePos 50 / 100: 566 / 1039 kbit/s, P QP 39.4 / 37.3; IPfrmQPDelta 0 / 8 and qualityLvl 0 / 7 move little (P-I gap 2.4 / 2.7; 924 / 963 kbit/s). Every stream 150/150 and decodable. Device-side numbers for the mapping that `rc_test` checks against the vendor IMP layer (docs/T32_RC.md).
 
 ## 2026-11-21: T32/T33 H.265 motion mode 2 per picture like the vendor: the motion level steps and the QP table 0x40500 follows (#719)
 
