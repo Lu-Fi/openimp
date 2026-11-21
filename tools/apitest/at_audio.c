@@ -546,7 +546,14 @@ static void ao_flow(void)
             }
 #endif
 #if HAS_IMP_AI_EnableAecRefFrame
+#if defined(APITEST_T32) || defined(APITEST_T33)
+            /* vendor 2.2.0 / 2.0.2.1 refuse reference frames while the AEC runs
+             * ("AEC and Ref can not enable both"): -1 is the expected result (#712) */
+            NEED(IMP_AI_EnableAecRefFrame) { r4 = IMP_AI_EnableAecRefFrame(adev, 0, ao, 0);
+                rep(FN(IMP_AI_EnableAecRefFrame), r4, r4 == -1 ? V_PASS : V_FAIL, "rt: reference frame on with the AEC on refused (-1, vendor)"); }
+#else
             NEED(IMP_AI_EnableAecRefFrame) { r4 = IMP_AI_EnableAecRefFrame(adev, 0, ao, 0); RET0(IMP_AI_EnableAecRefFrame, r4, "rt: reference frame on"); }
+#endif
             NEED(IMP_AI_DisableAecRefFrame) { r4 = IMP_AI_DisableAecRefFrame(adev, 0, ao, 0); RET0(IMP_AI_DisableAecRefFrame, r4, "rt: reference frame off"); }
 #endif
             NEED(IMP_AI_DisableAec) { r4 = IMP_AI_DisableAec(adev, 0); RET0(IMP_AI_DisableAec, r4, "rt: AEC off"); }
