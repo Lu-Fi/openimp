@@ -2353,6 +2353,37 @@ static void cs_faceae(void)
 static void cs_faceae(void) {}
 #endif
 
+#if defined(APITEST_T33) && HAS_IMP_ISP_Tuning_GetAFMetricesInfo
+/*
+ * AF metrics (#437): the T33 AF algorithm (tisp_af_alogrithm) updates the two metric words from the AF statistics at
+ * every AF interrupt; read them 20 x over 2 s and print them for the vendor / open comparison.  On the cv2005 PRJ008
+ * module the AF interrupt does not come with the vendor stack either (vendor libimp 2.0.2.1 + tx-isp-t33.ko: the
+ * section's init words 399341925 / 5686726 twenty times), so PASS = ret 0 and non-zero metrics; the change count is
+ * reported, not judged.
+ */
+static void cs_afmetric(void)
+{
+    NEED(IMP_ISP_Tuning_GetAFMetricesInfo) {
+        IMPISPAFMetricsInfo m;
+        unsigned v[20], a[20], k, changes = 0;
+        int r = 0;
+
+        for (k = 0; k < 20; k++) {
+            memset(&m, 0, sizeof(m));
+            r |= IMP_ISP_Tuning_GetAFMetricesInfo(IMPVI_MAIN, &m);
+            v[k] = m.af_metrics; a[k] = m.af_metrics_alt;
+            if (k && (v[k] != v[k - 1] || a[k] != a[k - 1])) changes++;
+            usleep(100000);
+        }
+        printf("[I] afmetric: %u %u / %u %u / %u %u / %u %u\n", v[0], a[0], v[5], a[5], v[10], a[10], v[19], a[19]);
+        rep(FN(IMP_ISP_Tuning_GetAFMetricesInfo), r, r == 0 && (v[19] || a[19]) ? V_PASS : V_FAIL,
+            "20 reads over 2 s: %u changes (metric %u -> %u, alt %u -> %u), frames flow %d", changes, v[0], v[19], a[0], a[19], flow());
+    }
+}
+#else
+static void cs_afmetric(void) {}
+#endif
+
 #if defined(PLATFORM_T41) && !defined(APITEST_T32) && HAS_IMP_ISP_Tuning_SetAeExpList && HAS_IMP_ISP_Tuning_GetAeExpList
 #ifdef APITEST_T40
 #define AEL_BADMODE_OK 1      /* T40: the OEM tisp_ae_api_set_exp_list stores any mode (no check in the driver lift); the return code of mode 7 is only reported */
@@ -7623,6 +7654,7 @@ void t_cases(void)
     wdog("cases", 240);
     if (cs_on("aestats")) cs_aestats();    wdog("cases", 60);
     if (cs_on("faceae")) cs_faceae();      wdog("cases", 90);
+    if (cs_on("afmetric")) cs_afmetric();  wdog("cases", 30);
     if (cs_on("aeexplist")) cs_aeexplist(); wdog("cases", 60);
     if (cs_on("dmic")) t_dmic();        wdog("cases", 60);
     if (cs_on("fspool")) cs_fspool();     wdog("cases", 90);
