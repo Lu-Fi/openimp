@@ -3054,6 +3054,12 @@ static void cs_isposdapi(void)
         h = IMP_OSD_CreateRgn_ISP(0, NULL); h2 = IMP_OSD_CreateRgn_ISP(0, NULL);
         rep(FN(IMP_OSD_CreateRgn_ISP), h, (h >= 0 && h2 >= 0 && h2 != h && rbad < 0) ? V_PASS : V_FAIL, "handles %d and %d (distinct), channel 99 refused (ret %d)", h, h2, rbad);
         if (h < 0) { isposd_cons_down(jenc); goto out; }
+        {   /* how many regions one channel takes (vendor 2.0.2.1 IMP_OSD_Init_ISP 0x179c14: 8 for CPU type 0, 4 for type 1 = T33) */
+            int hs[16], n = 0;
+            while (n < 16 && (hs[n] = IMP_OSD_CreateRgn_ISP(1, NULL)) >= 0) n++;
+            printf("[T] isposd: channel 1 takes %d regions\n", n);
+            while (n > 0) IMP_OSD_DestroyRgn_ISP(1, hs[--n]);
+        }
         isposd_fill(a, h, x0, y0, pic);
         rs = IMP_OSD_SetRgnAttr_PicISP(0, h, a);
         rg = IMP_OSD_GetRgnAttr_ISPPic(0, h, b);

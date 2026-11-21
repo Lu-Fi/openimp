@@ -290,7 +290,13 @@ int IMP_OSD_Init_ISP(void)
     }
     isp_osd_pool.size = (uint32_t)isp_osd_pool_size;
     isp_osd_nblk = 0;
+#ifdef PLATFORM_T33
+    /* vendor 2.0.2.1 IMP_OSD_Init_ISP (0x179c14): system_get_cpu_type() 0 (cpu id < 0xd) takes 8 regions
+     * per channel, type 1 (cpu id 0xd..0x15, the T33) 4; QEMU, vendor library: "channel 1 takes 4 regions" (#754) */
+    isp_osd_npics = 4;
+#else
     isp_osd_npics = ISPOSD_PICS;
+#endif
     memset(isp_osd_slot, 0, sizeof(isp_osd_slot));
     for (c = 0; c < ISPOSD_CHNS; c++) {
         isp_osd_free[c].head = isp_osd_free[c].tail = NULL;

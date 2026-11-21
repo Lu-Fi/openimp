@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-21: T33 matrix cells `?` resolved (#754)
 
 The 10 ISP-OSD rows and `DMIC_*` on T33 are `aud` (vendor 2.0.2.1 implements them, OpenIMP T33 shares the T32 source); the comparison run against the vendor is tracked in #754.
+## 2026-11-21: T33 ISP OSD takes 4 regions per channel like vendor 2.0.2.1 (#754)
+
+QEMU T33, vendor library vs OpenIMP through the same apitest (`isposd`, `isposdapi`): everything equal except the region count: vendor `IMP_OSD_Init_ISP` (0x179c14) takes 4 per channel for CPU type 1 (T33), OpenIMP had 8. Fixed; apitest prints `channel 1 takes N regions`. ISP-OSD matrix cells T33 `qemu`, `DMIC_*` `rt` (the vendor library crashes in QEMU on the DMIC calls).
 
 ## 2026-11-21: API evidence cells refreshed from the closed T32/T33 issues (#753)
 
