@@ -12,6 +12,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-21: API evidence cells refreshed from the closed T32/T33 issues (#753)
 
 `docs/api_evidence.json` and the generated matrix: T33 `Encoder_SetChnMaxPictureSize` err -> dev (#706/#714), T33 `Encoder_Get/SetChnROI` cache -> dev and T32 -> qemu (#726/#734), T33 `Encoder_SetRdBufShare` cache -> dev (#736), T32 `ISP_Tuning_SetAutoZoom` host -> qemu (#721). Only rows whose closing comment names device, QEMU or oracle evidence.
+## 2026-11-21: T32/T33 unbound YUV / JPEG encoder exports, stage 1 (#752)
+
+`IMP_Encoder_YuvInit/YuvEncode/YuvExit`, `IMP_Encoder_InputJpege` and `IMP_Encoder_SetChnQpgAI_Yuv` are exported on T32/T33 with the vendor 2.0.2.1 argument checks and return codes (NULL handle 0x80040010; codec other than H.264/H.265, width % 16, odd height 0x80040002; init failure 0x80048000). No encoder back end yet: no handle is ever created. Host test `tests/t33/yuv_stub_test.c`, apitest case in `at_t33.c`; matrix cells `host`.
 
 ## 2026-11-21: T32 encoder stream buffers in process memory, size like vendor 2.2.0 (#743)
 

@@ -16,8 +16,11 @@ HERA_DEPS := $(HERA_SRC) $(PROJECT_DIR)/src/t32/openimp_t33_hera.h $(PROJECT_DIR
 OSD_BIN := $(BUILD)/t33-osd-sw-test
 OSD_SRC := osd_sw_test.c $(PROJECT_DIR)/src/t32/openimp_t33_osd_sw.c
 
+YUV_BIN := $(BUILD)/t33-yuv-stub-test
+
 .PHONY: check
-check: $(HERA_BIN) $(OSD_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN)
+	$(YUV_BIN)
 	gzip -dc vendor-2.0.2.1-hera-h264.txt.gz vendor-2.0.2.1-hera-h265.txt.gz > $(BUILD)/t33-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t33-hera-lists.txt
 	gzip -dc vendor-2.0.2.1-osd-sw.txt.gz > $(BUILD)/t33-osd-sw.txt
@@ -31,3 +34,8 @@ $(OSD_BIN): $(OSD_SRC) $(PROJECT_DIR)/src/t32/openimp_t33_osd_sw.h
 $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(HERA_SRC) -lm
+
+# unbound YUV / JPEG encoder stage 1 (#752): vendor argument checks and return codes
+$(YUV_BIN): yuv_stub_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvstub.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ yuv_stub_test.c

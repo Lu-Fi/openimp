@@ -715,6 +715,31 @@ void cs_t33e3(void)
         int len = -7, r = IMP_Encoder_InputJpege_Ex(NULL, NULL, 320, 192, 75, &len);
         rep(FN(IMP_Encoder_InputJpege_Ex), r, r == -1 && len == -7 ? V_PASS : V_FAIL, "no server: 0x%x; frames flow %d", X(r), cases_flow());
     }
+    /* stage 1 (#752): the unbound encoder has no back end, the vendor 2.0.2.1 argument checks and codes only */
+    NEED(IMP_Encoder_YuvInit) NEED(IMP_Encoder_YuvEncode) NEED(IMP_Encoder_YuvExit) {
+        IMPEncoderYuvIn in;
+        IMPEncoderYuvOut out;
+        IMPFrameInfo f;
+        void *h = (void *)-7;
+        int r_ok, r_jpg, r_w, r_e, r_x;
+
+        memset(&in, 0, sizeof(in)); memset(&out, 0, sizeof(out)); memset(&f, 0, sizeof(f));
+        in.type = PT_H264;
+        r_ok = IMP_Encoder_YuvInit(&h, 320, 192, &in);
+        r_w = IMP_Encoder_YuvInit(&h, 322, 192, &in);
+        in.type = PT_JPEG;
+        r_jpg = IMP_Encoder_YuvInit(&h, 320, 192, &in);
+        r_e = IMP_Encoder_YuvEncode(NULL, f, &out);
+        r_x = IMP_Encoder_YuvExit(NULL);
+        rep(FN(IMP_Encoder_YuvInit), r_ok, r_ok == (int)0x80048000 && h == (void *)-7 ? V_PASS : V_FAIL, "no back end: 0x%x, width 322 0x%x, JPEG type 0x%x (handle untouched)", X(r_ok), X(r_w), X(r_jpg));
+        rep(FN(IMP_Encoder_YuvEncode), r_e, r_e == (int)0x80040010 && r_w == (int)0x80040002 && r_jpg == (int)0x80040002 ? V_PASS : V_FAIL, "NULL handle 0x%x", X(r_e));
+        rep(FN(IMP_Encoder_YuvExit), r_x, r_x == (int)0x80040010 ? V_PASS : V_FAIL, "NULL handle 0x%x", X(r_x));
+    }
+    NEED(IMP_Encoder_InputJpege) {
+        int len = -7, r_ok = IMP_Encoder_InputJpege(NULL, NULL, 320, 192, 75, &len);
+        int r_w = IMP_Encoder_InputJpege(NULL, NULL, 100, 192, 75, &len);
+        rep(FN(IMP_Encoder_InputJpege), r_ok, r_ok == (int)0x80048000 && r_w == (int)0x80040002 && len == -7 ? V_PASS : V_FAIL, "no back end: 0x%x, width 100 0x%x", X(r_ok), X(r_w));
+    }
 }
 
 /* ---- case "t33i2d": FrameSource I2D rotation on channel 2 (#445) -----------------------------------------------------------------
