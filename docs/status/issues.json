@@ -6643,7 +6643,7 @@
   {
    "number": 645,
    "title": "[T32/T33] Proof audit follow-up: recount T32 card (1591/1591) and T33 'wired' against real-body proofs",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/645",
    "labels": [
     "area:tests",
@@ -6668,7 +6668,7 @@
   {
    "number": 652,
    "title": "[T32] Frame-channel stream-off lacks the vendor's MSCA work-state wait (502 x 1 ms) before the fifo clear (cross-SoC from #651)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/652",
    "labels": [
     "area:Driver",
@@ -6896,7 +6896,7 @@
   {
    "number": 704,
    "title": "[T32] tests: stale mutation lines in t32 oracles (fail when the PR #15 reference C is present)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/704",
    "labels": [
     "area:Driver",
@@ -6913,7 +6913,7 @@
   {
    "number": 706,
    "title": "[T33] H.264 rate control runs blind on silicon: 39/48 HERA statistics registers and the IDR row sizes read 0 (T32 2.2.0 register list), MaxPictureSize not applied",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/706",
    "labels": [
     "area:Encoder",
@@ -6944,7 +6944,7 @@
   {
    "number": 711,
    "title": "T32: SetSharpness is a stub in the open tx-isp-t32.ko (T33 fixed in #707)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/711",
    "labels": [
     "area:ISP",
@@ -6960,7 +6960,7 @@
   {
    "number": 712,
    "title": "[T33] AI AEC reference path differs from vendor 2.0.2.1: GetFrameAndRef gives no reference, EnableAecRefFrame accepted with AEC on",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/712",
    "labels": [
     "area:Audio",
@@ -6986,10 +6986,107 @@
   {
    "number": 714,
    "title": "[T33] H.265 MaxPictureSize not applied (H.264 fixed in #706); rc65 unit registers likely missing in the T33 HERA H.265 list",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/714",
    "labels": [],
    "created": "2026-11-20T23:33:00Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 721,
+   "title": "[T32] SetAutoZoom / GetAutoZoom store-only: no MSCA crop state, request not applied",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/721",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T01:19:30Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 728,
+   "title": "[T32/T33] Vendor LSC mirror_flip: no mesh effect with ring-format bins, and toggles add up (vendor behaviour, kept)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/728",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T02:02:49Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 730,
+   "title": "[T32] MSCA channel start is the T23-style direct packing, not the vendor chx_cfg_load on st_msca_chx_cfg (blocks #721)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/730",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T02:06:28Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 732,
+   "title": "[T33] open tx-isp MEMORY_MALLOC (0x800c543a) fails with order-6 page allocation after ~12 library cycles on the 44 MiB T33L; timps cannot start",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/732",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-21T02:29:35Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 733,
+   "title": "[T31] ispcore_sync_sensor_attr does not write the derived line time back into the sensor attribute (vendor: attr +0xbc)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/733",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-11-21T02:30:56Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 734,
+   "title": "[T32] Encoder ROI (SetChnROI) stored only on T32 too (cross-SoC of #726)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/734",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-21T02:33:19Z",
    "closed": null,
    "milestone": null
   }

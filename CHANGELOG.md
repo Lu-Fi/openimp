@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs 14 days without an unplanned reset on the image built from the RC3 tag (at least one camera per gate SoC). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-21: docs: T33 matrix rows 21, 27, 34, 35, 36, 45 on device evidence (#731, row 27, #732, #726)
+
+- Row 21 rotation T33 🔧 -> ✅+ (beyond vendor, unified SetChnRotate path, T33L device test), row 27 RC parameters T33 🔧 -> ✅ (T33L device check of iBiasLvl / changePos / IPfrmQPDelta / qualityLvl), row 45 encoder ROI T33 📋 -> ✅ (QEMU lists = vendor 2.0.2.1, T33L region QP effect). Row 34 libimp size T33 📋 -> ✅+ (777 / 233 / 978 KB against the vendor 2.0.2.1 2096 / 563 / 2432 KB, T33 added to the beyond-vendor size row), row 35 module size T33 📋 -> ✅+ (tx-isp-t33.ko 904 KB against 1532 KB, lsmod 1,073,030 against 1,428,423 B), row 36 MemFree T33 🔧 -> ✅ (#732: 30 sample cycles + 5 timps starts flat on the current module; the flashed .122 module predates the #684 fix). Issue cache refreshed; FEATURE_MATRIX.md and feature-matrix.html regenerated.
+
 ## 2026-11-21: T33 encoder ROI regions reach the controller and the EFE ROI registers like vendor 2.0.2.1 (#726)
 
 - **Cause:** T33 `IMP_Encoder_SetChnROI` only stored the 16 regions for the getter; the controller's ROI table (parameter block +0x1c0 H.264 / +0x110 H.265) stayed zero and the HERA list kept the defaults of 0x20054..0x200c0.
