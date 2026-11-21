@@ -59,6 +59,10 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <time.h>
+#if defined(PLATFORM_T33)
+#include "framesource/nv12_rotate.h"
+#endif
+#include <time.h>
 #include <unistd.h>
 
 #include <imp/imp_common.h>
@@ -151,6 +155,10 @@ struct t32_fs_chn {
     IMPFSI2DAttr i2d_attr;
     struct p1_i2d_geometry i2d_geom;
     uint32_t i2d_runs, i2d_errors;
+    int rot_mode;               /* T33 software rotation (#731): nv12_rotate mode, 0 off */
+    uint32_t rot_frames;
+    uint64_t rot_us;
+    uint32_t rot_max_us;
 };
 
 struct t32_fs_cached {
@@ -474,7 +482,9 @@ static void fs_ex_offer_locked(struct t32_fs_chn *c, struct t32_fs_buf *b);
  * pitch ALIGN16(width) as the T32 capture buffers (the T40 driver needs
  * ALIGN32 for 90 / 270 on silicon: not known for the T32, no camera).
  * The delay FIFO and SnapFrame copy the unturned capture (not modelled). */
+#if !defined(PLATFORM_T33)
 static int fs_i2d_fd = -1;
+#endif
 
 static void fs_i2d_frame(const struct t32_fs_chn *c, const IMPDMABufferInfo *d, IMPFrameInfo *f)
 {
@@ -485,12 +495,166 @@ static void fs_i2d_frame(const struct t32_fs_chn *c, const IMPDMABufferInfo *d, 
     f->virAddr = d->virt_addr;
 }
 
+#if defined(PLATFORM_T33)
+/*
+ * T33 software rotation (#731, OpenIMP extension: the vendor 2.0.2.1 has no
+ * IMP_FrameSource_SetChnRotate and switches its I2D off on the T33L).  The
+ * unified OpenIMP rotation path of the SoCs without hardware rotation
+ * (T10/T20/T21/T23/T30/T31, docs/T31_ROTATE.md): IMP_FrameSource_SetChnRotate
+ * (rotTo90 1 = 90 CCW, 2 = 90 CW, 3 = 180, OpenIMP extension), before
+ * EnableChn, with the channel's size; every captured frame is rotated by
+ * nv12_rotate (MXU2 where the selftest passes, else C) into a second buffer
+ * of its capture buffer, the frame record of the consumers (encoder, OSD,
+ * GetFrame copies) points there with the rotated size, as the T32 I2D pass
+ * does (no copy back).  Envelope as the T30 (XBurst1 + MXU2): both sides
+ * multiples of 16, at most 1280x720 pixels (sub streams; the HERA encoder
+ * needs a width of a multiple of 16 anyway).  The delay FIFO and SnapFrame
+ * copy the unrotated capture, as with the I2D pass.
+ */
+#define FS_ROT_MAX_W 1280u
+#define FS_ROT_MAX_H 720u
+#define FS_ROT_CFG(m, w, h) ((uint32_t)(m) << 26 | (uint32_t)(w) << 13 | (uint32_t)(h))
+
+static uint32_t fs_rot_cfg[T32_FS_CHANNELS];
+
+static uint32_t fs_rot_max_pixels(void)
+{
+    static uint32_t max_pixels;
+
+    if (!max_pixels) {
+        const char *e = getenv("OPENIMP_FS_ROTATE_MAX_PIXELS");     /* tests only */
+        unsigned long v = e && e[0] ? strtoul(e, NULL, 0) : 0;
+
+        max_pixels = v && v <= 4096ul * 4096ul ? (uint32_t)v : FS_ROT_MAX_W * FS_ROT_MAX_H;
+    }
+    return max_pixels;
+}
+
+static uint64_t fs_rot_now_us(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
+}
+
+/* EnableChn: lock held, capture buffers allocated */
+static void fs_rot_arm_locked(struct t32_fs_chn *c, int chn)
+{
+    uint32_t cfg = __atomic_load_n(&fs_rot_cfg[chn], __ATOMIC_ACQUIRE);
+    int mode = (int)(cfg >> 26), i;
+    uint32_t w = (cfg >> 13) & 0x1fffu, h = cfg & 0x1fffu, ow, oh;
+
+    c->i2d_on = 0;
+    c->rot_mode = 0;
+    c->rot_frames = 0;
+    c->rot_us = 0;
+    c->rot_max_us = 0;
+    if (mode == NV12_ROT_NONE || c->direct)
+        return;
+    if (w != c->width || h != c->height || nv12_rotate_out_dims(mode, w, h, &ow, &oh) != 0) {
+        IMP_LOG_ERR(TAG, "chn %d: rotate %d set for %ux%u, channel is %ux%u: not rotated", chn, mode, w, h,
+                    c->width, c->height);
+        return;
+    }
+    c->i2d_geom.out_w = ow;
+    c->i2d_geom.out_h = oh;
+    c->i2d_geom.dst_pitch = nv12_rotate_pitch(ow);
+    c->i2d_geom.dst_size = (uint32_t)nv12_rotate_frame_size(ow, oh);
+    for (i = 0; i < c->nbufs; i++)
+        if (fs_alloc(&c->buf[i].i2d, c->i2d_geom.dst_size, "fs-rot") < 0) {
+            IMP_LOG_ERR(TAG, "chn %d: no memory for the rotation buffers: not rotated", chn);
+            for (i = 0; i < c->nbufs; i++)
+                fs_free_dma(&c->buf[i].i2d);
+            return;
+        }
+    c->rot_mode = mode;
+    c->i2d_on = 1;
+    for (i = 0; i < c->nbufs; i++)
+        fs_i2d_frame(c, &c->buf[i].i2d, &c->buf[i].frame);
+    IMP_LOG_INFO(TAG, "chn %d: rotate %ux%u -> %ux%u mode %d (software, %s)", chn, w, h, ow, oh, mode,
+                 nv12_rotate_get_impl() == 1 ? "MXU2" : "C");
+}
+
+/* the frame thread, no lock: one capture buffer into its rotation buffer */
+static void fs_rot_run(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
+{
+    uint64_t t0 = fs_rot_now_us();
+    uint32_t dt;
+
+    if (nv12_rotate((const uint8_t *)(uintptr_t)b->dma.virt_addr, (uint8_t *)(uintptr_t)b->i2d.virt_addr,
+                    c->width, c->height, c->rot_mode) != 0) {
+        if (!c->i2d_errors++)
+            IMP_LOG_ERR(TAG, "chn %d: rotate failed", chn);
+        return;
+    }
+    /* write the picture back before the encoder / OSD DMA reads it */
+    DMA_RmemFlushCache((void *)(uintptr_t)b->i2d.virt_addr, c->i2d_geom.dst_size, 1);
+    dt = (uint32_t)(fs_rot_now_us() - t0);
+    c->i2d_runs++;
+    c->rot_us += dt;
+    if (dt > c->rot_max_us)
+        c->rot_max_us = dt;
+    if (++c->rot_frames == 300u || c->i2d_runs == 1u) {
+        IMP_LOG_INFO(TAG, "chn %d: rotate %ux%u mode %d: avg %u us max %u us /frame (%s)", chn, c->width,
+                     c->height, c->rot_mode, (uint32_t)(c->rot_us / c->rot_frames), c->rot_max_us,
+                     nv12_rotate_get_impl() == 1 ? "MXU2" : "C");
+        c->rot_frames = 0;
+        c->rot_us = 0;
+        c->rot_max_us = 0;
+    }
+}
+
+int IMP_FrameSource_SetChnRotate(int chnNum, int rotTo90, int width, int height)
+{
+    int mode = rotTo90 & 0xff;
+    uint32_t ow, oh;
+
+    if (chnNum < 0 || chnNum >= T32_FS_CHANNELS)
+        return -1;
+    if (mode == NV12_ROT_NONE) {
+        __atomic_store_n(&fs_rot_cfg[chnNum], 0u, __ATOMIC_RELEASE);
+        return 0;
+    }
+    if (nv12_rotate_out_dims(mode, 1, 1, &ow, &oh) != 0 || width <= 0 || height <= 0 ||
+        width > 4096 || height > 4096 || ((width | height) & 15)) {
+        IMP_LOG_ERR(TAG, "SetChnRotate ch%d: rotTo90 %d %dx%d not supported (multiples of 16)", chnNum, mode,
+                    width, height);
+        return -1;
+    }
+    if ((uint32_t)width * (uint32_t)height > fs_rot_max_pixels()) {
+        IMP_LOG_ERR(TAG, "SetChnRotate ch%d: %dx%d not rotated: software rotation is limited to %u pixels "
+                    "(sub stream) on this SoC", chnNum, width, height, fs_rot_max_pixels());
+        return -1;
+    }
+    __atomic_store_n(&fs_rot_cfg[chnNum], FS_ROT_CFG(mode, width, height), __ATOMIC_RELEASE);
+    return 0;
+}
+
+/* streamer capability marker and envelope (docs/OPENIMP_BEYOND_VENDOR.md, #212) */
+const int OpenIMP_Cap_FsRotate = 1;
+
+int OpenIMP_FS_RotateLimits(int chn, int *max_w, int *max_h, int *max_fps, int *align)
+{
+    if (chn < 0 || chn >= T32_FS_CHANNELS)
+        return -1;
+    if (max_w)
+        *max_w = (int)FS_ROT_MAX_W;
+    if (max_h)
+        *max_h = (int)(fs_rot_max_pixels() / FS_ROT_MAX_W);
+    if (max_fps)
+        *max_fps = 0;
+    if (align)
+        *align = 16;
+    return 0;
+}
+#endif
+
 /* EnableChn: lock held, capture buffers allocated */
 static void fs_i2d_arm_locked(struct t32_fs_chn *c, int chn)
 {
 #if defined(PLATFORM_T33)
-    (void)c;
-    (void)chn;
+    fs_rot_arm_locked(c, chn);
 #else
     const IMPFSI2DAttr *a = &c->attr.i2dattr;
     int i;
@@ -535,6 +699,7 @@ static void fs_i2d_arm_locked(struct t32_fs_chn *c, int chn)
 #endif
 }
 
+#if !defined(PLATFORM_T33)
 /* the frame thread, no lock: one buffer through the block */
 static void fs_i2d_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
@@ -555,6 +720,7 @@ static void fs_i2d_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
     c->i2d_runs++;
     DMA_RmemFlushCache((void *)(uintptr_t)b->i2d.virt_addr, c->i2d_geom.dst_size, 2);
 }
+#endif
 
 static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
@@ -675,8 +841,13 @@ static void *fs_thread(void *arg)
         if (requeue)
             c->dropped++;
         pthread_mutex_unlock(&fs_lock);
+#if defined(PLATFORM_T33)
+        if (!requeue && c->rot_mode)
+            fs_rot_run(chn, c, b);
+#else
         if (!requeue && c->i2d_on)
             fs_i2d_run(c, b);
+#endif
         if (!requeue)
             fs_deliver(chn, c, b);
         pthread_mutex_lock(&fs_lock);
