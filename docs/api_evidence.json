@@ -8306,7 +8306,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
       },
@@ -8319,7 +8319,7 @@
         "T23": "apitest agg47 2026-10-26 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)",
-        "T33": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)"
+        "T33": "T33L device yuv_devtest 2026-11-22 (#752, audit/issue752/dev752.sh d1; OpenIMP 20058198 via LD_LIBRARY_PATH) + QEMU vs vendor 2.0.2.1"
       },
       "note": "T32/T33 (#752): per call JPEG context on the channel JPEG path, q<0 -> 10, q>100 -> 98 (vendor 0x105430); QEMU: q40/q80 byte-identical to vendor."
     },
@@ -9731,7 +9731,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9745,7 +9745,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)",
-        "T33": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)"
+        "T33": "T33L device yuv_devtest 2026-11-22 (#752, audit/issue752/dev752.sh d1; OpenIMP 20058198 via LD_LIBRARY_PATH) + QEMU vs vendor 2.0.2.1"
       },
       "note": "T32/T33 (#752): frame.virAddr NV12 (UV after the even height); QEMU vs vendor: H.265 byte-identical, H.264 IDR byte-identical, P smaller at equal PSNR; size mismatch 0x80040002, encode fail 0x80042000, over outLen 0x80040400."
     },
@@ -9779,7 +9779,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9793,7 +9793,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)",
-        "T33": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)"
+        "T33": "T33L device yuv_devtest 2026-11-22 (#752, audit/issue752/dev752.sh d1; OpenIMP 20058198 via LD_LIBRARY_PATH) + QEMU vs vendor 2.0.2.1"
       },
       "note": "T32/T33 (#752): NULL 0x80040010, foreign/unknown codec 0x80040002, else frees the context."
     },
@@ -9846,7 +9846,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9860,7 +9860,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)",
-        "T33": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)"
+        "T33": "T33L device yuv_devtest 2026-11-22 (#752, audit/issue752/dev752.sh d1; OpenIMP 20058198 via LD_LIBRARY_PATH) + QEMU vs vendor 2.0.2.1"
       },
       "note": "T32/T33 (#752): hidden encoder channel on the bound channels' HERA code; vendor checks (w%16, odd h, codec, rcMode>=6: 0x80040002; init fail 0x80048000), H.264 Main as vendor YuvInit 0x1040c4."
     },
@@ -20471,14 +20471,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
         "T32": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)",
-        "T33": "QEMU t33l/t32 yuv_devtest vs vendor 2.0.2.1/2.2.0 2026-11-22 (#752, audit/issue752/run752.sh)"
+        "T33": "T33L device yuv_devtest 2026-11-22 (#752, audit/issue752/dev752.sh d1; OpenIMP 20058198 via LD_LIBRARY_PATH) + QEMU vs vendor 2.0.2.1"
       },
       "note": "T32/T33 (#752): map stored per handle with the vendor clips (i264e_reconfig_qpgai_set 0x843f4), unknown codec 0 as vendor; map not applied to the MB QP yet (#781)."
     },
