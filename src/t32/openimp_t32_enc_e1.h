@@ -58,4 +58,21 @@ typedef struct {
 } T32E1Pskip;
 void OpenIMP_T32_E1PskipTake(int encChn, int rc_mode, uint32_t bitrate, T32E1Pskip *p);
 
+/* RC parameters the vendor 2.0.2.1 encoder takes at the next IDR (#784 group 2):
+ * SetChnRcTrigLevel (H.264, i264e_set_param 4 -> i264e_reconfig_rc_trig_set 0x83d94:
+ * level / mode as given into P+0x140 / +0x144, flag 0x10) and SetSuperFrameCfg
+ * (i264e / i265e set_param 0xd -> i264e_super_rc_set 0x82f24: mode, I / P / B
+ * thresholds, rcPriority, maxReEncodeTimes into P+0x19c..0x1b0, flag 0x2000);
+ * i264e_idr_reconfig (0x81b1c) restarts the controller (i264e_ratecontrol_init)
+ * for every flag outside 0x1e0000.  qpg = the QpgMode word i264e_reconfig
+ * (0x818e4, flag 0x8000) copies to P+0x194 before every picture; only
+ * i264e_ratecontrol_init reads it.  Returns T32_E1RC_* flags (taken). */
+enum { T32_E1RC_TRIG = 1, T32_E1RC_SF = 2 };
+typedef struct {
+    uint32_t trig[2];           /* P+0x140 level (raw word), +0x144 mode */
+    uint32_t sf[6];             /* P+0x19c..0x1b0 */
+    uint32_t qpg;               /* P+0x194 */
+} T32E1Rc;
+int OpenIMP_T32_E1RcTake(int encChn, int idr, T32E1Rc *r);
+
 #endif

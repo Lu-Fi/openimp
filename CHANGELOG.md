@@ -11,6 +11,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 ## 2026-11-22: docs: beyond-vendor row for the T23 direct-mode flip split (#787)
 - docs/OPENIMP_BEYOND_VENDOR.md section 6: with direct_mode=1, HFLIP stays in the MSCA and VFLIP goes to the sensor (user OK 2026-11-22).
+## 2026-11-22: T33 RC parameters like vendor 2.0.2.1 (#784, group 2)
+
+- **Encoder_SetChnRcTrigLevel, T33: cache -> dev (H.264).** The vendor keeps level / mode (i264e_reconfig_rc_trig_set 0x83d94, flag 0x10) and i264e_idr_reconfig (0x81b1c) copies them to P+0x140 / +0x144 at the next IDR and restarts the controller (i264e_ratecontrol_init for every flag outside 0x1e0000). OpenIMP now does the same (src/t32/openimp_t32_rc.c t32_rc_idr_params, encoder restart at the IDR).
+- **Encoder_SetSuperFrameCfg, T33: cache -> qemu.** Mode, I / P / B thresholds, rcPriority and maxReEncodeTimes go to P+0x19c..0x1b0 at the next IDR with a controller restart (H.264; H.265 restarts too). The re-encode / discard of a picture above the threshold is not ported (#797).
+- **Encoder_SetQpgMode, T33: cache -> dev.** P+0x194 before every picture (i264e_reconfig flag 0x8000); the controller reads it when it restarts, as the vendor init does.
+- **Encoder_SetMbRC, T33: cache -> no-op.** The vendor stores P+0x148 but neither the controller nor the slice set-up reads it (readers: i264e_validate_parameters, i264e_reconfig_init only); QEMU shows no register change.
+- QEMU CBR A/B (1920x1088, call at picture 4 + RequestIDR): vtr = otr, vsf = osf, vq3t = oq3t, omb = vb4 with 0 non-address HERA register differences (the address guard masked only the buffer address registers); VBR vvt / ovt equal from the restart on; H.265 v5sf / o5sf equal with the vendor IDR one picture later (#791). T33L d6 (OpenIMP only): apitest PASS 379 FAIL 0, snapshot 200.
+- Tests: tests/t33/rc784_test.c (restart at the IDR, trig / super-frame / QpgMode words). Lab: t32_trace_sample `X qpg3` (QpgMode ROWRC).
 
 ## 2026-11-22: T33 P-skip like vendor 2.0.2.1 (#784, part 4)
 

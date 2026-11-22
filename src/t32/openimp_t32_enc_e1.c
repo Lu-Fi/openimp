@@ -57,6 +57,7 @@ struct t32_e1 {
     int qpg, qpg_pend;
     IMPEncoderSrdCfg srd, srd_pend;
     int changeref, grey, mbrc, pskip_req, gdr_req, gdr_req_frames, pad, trig_mode;
+    int rc_new;                 /* T32_E1RC_* changes for the next IDR (#784) */
     uint32_t trig_level;
     uint8_t pad_attr[32];
     IMPEncoderGDRCfg gdr;
@@ -428,6 +429,7 @@ int IMP_Encoder_SetSuperFrameCfg(int encChn, const IMPEncoderSuperFrmCfg *c)
         E1.sf_pend = *c;
         if (c->superIFrmBitsThr > E1.sf_max)
             E1.sf_pend.superIFrmBitsThr = E1.sf_max;
+        E1.rc_new |= T32_E1RC_SF;
     }
     pthread_mutex_unlock(&e1_lock);
     return 0;
@@ -624,6 +626,30 @@ void OpenIMP_T32_E1GdrTake(int encChn, T32E1Gdr *g)
     pthread_mutex_unlock(&e1_lock);
 }
 
+int OpenIMP_T32_E1RcTake(int encChn, int idr, T32E1Rc *r)
+{
+    int f;
+
+    memset(r, 0, sizeof(*r));
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return 0;
+    pthread_mutex_lock(&e1_lock);
+    r->qpg = (uint32_t)E1.qpg_pend;
+    f = idr ? E1.rc_new : 0;
+    if (idr)
+        E1.rc_new = 0;
+    r->trig[0] = E1.trig_level;
+    r->trig[1] = (uint32_t)E1.trig_mode;
+    r->sf[0] = (uint32_t)E1.sf_pend.superFrmMode;
+    r->sf[1] = E1.sf_pend.superIFrmBitsThr;
+    r->sf[2] = E1.sf_pend.superPFrmBitsThr;
+    r->sf[3] = E1.sf_pend.superBFrmBitsThr;
+    r->sf[4] = (uint32_t)E1.sf_pend.rcPriority;
+    r->sf[5] = E1.sf_pend.maxReEncodeTimes;
+    pthread_mutex_unlock(&e1_lock);
+    return f;
+}
+
 void OpenIMP_T32_E1PskipTake(int encChn, int rc_mode, uint32_t bitrate, T32E1Pskip *p)
 {
     memset(p, 0, sizeof(*p));
@@ -707,6 +733,7 @@ int IMP_Encoder_SetChnRcTrigLevel(int encChn, uint32_t level, int mode)
     if (!rc && ci.codec == 1) {
         E1.trig_level = level;
         E1.trig_mode = mode;
+        E1.rc_new |= T32_E1RC_TRIG;
     }
     pthread_mutex_unlock(&e1_lock);
     return rc;

@@ -1024,6 +1024,34 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
     return 0;
 }
 
+int t32_rc_idr_params(T32Rc *rc, unsigned flags, const uint32_t trig[2], const uint32_t sf[6], uint32_t qpg)
+{
+    uint32_t *st = rc->stash;
+
+    if (rc->hevc)
+        return (flags & 2u) && rc->on;  /* the H.265 parameter fields: not ported (#784) */
+    if (!rc->have_stash)
+        return 0;
+    st[0x194 / 4] = qpg;
+    if (rc->t33)
+        t32_rc33_set(rc->t33, 0x194, qpg);
+    if (flags & 1u) {
+        st[0x140 / 4] = trig[0];        /* a float word: validate makes (int) level 2..10 of it */
+        st[0x144 / 4] = trig[1];
+    }
+    if (flags & 2u)
+        for (unsigned i = 0; i < 6; i++)
+            st[0x19c / 4 + i] = sf[i];
+    return (flags & 3u) != 0;
+}
+
+uint32_t t32_rc_get_param(T32Rc *rc, uint32_t off)
+{
+    if (rc->t33)
+        return t32_rc33_get(rc->t33, off);
+    return off < sizeof(rc->stash) ? rc->stash[off / 4] : 0;
+}
+
 /* vendor 2.0.2.1 i264e_reconfig (0x818e4, flag 4): h+0x2a64.. -> P+0x1c0
  * (16 x 9 bytes), which i264e_ratecontrol_start copies for the controller;
  * H.265 I265eReconfig::ReconfigPFrame (0x983ec): -> i265e+0x110, rcStart
