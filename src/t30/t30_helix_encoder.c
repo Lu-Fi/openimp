@@ -41,6 +41,7 @@
 #endif
 #if defined(PLATFORM_T23)
 #include "t30/t23_helix_bs.h"
+#include "imp/imp_framesource.h"
 #endif
 #if (defined(PLATFORM_T21) && !defined(PLATFORM_T20)) || \
     defined(PLATFORM_T23)
@@ -661,9 +662,10 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
-/* The shared bitstream area, see t30/t23_helix_bs.h.  Default size: the
- * largest window (2 MiB, 1080p) and its page of slack. */
-#define T23_BS_AREA_SIZE ((2u << 20) + 4096u)
+/* The shared bitstream area, see t30/t23_helix_bs.h.  Size: the largest
+ * channel window and its page of slack (t23_bs_area_size). */
+/* FrameSource channels the area size looks at (T23: 3 physical) */
+#define T23_BS_FS_CHANNELS 3u
 
 /* helix_jpeg.c (libimp only): frees the JPEG encoder's own buffer once the
  * area can take its pictures. */
@@ -676,6 +678,32 @@ static struct {
     const IMPDMABufferInfo *guard_emc; /* live channel scratch above it */
     uint32_t users;            /* H.264 channels on the area */
 } t23_bs = { .lock = PTHREAD_MUTEX_INITIALIZER };
+
+/* The area holds the window of the largest FrameSource channel (#768: the
+ * stock vpuBs is 0x1fa400 bytes on every T23 cpu id, libimp 1.3.0
+ * EncoderInit 0x4c6b4/0x4c990; sized to the pictures that can exist it is
+ * smaller on sub-1080p sensors).  IMP_FrameSource_GetChnAttr is weak so
+ * the encoder links without the FrameSource module (host tests). */
+extern int IMP_FrameSource_GetChnAttr(int chnNum, IMPFSChnAttr *chn_attr)
+    __attribute__((weak));
+
+static uint32_t t23_bs_area_size(uint32_t need)
+{
+    uint32_t w[T23_BS_FS_CHANNELS] = { 0 }, h[T23_BS_FS_CHANNELS] = { 0 };
+    unsigned int i;
+
+    for (i = 0; IMP_FrameSource_GetChnAttr && i < T23_BS_FS_CHANNELS; i++) {
+        IMPFSChnAttr attr;
+
+        memset(&attr, 0, sizeof(attr));
+        if (IMP_FrameSource_GetChnAttr((int)i, &attr) == 0 &&
+            attr.picWidth > 0 && attr.picHeight > 0) {
+            w[i] = (uint32_t)attr.picWidth;
+            h[i] = (uint32_t)attr.picHeight;
+        }
+    }
+    return t23_bs_area_bytes(w, h, T23_BS_FS_CHANNELS, need);
+}
 
 /* An H.264 channel that just allocated its EMC scratch takes the area for
  * its bitstream: a new area right below the scratch, or the existing one
@@ -701,10 +729,10 @@ static int t23_bs_attach(uint32_t size, const IMPDMABufferInfo *emc)
          * the sub channel still fits; short of rmem, the size asked for.
          * Top-down: the area must end where the scratch begins, or a
          * spill could reach whatever lies in between. */
-        uint32_t sizes[2] = { T23_BS_AREA_SIZE, size };
+        uint32_t sizes[2] = { t23_bs_area_size(size), size };
         unsigned int k;
 
-        for (k = size < T23_BS_AREA_SIZE ? 0u : 1u; k < 2u && ret; k++) {
+        for (k = size < sizes[0] ? 0u : 1u; k < 2u && ret; k++) {
             if (t30_dma_allocate(&t23_bs.dma, sizes[k], "t23-helix-bs") != 0)
                 continue;
             if ((uint64_t)t23_bs.dma.phys_addr + t23_bs.dma.size ==

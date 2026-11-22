@@ -21,6 +21,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `IMP_FrameSource_Set/GetDirectModeAttr` now set/read the threshold the frames carry.
 - Host test `tests/t23/ivdc_test.c` (misc-ivdc sequence, ring size, lead with wrap, mode 1 / mode 2 drop rule). QEMU A12 T23DL 32 MB, rmem 8M: SDK encoder sample on OpenIMP main 1280x720 over IVDC + sub 640x360 (100 and 1500 frames, decode clean, colour bars correct); timps selftest 21/21 (H.264 main over IVDC, snapshot 1280x720 JPEG over IVDC, MJPEG sub), needs #774 to fit rmem.
 
+## 2026-11-22: T23 Helix bitstream area sized to the largest FrameSource picture (#768, beyond vendor)
+
+- `t23_bs_attach` (src/t30/t30_helix_encoder.c) sizes the shared H.264/JPEG bitstream area with `t23_bs_area_bytes()` (src/t30/t23_helix_bs.h): the window of the largest FrameSource channel plus a page, 2 MiB + 4 KiB when none is known. 1280x720 sensor: 1412 KiB instead of 2052 KiB (stock vpuBs 0x1fa400 on every T23 cpu id, libimp 1.3.0 EncoderInit 0x4c990).
+- Host test: `tests/t23/rmem_layout_test.c` checks the window/area sizes and a 720p scenario; the 1080p simulation is unchanged. `make check` rc 0.
+
 ## 2026-11-21: OpenIMP identity marker guard (T32/T33, #545)
 
 - `tools/export-check.sh` fails a SoC whose `libimp.so` does not export `OpenIMP_P0_GetState` (the timps OpenIMP marker; without it an OpenIMP-flavour timpsd exits 78); `build-t32.sh` / `build-t33.sh` check it at link time. T32/T33 keep `OpenIMP_P0_GetState` as their only timps marker: `OpenIMP_AVC_Create` (AVPU/Helix-T40 codec) and `OpenIMP_Tuning_Create` (T40 ISP device) have no backend on the HERA SoCs (tools/export-check/README.md).
