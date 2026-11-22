@@ -4025,7 +4025,7 @@ static void p2_demask_after_picture(P2EncoderChannel *ch, int channel)
  * #807: an encoder channel fed by IVDC direct mode is kicked on the
  * frame-start event, like the vendor (no output-rate timer), and its rate
  * is the vendor frame-count mask (openimp_t23_ivdc_pace.h).
- * OPENIMP_T23_IVDC_PUSH=1 turns it on (default off, see below).  Beyond the vendor,
+ * Default ON (the vendor model); OPENIMP_T23_IVDC_PUSH=0 turns it off.  Beyond the vendor,
  * default off: OPENIMP_T23_IVDC_STALE_US=N skips an event older than N us
  * at the kick (no IDR; the vendor kicks it late).
  */
@@ -4041,11 +4041,10 @@ static int p2_ivdc_push_on(void)
     const char *e;
 
     if (on < 0) {
-        /* default off: on the QC3 the push kick (99 % of the kicks within
-         * 60 lines of the frame start) aborted more jobs than the timer
-         * (374 vs 155 per minute, main only), see CHANGELOG #807 */
+        /* default on (vendor push model); with the FIFO fix (open-tx-isp
+         * 6a244b1b6) the kick no longer aborts more jobs, see CHANGELOG #807 */
         e = getenv("OPENIMP_T23_IVDC_PUSH");
-        on = e && e[0] == '1';
+        on = !(e && e[0] == '0');
     }
     return on;
 }
