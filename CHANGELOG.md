@@ -9,6 +9,9 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T33 matrix column re-judged against the T33L device evidence
+- Docs only: T33 column ✅ 11 -> 14, ✅+ 4 -> 8, 🔧 29 -> 19, — 1 -> 4 (rows 1, 28, 43 -> ✅; 4, 7, 8, 24 -> ✅+; AI / AO / AEC -> — because the T33L module has no audio hardware). Picture-quality rows stay 🔧 (no light-box comparison yet); legend line of 🔧 corrected; details in docs/status/history.md.
+
 ## 2026-11-22: docs round 21 (T23 IVDC / rmem, T33 #784 / #805 / #803, T31 #604)
 - Matrix: cell texts of T23 rows 13 / 22 / 24 / 30 / 36, T31 row 26 and T33 rows 4 / 8 / 22 / 24 / 26 / 27 / 28 / 30 extended with the 2026-11-22 evidence; no symbol moved. API evidence as of 2026-11-22; API reference: T32 / T33 `YuvInit` / `InputJpege` / P-skip / multi-section notes, new `Encoder_SetChnQpgAI_Yuv` entry.
 - README completeness table (T32 / T33 counts), `OPENIMP_T23_EMC_CANARY` in docs/ai/env-vars.md, "user OK 2026-11-22" on the beyond-vendor rows #779 / #783 / #787, LAN address removed from section 6.14.
