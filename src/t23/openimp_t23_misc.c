@@ -8,12 +8,12 @@
 #include <imp/imp_framesource.h>
 
 #include "imp_log_int.h"
+#include "openimp_t23_ivdc.h"
 
 #define T23_FS_CHANNELS 9
 #define T23_MEM_POOLS   32
 
 static pthread_mutex_t misc_lock = PTHREAD_MUTEX_INITIALIZER;
-static int direct_threshold[T23_FS_CHANNELS];
 static size_t pool_request[T23_MEM_POOLS];
 
 static int fs_channel_created(int chn)
@@ -25,26 +25,23 @@ static int fs_channel_created(int chn)
            IMP_FrameSource_GetChnAttr(chn, &attr) == 0;
 }
 
-/* OEM: the cache threshold that decides between encoding and dropping in
- * the dual-sensor IVDC direct mode; it is only stored on the created
- * channel (and read back), which is all a single-sensor stack needs. */
+/* OEM (IMP_FrameSource_SetDirectModeAttr @0x9e504): the threshold of the
+ * IVDC direct mode, the lead in lines of the ISP over the encoder above
+ * which a frame is dropped; stored on the created channel (vendor +0x28,
+ * 300 from CreateChn in direct mode) and copied into every frame
+ * (openimp_t23_ivdc.c). */
 int IMP_FrameSource_SetDirectModeAttr(int chn, int data_threshold)
 {
     if (!fs_channel_created(chn))
         return -1;
-    pthread_mutex_lock(&misc_lock);
-    direct_threshold[chn] = data_threshold;
-    pthread_mutex_unlock(&misc_lock);
-    return 0;
+    return OpenIMP_T23_IvdcSetThreshold(chn, data_threshold);
 }
 
 int IMP_FrameSource_GetDirectModeAttr(int chn, int *data_threshold)
 {
     if (!data_threshold || !fs_channel_created(chn))
         return -1;
-    pthread_mutex_lock(&misc_lock);
-    *data_threshold = direct_threshold[chn];
-    pthread_mutex_unlock(&misc_lock);
+    *data_threshold = OpenIMP_T23_IvdcThreshold(chn);
     return 0;
 }
 

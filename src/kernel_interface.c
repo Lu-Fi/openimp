@@ -29,6 +29,9 @@
  * block (IVS capture, idle drain) since claude/t23-stub-fixes. */
 #if defined(PLATFORM_T31) || defined(PLATFORM_T23) || defined(PLATFORM_T20) || defined(PLATFORM_T21)
 #include "openimp_ready_event.h"
+#if defined(PLATFORM_T23)
+#include "t23/openimp_t23_ivdc.h"
+#endif
 #endif
 
 extern int64_t IMP_System_GetTimeStamp(void);
@@ -953,6 +956,13 @@ static void fs_dq_note_slept(int fd, long long slept_us)
 
 /* Dequeue a filled buffer from the framechan driver */
 int fs_dqbuf(int fd, int *index_out, uint64_t *timestamp_out) {
+    return fs_dqbuf_meta(fd, index_out, timestamp_out, NULL);
+}
+
+/* DQBUF; meta_out (when not NULL) gets reserved2 and reserved of the
+ * buffer (T23 IVDC: overflow count, frame type | sensor << 16). */
+int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
+                  uint32_t *meta_out) {
     void *raw = NULL;
     struct v4l2_buf32 *b;
     int ret;
@@ -1020,6 +1030,10 @@ int fs_dqbuf(int fd, int *index_out, uint64_t *timestamp_out) {
     }
 
     *index_out = (int)b->index;
+    if (meta_out != NULL) {
+        meta_out[0] = b->reserved2;
+        meta_out[1] = b->reserved;
+    }
     if (timestamp_out != NULL) {
         if (b->ts_usec < 1000000u)
             *timestamp_out = (uint64_t)b->ts_sec * 1000000u + b->ts_usec;
@@ -1134,6 +1148,25 @@ typedef struct {
                              : (size_t)0x180)
 
 static VBMPool *vbm_instance[MAX_VBM_POOLS] = {NULL};
+#if defined(PLATFORM_T23)
+/* pool of a channel in IVDC direct mode: frames without memory */
+static int vbm_direct[MAX_VBM_POOLS];
+#endif
+
+/* QBUF address of a frame: in IVDC direct mode the IVDC source (+0x20),
+ * as the vendor release_Frame @0x940ec, else the given frame address. */
+static unsigned long vbm_qbuf_addr(int chn, const VBMFrame *f,
+                                   unsigned long addr)
+{
+#if defined(PLATFORM_T23)
+    if (chn >= 0 && chn < MAX_VBM_POOLS && vbm_direct[chn])
+        return f->direct_phys_addr;
+#else
+    (void)chn;
+    (void)f;
+#endif
+    return addr;
+}
 /* One record per capture buffer: the largest pool (32 frames, see
  * CreatePool) on every channel. */
 #define VBM_MAX_POOL_FRAMES 32
@@ -1530,6 +1563,17 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
     memset(&alloc_info, 0, sizeof(alloc_info));
     int ret;
 
+#if defined(PLATFORM_T23)
+    /* vendor 1.3.0 VBMCreatePool @0x2d120: a channel in IVDC direct mode
+     * has no frame memory; its frames come over IVDC to the encoder */
+    vbm_direct[chn] = OpenIMP_T23_IvdcChnDirect(chn);
+    if (vbm_direct[chn]) {
+        fprintf(stderr, "[VBM] CreatePool: chn=%d IVDC direct mode, no frame "
+                "memory\n", chn);
+        total_size = 0;
+        ret = 0;
+    } else
+#endif
     if (pool->pool_id < 0 &&
         vbm_take_parked(chn, total_size, &alloc_info) == 0) {
         fprintf(stderr, "[VBM] CreatePool: chn=%d reuses its parked rmem "
@@ -1614,9 +1658,20 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
 
 #if defined(PLATFORM_T23)
         /* The 1.3.0 public descriptor exposes a direct address followed by
-         * two aligned timestamps.  OpenTX uses the same physical DMA window
-         * for direct and normal capture on T23. */
-        memcpy(frame_bytes + 0x20, &phys, sizeof(uint32_t));
+         * two aligned timestamps: the frame address for normal capture, the
+         * IVDC source 0x80000000 (phys and virt 0) in direct mode (vendor
+         * VBMCreatePool @0x2d120). */
+        if (vbm_direct[chn]) {
+            uint32_t ivdc = T23_IVDC_SRC_Y;
+
+            phys = 0;
+            virt = 0;
+            memcpy(frame_bytes + 0x18, &phys, sizeof(uint32_t));
+            memcpy(frame_bytes + 0x1c, &virt, sizeof(uint32_t));
+            memcpy(frame_bytes + 0x20, &ivdc, sizeof(uint32_t));
+        } else {
+            memcpy(frame_bytes + 0x20, &phys, sizeof(uint32_t));
+        }
 #else
 
         /* OEM encoder callback reads framePriv->i_fps_num/den from
@@ -1845,6 +1900,7 @@ int VBMPrimeKernelQueue(int chn, int fd, int limit) {
          * because the custom tx-isp driver maps that ioctl to DQBUF, not QUERYBUF.
          * Calling it here corrupts the driver's buffer state. */
         unsigned int qlen = (unsigned int)f->size;
+        addr_m = vbm_qbuf_addr(chn, f, addr_m);
         if (fs_qbuf(fd, idx, addr_m, qlen) < 0) {
             /* QBUF failed — return frame to the available queue so the software
              * fallback path (VBMGetFrame) can still use it.  Do NOT abort the
@@ -2434,7 +2490,8 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     }
 
     VBM_DQ_STEP(chn, VBM_DQ_STEP_DQBUF);
-    int ret = fs_dqbuf(fd, &idx, &absolute_timestamp);
+    uint32_t dq_meta[2] = {0, 0};
+    int ret = fs_dqbuf_meta(fd, &idx, &absolute_timestamp, dq_meta);
     ki_trace("libimp/VBM: KernelDequeue post-dq ch=%d fd=%d ret=%d idx=%d\n",
              chn, fd, ret, idx);
     if (dbg_count[chn] < 3) {
@@ -2476,6 +2533,19 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
 #if defined(PLATFORM_T23)
     pool->frames[idx].time_stamp = frame_timestamp;
     pool->frames[idx].time_stamp_ivdc = frame_timestamp;
+    if (vbm_direct[chn]) {
+        /* vendor get_frame @0x94744: +0x30 the driver time (us), +0x3f0
+         * reserved2 (IVDC overflow count), +0x3f4 the channel threshold,
+         * +0x3f8 reserved byte 0 (frame type 3), +0x3f9 byte 2 (sensor) */
+        uint8_t *fb = (uint8_t *)&pool->frames[idx];
+        uint32_t thr = (uint32_t)OpenIMP_T23_IvdcThreshold(chn);
+
+        pool->frames[idx].time_stamp_ivdc = (int64_t)absolute_timestamp;
+        memcpy(fb + T23_FRAME_OVERFLOW, &dq_meta[0], 4);
+        memcpy(fb + T23_FRAME_THRESHOLD, &thr, 4);
+        fb[T23_FRAME_TYPE] = (uint8_t)dq_meta[1];
+        fb[T23_FRAME_SENSOR] = (uint8_t)(dq_meta[1] >> 16);
+    }
 #else
     memcpy(pool->frames[idx].data, &frame_timestamp,
            sizeof(frame_timestamp));
@@ -2485,6 +2555,12 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     /* IVS groups bound to this channel copy the luma they need now, while
      * the buffer is still private to this thread (openimp_t31_ivs.c). */
 #if defined(PLATFORM_T31) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T23)
+    /* an IVDC frame has no picture in memory: only the encoder reads it
+     * (over IVDC), no rotation, test picture or IVS copy */
+    if (!vbm_direct[chn])
+#endif
+    {
     /* Rotate first, as the vendor does before notifying any consumer. */
     if (openimp_fs_rotate_capture)
         openimp_fs_rotate_capture(chn, &pool->frames[idx]);
@@ -2494,6 +2570,9 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
         vbm_test_pattern_fill(chn, &pool->frames[idx], 1);
     if (openimp_t31_ivs_capture)
         openimp_t31_ivs_capture(chn, &pool->frames[idx]);
+#if defined(PLATFORM_T31) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
+    }
+#endif
 #endif
 #if defined(PLATFORM_T31)
     if (openimp_fs_chn_callback)
@@ -2567,7 +2646,8 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
                  chn, idx, pool->queue_count);
         if (openimp_fs_rotate_release)
             openimp_fs_rotate_release(chn, captured);
-        if (fs_qbuf(fd, idx, captured->phys_addr,
+        if (fs_qbuf(fd, idx, vbm_qbuf_addr(chn, captured,
+                                           captured->phys_addr),
                     (unsigned int)captured->size) == 0 &&
             pool->buf_in_userspace)
             pool->buf_in_userspace[idx] = 0;
@@ -3044,7 +3124,8 @@ static int vbm_release_frame(int chn, void *frame) {
         }
 
         {
-            unsigned long phys = vbm_frame->phys_addr;
+            unsigned long phys = vbm_qbuf_addr(chn, vbm_frame,
+                                               vbm_frame->phys_addr);
             unsigned int qlen = (unsigned int)vbm_frame->size;
 
             if (fs_qbuf(pool->fd, frame_idx, phys, qlen) == 0) {

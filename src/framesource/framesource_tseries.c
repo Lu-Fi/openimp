@@ -59,6 +59,7 @@
 #include "vbm_delay.h"
 #if defined(PLATFORM_T23)
 #include "t23/openimp_t23_persist.h"
+#include "t23/openimp_t23_ivdc.h"
 #endif
 
 /* ---------------------------------------------------------------------
@@ -1457,6 +1458,11 @@ int32_t release_Frame(int32_t *arg1, void *arg2)
 
     idx = arg1[0];
     phys = (unsigned long)(uint32_t)arg1[6];
+#if defined(PLATFORM_T23)
+    /* vendor release_Frame @0x940ec: IVDC frames queue their +0x20 */
+    if (OpenIMP_T23_IvdcChnDirect(chn))
+        phys = (unsigned long)(uint32_t)arg1[8];
+#endif
     len = (unsigned int)arg1[5];
     if (len == 0) {
         fs_trace("libimp/FS: release_frame zero-len ch=%d fd=%d idx=%d\n",
@@ -1906,6 +1912,14 @@ int IMP_FrameSource_CreateChn(int chnNum, IMPFSChnAttr *chn_attr)
     }
 
     memcpy(&g_fs_ctx[chnNum].attr, chn_attr, sizeof(IMPFSChnAttr));
+#if defined(PLATFORM_T23)
+    /* vendor 1.3.0 CreateChn: channels 0/3/6 ask the IVDC direct mode
+     * (openimp_t23_ivdc.c) */
+    if (OpenIMP_T23_IvdcCreateChn(chnNum) != 0) {
+        FS_UNLOCK();
+        return -1;
+    }
+#endif
     g_fs_ctx[chnNum].created = 1;
     FS_UNLOCK();
     return 0;
@@ -1968,6 +1982,9 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     fs_cpy_trim(chnNum);
 #endif
     *(int32_t *)((char *)gFrameSource + 0x14) -= 1;
+#if defined(PLATFORM_T23)
+    OpenIMP_T23_IvdcDestroyChn(chnNum);
+#endif
     g_fs_ctx[chnNum].created = 0;
     FS_FLAG_STORE(g_fs_ctx[chnNum].running, 0);
 #if defined(FS_SW_ROTATE)
@@ -2290,6 +2307,16 @@ int IMP_FrameSource_EnableChn(int chnNum)
         fs_trace("libimp/FS: enable open-ok ch=%d fd=%d\n", chnNum, ctx->fd);
     }
 
+#if defined(PLATFORM_T23)
+    /* vendor 1.3.0 EnableChn: channel 0 in IVDC direct mode hands the DDR
+     * ring to the driver (GET_MEM_LINE, alloc, SET_PADDR) before SET_FMT */
+    if (OpenIMP_T23_IvdcEnableChn(chnNum, ctx->attr.picWidth,
+                                  ctx->attr.picHeight) != 0) {
+        fs_close_chn_fd(chnNum, ctx);
+        FS_UNLOCK();
+        return -1;
+    }
+#endif
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = 1;
     fmt.width = ctx->attr.picWidth;
@@ -2635,6 +2662,10 @@ static void fs_close_chn_fd(int chn, FsChnCtx *ctx)
     ctx->fd = -1;
     VBMWaitReleases(chn);
     fs_close_device(fd);
+#if defined(PLATFORM_T23)
+    /* the IVDC ring after the framechan: the driver stopped using it */
+    OpenIMP_T23_IvdcDisableChn(chn);
+#endif
 }
 
 #if defined(PLATFORM_T31)
@@ -3151,6 +3182,17 @@ static int fs_cpy_release(int chnNum, void *frame, int *ret)
 
 int IMP_FrameSource_GetFrame(int chnNum, void **frame)
 {
+#if defined(PLATFORM_T23)
+    /* IVDC direct mode: channel 0 frames carry no picture in memory (the
+     * vendor would hand out records with a NULL address); refuse */
+    if (OpenIMP_T23_IvdcChnDirect(chnNum)) {
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "GetFrame(%d): channel in IVDC direct mode has no "
+                        "frames in memory (use channel 1 or direct_mode=0)",
+                        chnNum);
+        return -1;
+    }
+#endif
 #if defined(FS_GETFRAME_COMPACT)
     return fs_getframe_impl(chnNum, frame, 1);
 #else

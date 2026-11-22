@@ -285,6 +285,25 @@ uint32_t T23_HelixScratchLayout(uint32_t mb_width, uint32_t mb_height,
     return offsets[3] + ((last + 4095u) & ~4095u) + 4096u;
 }
 
+/* T23 as the stock 1.3.0 library lays it out (h264_api_enc @0xd3930):
+ * 0x30018 and 0x3004c at the base, 0x30050 at align256(base + mbs),
+ * 0x30054 and 0x30058 at align256(0x30050 + 2 * mbs); the stock reference
+ * ring follows 0xa00 bytes later (soc_vpu command lists of the vendor
+ * encoder in QEMU, 1280x720 and 640x360: +0x3600 / +0x1600).  13.5 KiB at
+ * 720p where the T21-derived layout above needs 936 KiB.  One spare page
+ * on top. */
+uint32_t T23_HelixScratchLayoutStock(uint32_t mb_width, uint32_t mb_height,
+                                     uint32_t offsets[4])
+{
+    uint32_t mbs = mb_width * mb_height;
+
+    offsets[0] = 0;
+    offsets[1] = (mbs + 0xffu) & ~0xffu;
+    offsets[2] = (offsets[1] + 2u * mbs + 0xffu) & ~0xffu;
+    offsets[3] = offsets[2];
+    return ((offsets[2] + 0xa00u + 4095u) & ~4095u) + 4096u;
+}
+
 /* T21 as the stock library lays it out: hwicodec_pf_h264e_t21 gives each
  * channel one fixed 1 MiB pool buffer (descriptor 3 of its pool table) and
  * h264_api_enc places the EMC buffers at fixed offsets in it, sized for
@@ -556,7 +575,9 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
                   ((uint32_t)config->mb_width - 1u));
 #endif
     EMIT(0x30004, config->bitstream & ~0x7fu);
-    if (config->scratch_offset[0]) {
+    /* offset[1] is set by every computed layout (offset[0] may be 0: the
+     * T23 1.3.0 layout puts 0x3004c at the scratch base) */
+    if (config->scratch_offset[1]) {
         EMIT(0x30018, config->scratch_base);
         EMIT(0x3004c, config->scratch_base + config->scratch_offset[0]);
         EMIT(0x30050, config->scratch_base + config->scratch_offset[1]);

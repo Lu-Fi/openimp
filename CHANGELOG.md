@@ -9,6 +9,23 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T23 Helix EMC scratch in the vendor 1.3.0 layout (#774)
+
+- In the IVDC direct mode only (tx-isp-t23 `direct_mode=1`), the native T23 H.264 encoder lays out its EMC scratch as the vendor `h264_api_enc` (0x3004c at the base, 0x30050 after 1 byte per macroblock, 0x30054/0x30058 after 2 more, the vendor's 0xa00 gap, one spare page): 20 KiB at 1280x720 instead of 936 KiB, 12 KiB instead of ~260 KiB at 640x360; needed to fit main + sub + JPEG next to the IVDC ring at rmem=8M (QEMU A12). Every other T23 keeps the T21-derived layout unchanged; `OPENIMP_T23_EMC=vendor|t21` overrides. Device proof on a real T23 pending (#774).
+
+## 2026-11-22: T23 IVDC direct mode, OpenIMP side (#767)
+
+- Active only with tx-isp-t23 `direct_mode=1`; with `direct_mode=0` the T23 path behaves as before (channel 0 asks GET_DIRECT once, gets 0, nothing else changes; host test + QEMU timps selftest). Device proof on a real T23 pending (#767/#774).
+- With tx-isp-t23 `direct_mode=1` FrameSource channel 0 goes through the IVDC block to the encoder, as the vendor libimp 1.3.0 (`src/t23/openimp_t23_ivdc.c`): CreateChn asks `GET_DIRECT` on `/dev/misc-ivdc` (threshold 300), EnableChn hands the DDR ring (align256(width) x ivdc_mem_line x 3/2, 576000 bytes at 720p) over with `SET_PADDR` before SET_FMT, the VBM pool has no frame memory (frames: phys/virt 0, +0x20 = 0x80000000, QBUF of +0x20), DQBUF reserved/reserved2 become frame type / sensor / overflow count at the vendor offsets +0x3f0..+0x3f9. IVDC frames go to the encoders only (no rotation, IVS copy or test picture); `IMP_FrameSource_GetFrame` on such a channel returns -1 with a message (the vendor would hand out frames without memory).
+- Helix H.264: source 0x80000000 / 0x81000000, soc_vpu channel node frame type 3; a cancelled job (RUN returns 2) drops the picture without counting as a failure. The vendor drop check (IVDC overflow count, ISP lead over the VPU read line vs the threshold) and the node values overflow count / ivdc_mem_line / threshold / time run for direct modes 2 and 3 only, as in the vendor; mode 1 sends zeros. Helix JPEG: IVDC source at stride 0x1000, frame type 3, one job per picture (no stripes, no repeat). The JPEG-on-video channel gets IVDC frames lent through the encoder fan-out (never copied); the T23 CPU OSD skips frames without memory.
+- `IMP_FrameSource_Set/GetDirectModeAttr` now set/read the threshold the frames carry.
+- Host test `tests/t23/ivdc_test.c` (misc-ivdc sequence, ring size, lead with wrap, mode 1 / mode 2 drop rule). QEMU A12 T23DL 32 MB, rmem 8M: SDK encoder sample on OpenIMP main 1280x720 over IVDC + sub 640x360 (100 and 1500 frames, decode clean, colour bars correct); timps selftest 21/21 (H.264 main over IVDC, snapshot 1280x720 JPEG over IVDC, MJPEG sub), needs #774 to fit rmem.
+
+## 2026-11-22: T23 Helix bitstream area sized to the largest FrameSource picture (#768, beyond vendor)
+
+- `t23_bs_attach` (src/t30/t30_helix_encoder.c) sizes the shared H.264/JPEG bitstream area with `t23_bs_area_bytes()` (src/t30/t23_helix_bs.h): the window of the largest FrameSource channel plus a page, 2 MiB + 4 KiB when none is known. 1280x720 sensor: 1412 KiB instead of 2052 KiB (stock vpuBs 0x1fa400 on every T23 cpu id, libimp 1.3.0 EncoderInit 0x4c990).
+- Host test: `tests/t23/rmem_layout_test.c` checks the window/area sizes and a 720p scenario; the 1080p simulation is unchanged. `make check` rc 0.
+
 ## 2026-11-22: T32/T33 stand-alone YUV / JPEG encoder (#752)
 
 `IMP_Encoder_YuvInit/YuvEncode/YuvExit`, `IMP_Encoder_InputJpege` and `IMP_Encoder_SetChnQpgAI_Yuv` now encode on T32/T33 (stage 1 only had the exports and return codes).

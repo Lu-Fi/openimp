@@ -85,7 +85,7 @@ t23_ring_layout_test: $(T21_RMEM_SOURCES) $(ROOT)/src/rmem_arena.h \
 	$(CC) $(CFLAGS) -DPLATFORM_T23 -fno-pie -no-pie \
 		-I$(ROOT)/include -I$(ROOT)/src $(INCLUDES) \
 		-Wl,--wrap=open,--wrap=close,--wrap=ioctl \
-	 $(ROOT)/src/core/imp_log_emit.c	-o $@ $(T21_RMEM_SOURCES) -pthread -lm
+	 $(ROOT)/src/core/imp_log_emit.c $(ROOT)/src/t23/openimp_t23_ivdc.c -o $@ $(T21_RMEM_SOURCES) -pthread -lm
 
 t21_sinter_map_test: t21_sinter_map_test.c $(ROOT)/src/isp/isp_t21_sinter.h
 	$(CC) $(CFLAGS) -I$(ROOT)/src -o $@ t21_sinter_map_test.c
@@ -193,8 +193,9 @@ fs_lifecycle_test_t20: $(FS_DEPS)
 fs_lifecycle_test_t30: $(FS_DEPS)
 	$(CC) $(CFLAGS) $(FS_FLAGS) -DPLATFORM_T30 $(ROOT)/src/core/imp_log_emit.c -o $@ $(FS_SOURCES) -pthread
 
-fs_lifecycle_test_t23: $(FS_DEPS)
-	$(CC) $(CFLAGS) $(FS_FLAGS) -DPLATFORM_T23 $(ROOT)/src/core/imp_log_emit.c -o $@ $(FS_SOURCES) -pthread
+fs_lifecycle_test_t23: $(FS_DEPS) $(ROOT)/src/t23/openimp_t23_ivdc.c
+	$(CC) $(CFLAGS) $(FS_FLAGS) -DPLATFORM_T23 $(ROOT)/src/core/imp_log_emit.c \
+		$(ROOT)/src/t23/openimp_t23_ivdc.c -o $@ $(FS_SOURCES) -pthread
 
 # T31: the FS_EXT_CHANNEL software scale (#370) and the common lifecycle
 fs_lifecycle_test_t31: $(FS_DEPS)
