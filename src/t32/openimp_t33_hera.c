@@ -269,6 +269,29 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
     return v;
 }
 
+/* the stand-alone encoder's deltas (T33HeraH264Pic no8x8 / src_height, #752) */
+static uint32_t t33_main_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v)
+{
+    if (reg == EFE_FRM_SIZE && t->src_height)
+        return t->src_height << 16 | (v & 0xffffu);
+    if (!t->no8x8)
+        return v;
+    switch (reg) {
+    case 0x38004u:
+        return v & ~0x28u;
+    case 0x40234u:
+        return v & ~(1u << 29);
+    case VMAU_MD_CFG0:
+        return v & ~(1u << 15);
+    case SDE_CFG1:
+        return v & ~(1u << 5);
+    case 0x70000u:
+        return v & ~(1u << 20);
+    default:
+        return v;
+    }
+}
+
 size_t t33_hera_h264_list(const T33HeraH264Pic *t, uint32_t *list)
 {
     const T32HeraH264Pic *p = t ? &t->pic : NULL;
@@ -293,7 +316,7 @@ size_t t33_hera_h264_list(const T33HeraH264Pic *t, uint32_t *list)
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->reg == SDE_CTX_TBL ? e->reg + 4u * k : e->reg;
-            uint32_t v = t33_field(t, e->reg, def, st, k);
+            uint32_t v = t33_main_field(t, e->reg, t33_field(t, e->reg, def, st, k));
 
             if (n >= T32_HERA_LIST_MAX_PAIRS)
                 return 0;

@@ -145,15 +145,19 @@ size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
     int crop = w16 != s->width || h16 != s->height;
 
     memset(&b, 0, sizeof(b));
-    put(&b, 8, 100);                    /* High */
-    put(&b, 8, 0);                      /* constraint flags, reserved */
+    /* High; Main for the stand-alone encoder (vendor 2.0.2.1 YuvInit 0x1040c4: i264e profile 0x4d, its
+     * SPS profile_idc 77 with constraint_set1_flag, #752) */
+    put(&b, 8, s->main_profile ? 77u : 100u);
+    put(&b, 8, s->main_profile ? 0x40u : 0u);   /* constraint flags, reserved */
     put(&b, 8, t32_h264_level(s->width, s->height, s->fps_num, s->fps_den));
     put_ue(&b, 0);                      /* sps id */
-    put_ue(&b, 1);                      /* 4:2:0 */
-    put_ue(&b, 0);
-    put_ue(&b, 0);                      /* 8 bit */
-    put(&b, 1, 0);                      /* no transform bypass */
-    put(&b, 1, 0);                      /* no SPS scaling matrix */
+    if (!s->main_profile) {
+        put_ue(&b, 1);                  /* 4:2:0 */
+        put_ue(&b, 0);
+        put_ue(&b, 0);                  /* 8 bit */
+        put(&b, 1, 0);                  /* no transform bypass */
+        put(&b, 1, 0);                  /* no SPS scaling matrix */
+    }
     put_ue(&b, T32_H264_LOG2_MAX_FRAME_NUM - 4u);
     put_ue(&b, 2);                      /* pic_order_cnt_type 2 */
     put_ue(&b, 1);                      /* one reference */
@@ -226,17 +230,19 @@ size_t t32_h264_pps(const T32H264Seq *s, uint8_t *out)
     put_se(&b, s->chroma_qp_offset);    /* chroma QP offset (SetH264TransCfg, #784) */
     put(&b, 1, 1);                      /* deblocking control present */
     put(&b, 2, 0);
-    put(&b, 1, 1);                      /* transform_8x8_mode */
-    put(&b, 1, 1);                      /* pic scaling matrix */
-    for (i = 0; i < 8; i++) {           /* 4x4 Y intra and inter: flat 16; 8x8: default */
-        int flat = i == 0 || i == 3;
-        put(&b, 1, (uint32_t)flat);
-        if (flat) {
-            put_se(&b, 8);              /* 8 + 8 = 16 */
-            put_se(&b, -16);            /* next scale 0: the rest repeats 16 */
+    if (!s->main_profile) {             /* Main: the PPS ends here */
+        put(&b, 1, 1);                  /* transform_8x8_mode */
+        put(&b, 1, 1);                  /* pic scaling matrix */
+        for (i = 0; i < 8; i++) {       /* 4x4 Y intra and inter: flat 16; 8x8: default */
+            int flat = i == 0 || i == 3;
+            put(&b, 1, (uint32_t)flat);
+            if (flat) {
+                put_se(&b, 8);          /* 8 + 8 = 16 */
+                put_se(&b, -16);        /* next scale 0: the rest repeats 16 */
+            }
         }
+        put_se(&b, s->chroma_qp_offset);    /* second chroma QP offset: the same value (#784) */
     }
-    put_se(&b, s->chroma_qp_offset);    /* second chroma QP offset: the same value */
     trailing(&b);
     return nal(out, 3, 8, &b, NULL);
 }

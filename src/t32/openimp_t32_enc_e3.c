@@ -27,14 +27,16 @@
  *   MultiProcessExit(): stops them.
  *   Server here: VBM allocation for the clients (IMP_Encoder_VbmAlloc / VbmFree, 16 entries) and
  *   the release of allocations whose client process is gone (/proc/<pid>, every 100 ms), as the
- *   vendor.  Not as the vendor: the YUV and JPEG requests are answered "failed" (status 0): the
- *   unbound YUV / JPEG encoder (IMP_Encoder_YuvInit / YuvEncode / InputJpege) is not on T32/T33
- *   yet.
+ *   vendor.  Not as the vendor: the YUV and JPEG requests are answered "failed" (status 0); the
+ *   stand-alone encoder itself (IMP_Encoder_YuvInit / YuvEncode / InputJpege, #752) is below, the
+ *   server does not call it yet.
  */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -310,60 +312,209 @@ int IMP_Encoder_InputJpege_Ex(uint8_t *src, uint8_t *dst, int src_w, int src_h, 
     return 0;
 }
 
-/* ---- unbound YUV / JPEG encoder, stage 1 (#752): argument checks and return codes only ----
- * Vendor 2.0.2.1 (T33 libimp, audit t33backlog/v33_backlog.c): YuvInit 0x1040c4, YuvEncode 0x104b4c,
- * YuvExit 0x105248, InputJpege 0x105430, SetChnQpgAI_Yuv 0x1048ac.  The encoder back end (HERA job on
- * a caller buffer, ijpege) is not here, so no handle ever exists:
- *   YuvInit: codec (type) other than 1 / 2 (H.264 / H.265), width % 16, height odd: 0x80040002 (the
- *     vendor checks codec 1/2 first, then the alignment, both 0x80040002); a valid request would
- *     reach i264e_init / i265e_init: here 0x80048000 (the vendor's init-failed code), *h untouched.
- *     NULL h / encIn: the vendor dereferences them (crash); here 0x80040002.
- *   YuvEncode / YuvExit: NULL handle 0x80040010 (vendor), any other handle 0x80040002 (vendor: codec
- *     word neither 1 nor 2; the stub never hands out a handle, so it is foreign and is not read).
- *   InputJpege: width % 16 or height odd 0x80040002 (vendor 0x242e), else ijpege_init cannot run:
- *     0x80048000 (vendor failure return of the same function).
- *   SetChnQpgAI_Yuv: only valid on a handle: 0x80040002 (vendor: unknown codec).
+/* ---- stand-alone ("unbound") YUV / JPEG encoder (#752) --------------------------------------------------
+ * Vendor 2.0.2.1 (T33 libimp, Ghidra base; T32 2.2.0 the same flow): YuvInit 0x1040c4 callocs a 0x5c context,
+ * copies the 80-byte IMPEncoderYuvIn to its start (word 0 = the codec), sets up its own i264e / i265e
+ * parameters (the size only when width % 16 == 0 and the height is even, the rate control from the attribute,
+ * FUN_000e780c) and runs i264e_init / i265e_init; YuvEncode 0x104b4c checks the frame's size, flushes the
+ * caller's NV12 (frame.virAddr, UV after the even height, stride ALIGN16(w)), codes it into encOut->outAddr
+ * and returns the sum of the NAL lengths in outLen; YuvExit 0x105248 deinits and frees; InputJpege 0x105430
+ * runs ijpege_init / encode / deinit on src (Y, UV at src + w * h) into dst; SetChnQpgAI_Yuv 0x1048ac hands
+ * the QpgAI map to i264e_set_param(0x15) / i265e_set_param(0x16) (i264e_reconfig_qpgai_set 0x843f4: own copy
+ * of the w * h map, foreBackMode clip 0..2, markLvl clip 0..3).
+ * Here the encoder is a hidden channel of openimp_t32_encoder.c (openimp_t32_yuv.h): the same HERA / JPEG
+ * code as the bound channels, synchronous in the caller's thread.  Return codes: openimp_t32_yuvrc.h.
+ * Deviations (vendor-or-better): NULL arguments and foreign handles return a code where the vendor crashes;
+ * a picture over encOut->outLen (when set) is 0x80040400 instead of a write past the buffer; an InputJpege
+ * picture over the stream buffer is coded again at a lower quality (the channels' retry) where the vendor
+ * raises the +0x55 byte by 5 and asserts at 99; the QpgAI map is stored per handle and, as on the bound
+ * channels (IMP_Encoder_SetChnQpgAI), not yet applied to the per-macroblock QP.
  */
-#include "t32/openimp_t32_yuvstub.h"
+#include "t32/openimp_t32_yuvrc.h"
+#include "t32/openimp_t32_yuv.h"
+
+#define YUV_MAGIC 0x59555633u           /* "3VUY" */
+
+struct t32_yuv_handle {
+    IMPEncoderYuvIn in;                 /* first: word 0 is the codec, as the vendor's context */
+    uint32_t magic;
+    uint32_t w, h;
+    void *enc;                          /* openimp_t32_yuv.h context */
+    int qpg_ai_on;                      /* SetChnQpgAIEnable_Yuv at YuvInit (vendor param +0x25c / +0x2d4) */
+    uint8_t *qpg_map;                   /* SetChnQpgAI_Yuv: the map's copy, its size and modes */
+    uint32_t qpg_w, qpg_h, qpg_cap;
+    uint8_t qpg_fb, qpg_lvl;
+    int qpg_set;
+};
+
+_Static_assert(sizeof(IMPEncoderYuvIn) == 80, "IMPEncoderYuvIn: vendor YuvInit copies 80 bytes");
+_Static_assert(offsetof(struct t32_yuv_handle, in) == 0, "the codec word leads the handle (vendor ctx[0])");
+
+int OpenIMP_T32_EncQpgAIYuvOn(void);    /* openimp_t32_fs_enc_ext.c: SetChnQpgAIEnable_Yuv */
+
+static int yuv_check(const void *h)
+{
+    const struct t32_yuv_handle *y = h;
+
+    if (!y)
+        return yuvrc_handle(0, 0, 0);
+    return yuvrc_handle(1, y->magic == YUV_MAGIC && y->enc, (uint32_t)y->in.type);
+}
 
 int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight, IMPEncoderYuvIn *encIn)
 {
-    (void)h;
-    int r = yuvstub_init_rc(encIn != NULL, encIn ? (int)encIn->type : 0, inWidth, inHeight);
+    struct t32_yuv_handle *y;
+    T32YuvCfg c;
+    int r = yuvrc_init(h && encIn, encIn ? (int)encIn->type : 0, inWidth, inHeight,
+                       encIn ? (uint32_t)encIn->mode.rcMode : 0u);
 
-    IMP_LOG_ERR(TAG, "YuvInit: %dx%d: 0x%x (unbound encoder not implemented on T32/T33)", inWidth, inHeight, r);
-    return r;
+    if (r) {
+        IMP_LOG_ERR(TAG, "YuvInit: %dx%d: 0x%x", inWidth, inHeight, r);
+        return r;
+    }
+    y = calloc(1, sizeof(*y));
+    if (!y)
+        return YUVRC_E_NOMEM;
+    y->in = *encIn;
+    y->w = (uint32_t)inWidth;
+    y->h = (uint32_t)inHeight;
+    y->qpg_ai_on = OpenIMP_T32_EncQpgAIYuvOn();
+    memset(&c, 0, sizeof(c));
+    c.codec = encIn->type == PT_H265 ? T32_YUV_H265 : T32_YUV_H264;
+    c.width = y->w;
+    c.height = y->h;
+    c.rc = &encIn->mode;
+    c.rc_size = sizeof(encIn->mode);
+    c.fps_num = encIn->outFrmRate.frmRateNum;
+    c.fps_den = encIn->outFrmRate.frmRateDen;
+    c.gop = encIn->maxGop;
+    y->enc = OpenIMP_T32_EncYuvOpen(&c);
+    if (!y->enc) {
+        free(y);
+        IMP_LOG_ERR(TAG, "YuvInit: %dx%d: encoder init failed", inWidth, inHeight);
+        return YUVRC_E_DEV;
+    }
+    y->magic = YUV_MAGIC;
+    *h = y;
+    return 0;
 }
 
 int IMP_Encoder_YuvEncode(void *h, IMPFrameInfo frame, IMPEncoderYuvOut *encOut)
 {
-    (void)frame;
-    (void)encOut;
-    return yuvstub_handle_rc(h != NULL);
+    struct t32_yuv_handle *y = h;
+    uint32_t pa, len = 0;
+    int r = yuv_check(h);
+
+    if (r)
+        return r;
+    if (!encOut || !encOut->outAddr)
+        return YUVRC_E_NULL;
+    r = yuvrc_frame(frame.width, frame.height, y->w, y->h);
+    if (r) {
+        IMP_LOG_ERR(TAG, "YuvEncode: frame %ux%u, encoder %ux%u", frame.width, frame.height, y->w, y->h);
+        return r;
+    }
+    /* the vendor takes frame.virAddr (__jz_video_vbm_virt_to_phys); a frame with phyAddr only works too */
+    pa = frame.virAddr ? (uint32_t)IMP_Encoder_VbmV2P((intptr_t)frame.virAddr) : 0u;
+    if (!pa)
+        pa = frame.phyAddr;
+    if (!pa) {
+        IMP_LOG_ERR(TAG, "YuvEncode: frame 0x%x is not in rmem", frame.virAddr);
+        return YUVRC_E_ENC;
+    }
+    r = OpenIMP_T32_EncYuvFrame(y->enc, (const void *)(uintptr_t)frame.virAddr, pa, y->w, y->h,
+                                frame.timeStamp, encOut->outAddr, encOut->outLen, &len);
+    if (r == T32_YUV_E_ROOM)
+        return YUVRC_E_BS;
+    if (r)
+        return YUVRC_E_ENC;
+    encOut->outLen = len;
+    return 0;
 }
 
 int IMP_Encoder_YuvExit(void *h)
 {
-    return yuvstub_handle_rc(h != NULL);
+    struct t32_yuv_handle *y = h;
+    int r = yuv_check(h);
+
+    if (r)
+        return r;
+    OpenIMP_T32_EncYuvClose(y->enc);
+    y->enc = NULL;
+    y->magic = 0;
+    free(y->qpg_map);
+    free(y);
+    return 0;
 }
 
 int IMP_Encoder_InputJpege(uint8_t *src, uint8_t *dst, int src_w, int src_h, int q, int *stream_length)
 {
-    (void)src;
-    (void)dst;
-    (void)q;
-    (void)stream_length;
-    int r = yuvstub_jpege_rc(src_w, src_h);
+    T32YuvCfg c;
+    void *enc;
+    uint32_t pa, len = 0;
+    int r = yuvrc_jpege(src_w, src_h);
 
-    IMP_LOG_ERR(TAG, "InputJpege: %dx%d: 0x%x (not implemented on T32/T33)", src_w, src_h, r);
-    return r;
+    if (r) {
+        IMP_LOG_ERR(TAG, "InputJpege: %dx%d: 0x%x", src_w, src_h, r);
+        return r;
+    }
+    if (!src || !dst || !stream_length || src_w <= 0 || src_h <= 0)
+        return YUVRC_E_PARAM;
+    pa = (uint32_t)IMP_Encoder_VbmV2P((intptr_t)src);
+    if (!pa) {
+        IMP_LOG_ERR(TAG, "InputJpege: source %p is not in rmem", (void *)src);
+        return YUVRC_E_DEV;
+    }
+    memset(&c, 0, sizeof(c));
+    c.codec = T32_YUV_JPEG;
+    c.width = (uint32_t)src_w;
+    c.height = (uint32_t)src_h;
+    c.jpeg_qp = yuvrc_jpege_q(q);
+    enc = OpenIMP_T32_EncYuvOpen(&c);
+    if (!enc) {
+        IMP_LOG_ERR(TAG, "InputJpege: %dx%d: encoder init failed", src_w, src_h);
+        return YUVRC_E_DEV;
+    }
+    r = OpenIMP_T32_EncYuvFrame(enc, src, pa, (uint32_t)src_w, (uint32_t)src_h, 0, dst, 0, &len);
+    OpenIMP_T32_EncYuvClose(enc);
+    if (r) {
+        IMP_LOG_ERR(TAG, "InputJpege: %dx%d: encode failed", src_w, src_h);
+        return YUVRC_E_DEV;
+    }
+    *stream_length = (int)len;
+    return 0;
 }
 
 int IMP_Encoder_SetChnQpgAI_Yuv(void *h, IMPEncoderQpgAICfg *q)
 {
-    (void)h;
-    (void)q;
-    return YUVSTUB_E_PARAM;
+    struct t32_yuv_handle *y = h;
+    uint32_t n;
+
+    if (!y)
+        return YUVRC_E_NULL;            /* vendor: reads *h (crash) */
+    if (y->in.type != PT_H264 && y->in.type != PT_H265)
+        return 0;                       /* vendor 0x1048ac: neither codec, logs and returns 0 */
+    if (y->magic != YUV_MAGIC || !q)
+        return YUVRC_E_PARAM;
+    n = q->width * q->height;
+    if (n && !q->map)
+        return YUVRC_E_PARAM;           /* vendor: memcpy from NULL (crash) */
+    if (n > y->qpg_cap) {               /* vendor: the first map's size only (a larger one overruns) */
+        uint8_t *m = realloc(y->qpg_map, n);
+
+        if (!m)
+            return YUVRC_E_PARAM;       /* i264e_reconfig_qpgai_set: malloc failed -> set_param -1 */
+        y->qpg_map = m;
+        y->qpg_cap = n;
+    }
+    if (n)
+        memcpy(y->qpg_map, q->map, n);
+    y->qpg_w = q->width;
+    y->qpg_h = q->height;
+    y->qpg_fb = yuvrc_clip(q->foreBackMode, 0, 2);
+    y->qpg_lvl = yuvrc_clip(q->markLvl, 0, 3);
+    y->qpg_set = 1;
+    return 0;
 }
 
 /* ---- multi-process server --------------------------------------------------- */
