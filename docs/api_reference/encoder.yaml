@@ -490,7 +490,7 @@ functions:
       stream_length: "Receives the JPEG size in bytes (0 on failure)."
     returns: "0 on success, -1 for a NULL pointer, a size outside the limits above, or an encoder failure."
     notes: "On T41 the picture is coded by the software JPEG encoder; the vendor library ignores `q` there, OpenIMP honours it. On T23 the Helix hardware codes the picture, with the software encoder as a fallback, and the quality scales the quantisation tables."
-    soc: "T23, T41"
+    soc: "T23, T32, T33, T41"
   Encoder_InputJpege_Ex:
     group: jpeg
     summary: "Same as `InputJpege` for the secondary-process interface of the vendor library. In OpenIMP it works only in the process that owns the encoder."
@@ -506,7 +506,7 @@ functions:
       encIn: "Codec type, rate control, frame rate and GOP length (`IMPEncoderYuvIn`). T23 accepts H.264 only."
     returns: "0 on success, -1 for a NULL argument, an unsupported size or type, no free context, or when the encoder cannot be created. T40/T41 provide a limited number of simultaneous contexts."
     notes: "On T40 and T41 the context runs the same codec as a bound channel, so rate control and GOP behave the same. On T41 a user buffer given in `encIn` has to come from `VbmAlloc`."
-    soc: "T23, T40, T41"
+    soc: "T23, T32, T33, T40, T41"
   Encoder_YuvEncode:
     group: yuv
     summary: "Encodes one frame with the context and copies the finished stream into the caller's buffer."
@@ -517,7 +517,7 @@ functions:
     returns: "0 on success, -1 for an invalid handle, a missing output buffer, a frame the encoder cannot use, an encode failure, no stream within 2 seconds (T40/T41), or a stream larger than the given capacity. `outLen` is 0 after a failure on T40/T41."
     notes: "Use frame memory from `VbmAlloc` where possible. On T40/T41 a frame outside reserved memory, or whose chroma plane follows a luma plane of exactly `width * height` bytes, is copied into the layout the encoder reads. On T23 the frame size and dimensions must match the context, and `outLen` must be non-zero on entry."
     diff: "A picture that does not fit the output buffer fails with -1 and `outLen` 0, instead of writing past the buffer."
-    soc: "T23, T40, T41"
+    soc: "T23, T32, T33, T40, T41"
   Encoder_YuvExit:
     group: yuv
     summary: "Destroys the context and frees its resources."
@@ -541,7 +541,7 @@ functions:
     group: yuv
     summary: "Same as `YuvInit`, but returns a small integer handle (0 to 7) instead of a pointer. In OpenIMP it works only in the process that owns the encoder."
     returns: "0 on success, -1 on the errors of `YuvInit`, when all 8 handles are in use, or in a process without the encoder (errno ENOTSUP)."
-    notes: "T32 and T33: a client of the multi-process encoder server (`MultiProcessInit` in another process, System V message queue 0x24861357); -1 when no server runs. The OpenIMP server answers these requests with \"failed\" (no unbound YUV encoder on T32/T33 yet)."
+    notes: "T32 and T33: a client of the multi-process encoder server (`MultiProcessInit` in another process, System V message queue 0x24861357); -1 when no server runs. The OpenIMP server still answers these requests with \"failed\"; use the in-process calls on T32/T33."
   Encoder_YuvEncode_Ex:
     group: yuv
     summary: "Same as `YuvEncode` with an integer handle."
@@ -579,13 +579,13 @@ functions:
   Encoder_InputJpege_Ex:
     group: yuv
     summary: "Client side of the multi-process JPEG request (T32, T33; queue 0x12354645): a picture in reserved memory is encoded by the server process."
-    returns: "0 with `*stream_length` set; -1 without a server or when the server fails (the OpenIMP server has no unbound JPEG encoder on T32/T33 yet and answers failed)."
+    returns: "0 with `*stream_length` set; -1 without a server or when the server fails (the OpenIMP multi-process server still answers failed on T32/T33; the in-process `InputJpege` encodes)."
     soc: "T32, T33"
   Encoder_MultiProcessInit:
     group: yuv
     summary: "Starts the multi-process encoder server in this process (T32, T33): reserved-memory allocation for client processes (`VbmAlloc_Ex`), release of the buffers of ended clients, and the YUV / JPEG request queues."
     returns: "0 on success, 0x80040080 after `IMP_System_Init` (call it before), 0x80042000 when a server thread cannot start."
-    notes: "YUV and JPEG requests are answered failed: the unbound encoders are not on T32/T33 yet."
+    notes: "YUV and JPEG requests are still answered failed by this server; the in-process `YuvInit` / `InputJpege` work on T32/T33."
     see_also: [Encoder_MultiProcessExit]
     soc: "T32, T33"
   Encoder_MultiProcessExit:
@@ -647,12 +647,12 @@ functions:
     soc: "T32, T33"
   Encoder_SetPskipCfg:
     group: h26x
-    summary: "Sets the adaptive P-skip mode; stored only (not applied to the encoder yet)."
+    summary: "Sets the adaptive P-skip mode. T32 / T33: applied to the H.264 encoder like the vendor (threshold from the bit rate, enable, request, maximum frames); H.265 skipped pictures are not coded yet."
     returns: "As GetPskipCfg; 0x80040002 (setting kept) for a maximum below 1 or a negative threshold; enable 0 switches it off and keeps the other fields."
     soc: "T32, T33"
   Encoder_RequestPskip:
     group: h26x
-    summary: "Asks for a P-skip picture; accepted but not applied yet on T32/T33."
+    summary: "Asks for a P-skip picture; on T32 / T33 the request is taken and cleared by the next H.264 picture (H.265 not yet)."
     returns: "0 on success; 0x80040001, 0x80040008 (no channel)."
     soc: "T32, T33"
   Encoder_KernEnc_Stop:
@@ -795,6 +795,15 @@ functions:
     returns: "0 on success; 0x80040001 for a channel of 16 or more, 0x80040004 once the channel exists."
     notes: "T32 / T33: stored; not used by the HERA encoder yet (cell cache)."
     soc: "T32, T33"
+  Encoder_SetChnQpgAI_Yuv:
+    group: yuv
+    summary: "Hands a QP-grouping (QpgAI) map to the unbound YUV encoder context."
+    params:
+      h: "Context handle from `YuvInit`."
+      q: "Map size and mode (`IMPEncoderQpgAICfg`); the map is copied."
+    returns: "0 on success (also for a context that is neither H.264 nor H.265, as the vendor); 0x80040010 for a NULL handle; 0x80040002 for a NULL map with a size or a foreign handle."
+    notes: "T32 / T33: the map is stored per handle but, as on bound channels, not applied to the macroblock QP yet."
+    soc: "T32, T33"
   Encoder_SetChnQpgAIEnable_Yuv:
     group: yuv
     summary: "The same flag for the unbound YUV encoder (no return value)."
@@ -812,5 +821,5 @@ functions:
     group: mem
     summary: "Lets the JPEG encoder write its bitstream in sections (mode < 4, section size); only before `IMP_System_Init`."
     returns: "0 on success; 0x80040080 after `IMP_System_Init`, 0x80040002 for a mode of 4 or more."
-    notes: "T32 / T33: stored; the JPEG path does not use sections yet (cell cache)."
+    notes: "T32 / T33: applied like the vendor: mode on = the JPEG engine stops at section boundaries, mode off = one buffer of `SetJpegBsSize` bytes and a picture over that limit is dropped with an error (the vendor aborts the process)."
     soc: "T32, T33"
