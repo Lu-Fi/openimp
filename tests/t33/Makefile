@@ -44,7 +44,12 @@ MS_BIN := $(BUILD)/t33-ms784-test
 MS_SRC := ms784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 
 .PHONY: check
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(RC_BIN) $(MS_BIN)
+# #805: the custom AE / AWB workers ask again on EAGAIN / EINTR (blocking open-tx-isp get), leave on other errors
+ALGO_BIN := $(BUILD)/t33-algo805-test
+ALGO_SRC := algo805_test.c $(PROJECT_DIR)/src/t40/openimp_p1_algo.c algo805_inc/imp/imp_isp.h
+
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(RC_BIN) $(MS_BIN) $(ALGO_BIN)
+	$(ALGO_BIN)
 	$(YUV_BIN)
 	$(HDR_BIN)
 	$(GDR_BIN)
@@ -92,3 +97,7 @@ $(YUV_BIN): yuv_rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvrc.h
 $(MS_BIN): $(MS_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t33_sections.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(MS_SRC) -lm
+
+$(ALGO_BIN): $(ALGO_SRC)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -DPLATFORM_T32 -DPLATFORM_T33 -Ialgo805_inc -I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src algo805_test.c -lpthread -o $@

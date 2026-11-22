@@ -5249,7 +5249,7 @@ static int g_algo_reg_ae = -99, g_algo_reg_awb = -99, g_algo_gate_rc = -99, g_al
 /* effect checks: the case drives the callbacks through these requests.  AE phase 0 = answer "no change" (change = 0), 1 = request
  * g_ae_req_*, the info the driver delivered (the exposure it applied) is kept in g_ae_cur_*.  AWB likewise with g_awb_req_*. */
 static volatile int g_ae_phase, g_awb_phase;
-static volatile uint32_t g_ae_req_it, g_ae_req_ag, g_ae_req_dg, g_ae_cur_it, g_ae_cur_ag, g_ae_cur_dg, g_ae_cur_isp, g_ae_unit;
+static volatile uint32_t g_ae_req_isp = 1024, g_ae_req_it, g_ae_req_ag, g_ae_req_dg, g_ae_cur_it, g_ae_cur_ag, g_ae_cur_dg, g_ae_cur_isp, g_ae_unit;
 static volatile uint32_t g_awb_req_r, g_awb_req_b, g_awb_cur_r, g_awb_cur_b;
 static volatile uint32_t g_ae_max_ag, g_ae_min_it;
 static int ae_cb_open(void *p, IMPISPAeInitAttr *a) { (void)p; g_ae_initmax = a->AeMaxIntegrationTime; g_ae_max_ag = a->AeMaxAGain; g_ae_min_it = a->AeMinIntegrationTime; g_ae_open++; return 0; }
@@ -5262,7 +5262,7 @@ static void ae_cb_handle(void *p, CA_CONST IMPISPAeInfo *i, IMPISPAeAttr *a)
     memset(a, 0, sizeof(*a));
     if (g_ae_phase) {
         a->change = 1; a->AeIntegrationTimeUnit = ISP_CORE_EXPR_UNIT_LINE;
-        a->AeIntegrationTime = g_ae_req_it; a->AeAGain = g_ae_req_ag; a->AeDGain = g_ae_req_dg; a->AeIspDGain = 1024;
+        a->AeIntegrationTime = g_ae_req_it; a->AeAGain = g_ae_req_ag; a->AeDGain = g_ae_req_dg; a->AeIspDGain = g_ae_req_isp;
     }
     g_ae_handle++;
 }
@@ -5354,9 +5354,13 @@ static void cs_customalgo_t40(void)
         rep(LBL("customalgo_notify" CA_SFX), r, (r != 0 && getenv("APITEST_QEMU")) ? V_NA : (r == 0 && g_ae_notify >= 1) ? V_PASS : V_FAIL,
             "SetSensorFPS 15/1 -> the active AE library got IMPISP_AE_NOTIFY_FPS_CHANGE %d time(s) (vendor: notify(priv, 0, NULL) after a successful set)", g_ae_notify);
     }
+#if defined(APITEST_T40) || defined(APITEST_T33)
 #ifdef APITEST_T33
-    (void)isp_proc_val;
-#elif defined(APITEST_T40)
+    /* T33 (#805, beyond the vendor): no AE keys in isp-m0, the exposure the driver applied comes back in the library's next info */
+#define CA_PROC(k) ((void)isp_proc_val, (long)(!strcmp((k), "AeAGain") ? g_ae_cur_ag : g_ae_cur_it))
+#else
+#define CA_PROC(k) isp_proc_val(k)
+#endif
     /* effect checks (#65): the callback RESULT must reach the sensor / the white balance */
     if (g_algo_reg_ae == 0 && g_ae_handle >= 5) {
         Fst y0, y1, y2, y3;
@@ -5369,18 +5373,22 @@ static void cs_customalgo_t40(void)
         synth = !b_it || !b_ag;                 /* QEMU delivers no exposure data: exercise the driver path with fixed requests, no verdict */
         if (synth) { b_it = 600; b_ag = 1024; }
         maxag = g_ae_max_ag ? g_ae_max_ag : 0xffffffffU;
-        it0 = isp_proc_val("AeIntegrationTime"); ag0 = isp_proc_val("AeAGain");
+        it0 = CA_PROC("AeIntegrationTime"); ag0 = CA_PROC("AeAGain");
+#ifdef APITEST_T33
+        /* guard (#805 d1, 2026-11-22): the night start had ISP dgain > 1x; requesting 1024 made "back to start" 0.37x darker */
+        g_ae_req_isp = g_ae_cur_isp ? g_ae_cur_isp : 1024;
+#endif
         y0 = fst(1000);
         /* phase 1: a fixed short exposure, gain as before */
         g_ae_req_it = b_it / 6 > g_ae_min_it ? b_it / 6 : (g_ae_min_it ? g_ae_min_it : 1); g_ae_req_ag = b_ag; g_ae_req_dg = g_ae_cur_dg ? g_ae_cur_dg : 1024;
         g_ae_phase = 1; usleep(3000000);
-        it1 = isp_proc_val("AeIntegrationTime"); ag1 = isp_proc_val("AeAGain"); c_it = g_ae_cur_it;
+        it1 = CA_PROC("AeIntegrationTime"); ag1 = CA_PROC("AeAGain"); c_it = g_ae_cur_it;
         y1 = fst(1000);
         ok1 = it1 >= (long)g_ae_req_it * 85 / 100 && it1 <= (long)g_ae_req_it * 115 / 100 && y1.ok && y0.ok && y1.y < y0.y * 0.7;
         /* phase 2: base exposure time, analog gain x4 (limited to the init maximum) */
         g_ae_req_it = b_it; g_ae_req_ag = (uint64_t)b_ag * 4 > maxag ? maxag : b_ag * 4;
         usleep(3000000);
-        it2 = isp_proc_val("AeIntegrationTime"); ag2 = isp_proc_val("AeAGain"); c_ag = g_ae_cur_ag;
+        it2 = CA_PROC("AeIntegrationTime"); ag2 = CA_PROC("AeAGain"); c_ag = g_ae_cur_ag;
         y2 = fst(1000);
         ok2 = ag2 >= (long)g_ae_req_ag * 85 / 100 && ag2 <= (long)g_ae_req_ag * 115 / 100 && y2.ok && y2.y > y1.y + 15;
         /* back to the starting exposure through the callback, then "no change" again */
@@ -5435,8 +5443,7 @@ static void cs_customalgo_t40(void)
             base, it_b, yb.y, found ? "" : " (NO well exposed base found)", dark, it_d, ag_d, yd.y, dark, gain, it_g, ag_g, yg.y, yr.y, yb.y, ok1, ok2, ok3, g_ae_cur_ag);
     }
 #endif
-#ifndef APITEST_T33
-    /* AWB callback result vs picture (T40, and T41 where it is an extra beyond the vendor: #195) */
+    /* AWB callback result vs picture (T40; T41 and T33 where it is an extra beyond the vendor: #195, #805) */
     if (g_algo_reg_awb == 0 && g_awb_handle >= 5) {
         Fst yb, yr, yu, yz;
         uint32_t cr, cb, r1, b1, r2, b2;
@@ -5453,7 +5460,7 @@ static void cs_customalgo_t40(void)
         if (synth) { cr = 1024; cb = 1024; }
         yb = fst(1000);
         /* T41: the library's gains are the hardware gains (1024 = 1.0) in 0x200..0x1800, requests outside are ignored: clamp */
-#ifdef APITEST_T40
+#if defined(APITEST_T40) || defined(APITEST_T33)
 #define AWB_CL(x) ((x) ? (x) : 1)
 #else
 #define AWB_CL(x) ((x) < 0x200 ? 0x200 : (x) > 0x1800 ? 0x1800 : (x))
@@ -5479,7 +5486,6 @@ static void cs_customalgo_t40(void)
             cr, cb, yb.u, yb.v, r1, b1, yr.u, yr.v, r2, b2, yu.u, yu.v, yz.u, yz.v, okr ? "yes" : "NO", okb ? "yes" : "NO", okf ? "yes" : "NO", okc ? "yes" : "NO");
         if (rgot && om != IMPISP_RUNNING_MODE_DAY) { IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &om); usleep(1500000); }
     }
-#endif /* !APITEST_T33 */
 }
 #else
 static void cs_customalgo_t40(void) {}
