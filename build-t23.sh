@@ -149,6 +149,7 @@ compile t23_encoder src/t23/openimp_t23_encoder.c -Werror
 compile t23_decoder src/t23/openimp_t23_decoder.c -Werror
 compile t23_jpegdec src/t23/openimp_t23_jpegdec.c -Werror
 compile t23_misc src/t23/openimp_t23_misc.c -Werror
+compile t23_ivdc src/t23/openimp_t23_ivdc.c -Werror
 # Native Helix H.264: the T30/T21 encoder with the T21-family command list.
 compile t23_helix_native src/t30/t30_helix_encoder.c -Werror
 compile t23_h264_descriptor src/t21/t21_h264_descriptor.c -Werror
@@ -222,6 +223,7 @@ compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
     "$output_dir/t23_decoder.o" \
     "$output_dir/t23_jpegdec.o" \
     "$output_dir/t23_misc.o" \
+    "$output_dir/t23_ivdc.o" \
     "$output_dir/t23_helix_native.o" \
     "$output_dir/t23_h264_descriptor.o" \
     "$output_dir/t23_h264_common.o" \
@@ -250,7 +252,7 @@ compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
     "$output_dir/t23_h264_set.o" "$output_dir/t23_h264_slice.o" \
     "$output_dir/t23_rate_control.o" "$output_dir/t23_eprc.o" \
     "$output_dir/t23_eprc_mbrc.o" "$output_dir/t23_fisheye.o" "$output_dir/watermark.o" \
-    "$output_dir/dma_alloc.o" "$output_dir/core_imp_log_emit.o" \
+    "$output_dir/dma_alloc.o" "$output_dir/core_imp_log_emit.o" "$output_dir/t23_ivdc.o" \
     -lpthread -lm -o "$output_dir/openimp-t23-helix-selftest"
 "$stripper" --strip-unneeded "$output_dir/openimp-t23-helix-selftest"
 

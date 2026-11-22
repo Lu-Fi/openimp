@@ -54,6 +54,9 @@ static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #include "imp_log_int.h"
+#if defined(PLATFORM_T23)
+#include "t23/openimp_t23_ivdc.h"
+#endif
 #include "kernel_interface.h"
 #include "openimp_profile.h"
 #if defined(PLATFORM_T40)
@@ -14452,6 +14455,19 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         if (!hw_frame.pitch)
             hw_frame.pitch = enc->jpeg_src_pitch;
         hw_frame.timestamp = timestamp;
+#if defined(PLATFORM_T23)
+        /* IVDC frame (channel 0 in direct mode): the JPEG core reads it
+         * from the IVDC block (helix_jpeg.c; vendor do_channel_process_jpege
+         * @0x59720 takes frame +0x20 as the source) */
+        /* a lent frame (encoder fan-out) already carries the IVDC source;
+         * a FrameSource record (phys and virt 0) is checked for type 3 */
+        if (codec_type == IMP_ENC_TYPE_JPEG && !phys_addr && !virt_addr &&
+            OpenIMP_T23_IvdcFrame(frame)) {
+            memcpy(&hw_frame.phys_addr, (const uint8_t *)frame + 0x20,
+                   sizeof(uint32_t));
+            hw_frame.virt_addr = 0;
+        }
+#endif
         if (force_idr) {
             LOG_CODEC("Process: channel=%d forcing next SW frame to IDR", enc->channel_id - 1);
             HW_Encoder_RequestIDR();

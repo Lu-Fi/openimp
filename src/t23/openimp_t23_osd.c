@@ -835,7 +835,9 @@ static void osd_apply_draw(int group, void *frame)
             pitch = p ? p : width;
     }
 #endif
-    if (!width || !height || (pitch & 15u))
+    /* no picture in memory (T23 IVDC direct mode, channel 0): nothing to
+     * draw on the CPU */
+    if (!width || !height || (pitch & 15u) || !virt)
         return;
     bg_h = (height + 15u) & ~15u;
 

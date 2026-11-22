@@ -26,6 +26,7 @@ P2_ROI := $(BUILD)/t23-p2-roi-test
 HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 FRAMELOSS := $(BUILD)/t23-frameloss-test
 P2_MULTISECTION := $(BUILD)/t23-p2-multisection-test
+IVDC := $(BUILD)/t23-ivdc-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c \
 	$(PROJECT_DIR)/src/t30/h264enc/cabac.c \
@@ -35,7 +36,8 @@ HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t40/t31_rate_control.c \
 	$(PROJECT_DIR)/src/eprc/eprc.c \
 	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c \
-	$(PROJECT_DIR)/src/fisheye/fisheye.c $(PROJECT_DIR)/src/watermark/watermark.c
+	$(PROJECT_DIR)/src/fisheye/fisheye.c $(PROJECT_DIR)/src/watermark/watermark.c \
+	$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c
 # The IMP headers pin the 32-bit MIPS ABI with _Static_assert; the Helix
 # bridge host build (x86_64, both ends of the IPC built alike) only checks
 # the bridge's input path, so those layout checks are compiled out there.
@@ -49,7 +51,7 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS) $(P2_MULTISECTION)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS) $(P2_MULTISECTION) $(IVDC)
 	$(P2_ROI)
 	$(P2_MULTISECTION)
 	$(FRAMELOSS) frameloss_vectors.txt
@@ -91,6 +93,7 @@ check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(IVS_FRAMEWORK)
 	$(IVS_MOVE_V2)
 	$(JPEG_QL)
+	$(IVDC)
 
 $(ISP_TUNING_TEST_BIN): isp_tuning_test.c \
 	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c $(PROJECT_DIR)/src/isp/isp_mid_ref.c
@@ -174,6 +177,15 @@ $(HELIX_DESCRIPTOR): helix_descriptor_test.c \
 $(FRAMELOSS): frameloss_test.c $(PROJECT_DIR)/src/t23/t23_frameloss.h
 	mkdir -p "$(dir $@)"
 	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src frameloss_test.c -lm -o "$@"
+
+# IVDC direct mode (openimp #767): misc-ivdc sequence, ring, drop rule
+$(IVDC): ivdc_test.c $(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c \
+	$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) -DPLATFORM_T23 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src ivdc_test.c $(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c \
+		$(PROJECT_DIR)/src/core/imp_log_emit.c -Wl,--wrap=open,--wrap=close,--wrap=ioctl \
+		-lpthread -o "$@"
 
 $(HELIX_STREAM): helix_stream_test.c $(HELIX_NATIVE_SOURCES) \
 	$(PROJECT_DIR)/src/t30/t30_helix_encoder.h
@@ -280,7 +292,7 @@ $(P2_MULTISECTION): p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_enc
 		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
 		p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \
-		-lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
+		$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
 
 # SetChnROI / GetChnROI of the T23 encoder against a stub codec (vendor 1.3.0)
 $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
@@ -290,4 +302,4 @@ $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
 		p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \
-		-lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
+		$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
