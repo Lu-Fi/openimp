@@ -32,6 +32,7 @@ typedef struct {
     uint32_t fps_num, fps_den;
     uint32_t bitrate;                   /* bits/s (H.265 level only; the H.264 level has no bitrate check) */
     int init_qp;                        /* pic_init_qp: 26, FIXQP = the I QP (vendor i264e_pps_init) */
+    int main_profile;                   /* Main (77, constraint_set1): no 8x8 transform, no scaling lists (#752) */
     T32Vui vui;
 } T32H264Seq;
 

@@ -56,6 +56,11 @@ typedef struct {
      * on I and P, ref_* the other one, the area registers 0 (ring_* = 0),
      * 0x30004 bit 26 and 0x301c0 bits 18, 19 off, no 0x30800 / 0x30804 */
     int noshare;
+    /* the stand-alone encoder (#752), vendor 2.0.2.1 YuvEncode lists (QEMU capture): Main profile, the
+     * 8x8 transform off (0x38004 bits 3 / 5, 0x40234 bit 29, 0x40410 bit 15, 0x68018 bit 5, 0x70000
+     * bit 20 clear); the source's real height in 0x20008 (0: pic.height) */
+    int no8x8;
+    uint32_t src_height;
 } T33HeraH264Pic;
 
 /* the list into @list (T32_HERA_LIST_MAX_PAIRS * 2 words): pairs written, 0 on bad input */

@@ -303,7 +303,7 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
     case SDE_SL_GEOM:
         return mbh << 24 | mbw << 16;
     case SDE_CFG1:                      /* QP, 8x8 transform, skip, slice type + 1 */
-        return qp << 8 | 1u << 5 | 1u << 4 | (p->p_frame ? 2u : 1u);
+        return qp << 8 | (p->no8x8 ? 0u : 1u << 5) | 1u << 4 | (p->p_frame ? 2u : 1u);
     case SDE_CTX_TBL: {
         unsigned s = st[idx];
         return hera_lps_range[s <= 63 ? 63 - s : s - 64] | (s >> 6 & 1u);

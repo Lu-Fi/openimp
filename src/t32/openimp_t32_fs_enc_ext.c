@@ -420,6 +420,12 @@ void IMP_Encoder_SetChnQpgAIEnable_Yuv(int encChn, int enable)
     enc_glob.qpg_ai_yuv = enable != 0;
 }
 
+/* the flag YuvInit takes (vendor 0x1040c4: param +0x25c / +0x2d4 = the global != 0, #752) */
+int OpenIMP_T32_EncQpgAIYuvOn(void)
+{
+    return enc_glob.qpg_ai_yuv;
+}
+
 void IMP_Encoder_SetMotionQualityEnable_Yuv(int encChn, int enable)
 {
     (void)encChn;

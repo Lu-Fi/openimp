@@ -195,6 +195,7 @@ struct t32_enc_chn {
     uint32_t frames, encoded, skipped, retries, errors;
     int size_logged;
     int ivdc;                           /* fed by the IVDC direct channel (#301) */
+    int yuv;                            /* stand-alone context (YuvInit / InputJpege, #752): no channel number */
 #ifdef PLATFORM_T33
     /* IMP_Encoder_Query of vendor 2.0.2.1 (#738): the encoder thread writes
      * the channel's status words after every picture (0xdd6bc / 0xdebf4:
@@ -219,6 +220,13 @@ static pthread_mutex_t enc_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct t32_enc_grp enc_grp[T32_ENC_GROUPS];
 static struct t32_enc_chn enc_chn[T32_ENC_CHNS];
 static uint32_t enc_jpeg_bs_size;       /* IMP_Encoder_SetJpegBsSize, 0 = default */
+
+/* the channel number of @e for the per-channel tables; -1 for a stand-alone context (#752), which the
+ * tables (E1 SEI / ROI / VUI, SetRdBufShare) do not know */
+static int chn_no(const struct t32_enc_chn *e)
+{
+    return e >= enc_chn && e < enc_chn + T32_ENC_CHNS ? (int)(e - enc_chn) : -1;
+}
 
 /*
  * T33 (#391), T32 (#743): one 2 x 250 KiB section buffer per engine, shared by all of
@@ -344,7 +352,7 @@ static void e1_at_idr(struct t32_enc_chn *e)
 {
     struct t32_h264 *a = &e->avc;
     T32Vui v;
-    int n = (int)(e - enc_chn);
+    int n = chn_no(e);
 
     if (!OpenIMP_T32_E1AtIdr(n, &v))
         return;
@@ -359,7 +367,7 @@ static void e1_at_idr(struct t32_enc_chn *e)
 
 static size_t e1_sei(struct t32_enc_chn *e, uint8_t *out, size_t cap)
 {
-    return OpenIMP_T32_E1Sei((int)(e - enc_chn), e->hevc, out, cap);
+    return OpenIMP_T32_E1Sei(chn_no(e), e->hevc, out, cap);
 }
 
 static int jpeg_qp_of(int qp)
@@ -399,7 +407,9 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
     } else {
         *stride = ALIGN16(f->width);
         *y = f->phyAddr;
-        *c = f->phyAddr + *stride * ALIGN16(f->height);
+        /* a caller's NV12 (YuvEncode / InputJpege, #752): UV after the even height, vendor 2.0.2.1
+         * YuvEncode 0x104b4c job +0x64 = ((h + 1) & ~1) * ALIGN16(w) + Y, InputJpege 0x105430 C = Y + w * h */
+        *c = f->phyAddr + *stride * (e->yuv ? (f->height + 1u) & ~1u : ALIGN16(f->height));
     }
     e->vpu.node.frame_type = ivdc ? OI_T32_FRAME_TYPE_IVDC : 0;
     e->vpu.node.sensor_id = 0;          /* one sensor (direct mode 1) */
@@ -816,7 +826,7 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
      * H.264 after it (i264e_encode: ratecontrol_start, then i264e_reconfig,
      * the same in vendor 2.2.0 0x7ed74), so the next start takes them */
     uint8_t roi[16][9];
-    int roi_new = OpenIMP_T32_E1RoiTake((int)(e - enc_chn), roi);
+    int roi_new = OpenIMP_T32_E1RoiTake(chn_no(e), roi);
 
     if (roi_new && e->hevc)
         t32_rc_roi(&a->rc, roi);
@@ -882,6 +892,10 @@ static uint32_t t33_h264_list(struct t32_enc_chn *e, const T32HeraH264Pic *p, ui
     t33_hera_ring_layout(w, h, &r);
     memset(&t, 0, sizeof(t));
     t.pic = *p;
+    if (e->yuv) {                       /* stand-alone (#752): Main, the source's real height */
+        t.no8x8 = 1;
+        t.src_height = e->attr.encAttr.picHeight;
+    }
     if (a->noshare) {
         /* SetRdBufShare(0) (#736): no shared area, two whole pictures */
         t.noshare = 1;
@@ -960,6 +974,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     T32H264Slice sl;
 
     memset(&p, 0, sizeof(p));
+    p.no8x8 = e->yuv;                   /* stand-alone: Main (#752) */
     p.width = w;
     p.height = h;
     p.p_frame = !idr;
@@ -1333,7 +1348,7 @@ static void *enc_thread(void *arg)
 {
     struct t32_enc_chn *e = arg;
     openimp_thread_setnamef(e->hevc ? "oimp-h265-%d" : e->h264 ? "oimp-h264-%d" : "oimp-jpeg-%d",
-                            (int)(e - enc_chn));
+                            chn_no(e));
     pthread_mutex_lock(&enc_lock);
     for (;;) {
         struct t32_enc_grp *g;
@@ -1758,7 +1773,7 @@ static int h264_setup(struct t32_enc_chn *e)
 #ifdef PLATFORM_T33
     /* HERA v1.6 compressed area (#391); H.265 heights are multiples of 8.
      * SetRdBufShare(0) (#736): two whole pictures and the header sets */
-    a->noshare = OpenIMP_T32_EncTakeRdBufShareOff((int)(e - enc_chn));
+    a->noshare = OpenIMP_T32_EncTakeRdBufShareOff(chn_no(e));
     a->pp = 0;
     ring_bytes = t33_hera_ring_bytes(w, ALIGN16(at->encAttr.picHeight));
     if (a->noshare) {
@@ -1780,6 +1795,7 @@ static int h264_setup(struct t32_enc_chn *e)
             return -1;
     a->seq.width = at->encAttr.picWidth;
     a->seq.height = at->encAttr.picHeight;
+    a->seq.main_profile = e->yuv;       /* stand-alone: Main as vendor YuvInit (#752); the list drops 8x8 */
     a->seq.fps_num = at->rcAttr.outFrmRate.frmRateNum;
     a->seq.fps_den = at->rcAttr.outFrmRate.frmRateDen;
     a->seq.bitrate = at->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR ?
@@ -2766,4 +2782,161 @@ int IMP_Encoder_RequestIDR(int encChn)
         e->avc.idr_req = 1;
     pthread_mutex_unlock(&enc_lock);
     return e ? 0 : -1;
+}
+
+/* ---- stand-alone encoder contexts (#752) -------------------------------------------------------
+ * The back end of IMP_Encoder_YuvInit / YuvEncode / YuvExit and IMP_Encoder_InputJpege
+ * (openimp_t32_enc_e3.c).  Vendor 2.0.2.1 / 2.2.0 runs a second i264e / i265e / ijpege instance on the
+ * caller's buffer (YuvInit 0x1040c4: i264e_init on its own parameters, YuvEncode 0x104b4c:
+ * i264e_encode + i264e_get_bitstream; InputJpege 0x105430: ijpege_init / encode / deinit per call), no
+ * FrameSource channel.  Here a context is a hidden channel: the same set-up (h264_setup, the JPEG job
+ * and output buffers), one stream slot, the same h264_encode / h265_encode / jpeg_encode, called in the
+ * caller's thread; the coded picture is copied to the caller's buffer.
+ */
+#include "t32/openimp_t32_yuv.h"
+
+static pthread_mutex_t yuv_lock = PTHREAD_MUTEX_INITIALIZER;   /* one stand-alone picture at a time */
+
+static void yuv_free(struct t32_enc_chn *e, int opened)
+{
+    chn_free_bufs(e);
+    OpenIMP_T32_VpuBufFree(&e->job);
+    h264_free(e);
+    OpenIMP_T32_VpuRelease(&e->vpu);
+    if (opened)
+        OpenIMP_T32_VpuClose();
+    free(e);
+}
+
+void *OpenIMP_T32_EncYuvOpen(const T32YuvCfg *c)
+{
+    struct t32_enc_chn *e;
+    IMPEncoderCHNAttr *a;
+
+    if (!c || c->codec < T32_YUV_JPEG || c->codec > T32_YUV_H265 || !c->width || !c->height ||
+        c->width > 8192u || c->height > 8192u)
+        return NULL;
+    if (c->codec != T32_YUV_JPEG && (!c->rc || c->rc_size != sizeof(IMPEncoderAttrRcMode)))
+        return NULL;
+    if (c->codec == T32_YUV_H265 && (c->width < 256u || c->width > 4096u || c->height < 64u ||
+                                     c->height > 2304u)) {
+        IMP_LOG_ERR(TAG, "stand-alone H.265 %ux%u outside 256..4096 x 64..2304", c->width, c->height);
+        return NULL;
+    }
+    e = calloc(1, sizeof(*e));
+    if (!e)
+        return NULL;
+    e->created = 1;
+    e->yuv = 1;
+    e->src_fs = -1;
+    e->pipefd[0] = e->pipefd[1] = -1;
+    a = &e->attr;
+    a->encAttr.enType = c->codec == T32_YUV_H265 ? PT_H265 : c->codec == T32_YUV_H264 ? PT_H264 : PT_JPEG;
+    a->encAttr.profile = c->codec == T32_YUV_H264 ? 1u : 0u;   /* vendor YuvInit: i264e profile 0x4d (Main) */
+    a->encAttr.picWidth = c->width;
+    a->encAttr.picHeight = c->height;
+    a->rcAttr.outFrmRate.frmRateNum = c->fps_num ? c->fps_num : 25u;
+    a->rcAttr.outFrmRate.frmRateDen = c->fps_den ? c->fps_den : 1u;
+    a->rcAttr.maxGop = c->gop;
+    if (c->codec != T32_YUV_JPEG)
+        memcpy(&a->rcAttr.attrRcMode, c->rc, sizeof(a->rcAttr.attrRcMode));
+    else
+        a->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)jpeg_qp_of(c->jpeg_qp);
+    e->h264 = c->codec != T32_YUV_JPEG;
+    e->hevc = c->codec == T32_YUV_H265;
+    e->qp = e->h264 ? 0 : jpeg_qp_of(c->jpeg_qp);
+    e->max_streams = 1;
+
+    if (OpenIMP_T32_VpuOpen() != 0) {
+        free(e);
+        return NULL;
+    }
+    if (OpenIMP_T32_VpuRequest(&e->vpu, e->hevc ? OI_T32_VPU_CODEC_H265ENC :
+                               e->h264 ? OI_T32_VPU_CODEC_H264ENC : OI_T32_VPU_CODEC_JPEGENC) != 0) {
+        OpenIMP_T32_VpuClose();
+        free(e);
+        return NULL;
+    }
+    if (e->h264 ? h264_setup(e) != 0 :
+        OpenIMP_T32_VpuBufAlloc(&e->job, T32_JPEG_JOB_BYTES, "t32_yuv_jpeg_job") != 0)
+        goto fail;
+#ifdef PLATFORM_T33
+    e->bs_size = t33_bs_size(a, !(e->h264 && e->avc.noshare));
+    if (!e->h264) {
+        e->avc.section_kb = T32_HERA_SECTION_KB;
+        if (t33_bs_get(e) != 0)
+            goto fail;
+    }
+#else
+    e->bs_size = t33_bs_size(a, 1);
+    if (!e->h264 && OpenIMP_T32_VpuBufAlloc(&e->avc.ebs, t32_jpeg_out_size(a), "t32_yuv_jpeg_bs") != 0)
+        goto fail;
+#endif
+    if (chn_alloc_bufs(e, 1) != 0)
+        goto fail;
+    IMP_LOG_INFO(TAG, "stand-alone %s %ux%u, stream buffer %u bytes, vpu channel %u",
+                 e->hevc ? "H.265" : e->h264 ? "H.264" : "JPEG", c->width, c->height, e->bs_size,
+                 e->vpu.node.channel_id);
+    return e;
+fail:
+    yuv_free(e, 1);
+    return NULL;
+}
+
+int OpenIMP_T32_EncYuvFrame(void *ctx, const void *y_va, uint32_t y_pa, uint32_t w, uint32_t h, int64_t ts,
+                            void *out, uint32_t cap, uint32_t *len)
+{
+    struct t32_enc_chn *e = ctx;
+    struct t32_enc_slot *s;
+    IMPFrameInfo f;
+    uint32_t n = 0;
+    int ok;
+
+    if (!e || !e->yuv || !out || !y_pa)
+        return T32_YUV_E_CODE;
+    memset(&f, 0, sizeof(f));
+    f.width = w;
+    f.height = h;
+    f.pixfmt = PIX_FMT_NV12;
+    f.phyAddr = y_pa;
+    f.size = ALIGN16(w) * ((h + 1u) & ~1u) * 3u / 2u;
+    f.timeStamp = ts;
+    /* vendor YuvEncode / InputJpege: IMP_FlushCache(src, h * 3 * ALIGN16(w) / 2, 1) */
+    if (y_va)
+        OpenIMP_T32_VpuFlush(y_va, f.size, OI_T32_VPU_FLUSH_WBACK);
+    pthread_mutex_lock(&yuv_lock);
+    s = &e->slot[0];
+    if (e->hevc)
+        ok = h265_encode(e, &f, s) == 0;
+    else if (e->h264)
+        ok = h264_encode(e, &f, s) == 0;
+    else
+        ok = jpeg_encode(e, &f, s, &n) == 0;
+    if (ok && e->h264)
+        n = s->length;
+    if (ok && cap && n > cap) {
+        IMP_LOG_ERR(TAG, "stand-alone picture of %u bytes over the %u byte output buffer", n, cap);
+        pthread_mutex_unlock(&yuv_lock);
+        return T32_YUV_E_ROOM;
+    }
+    if (ok) {
+        memcpy(out, t32_vpu_buf_va(&s->bs), n);
+        e->encoded++;
+        *len = n;
+    } else {
+        e->errors++;
+    }
+    pthread_mutex_unlock(&yuv_lock);
+    return ok ? 0 : T32_YUV_E_CODE;
+}
+
+void OpenIMP_T32_EncYuvClose(void *ctx)
+{
+    struct t32_enc_chn *e = ctx;
+
+    if (!e || !e->yuv)
+        return;
+    IMP_LOG_INFO(TAG, "stand-alone %s off: %u coded, %u over-limit retries, %u errors",
+                 e->hevc ? "H.265" : e->h264 ? "H.264" : "JPEG", e->encoded, e->retries, e->errors);
+    yuv_free(e, 1);
 }
