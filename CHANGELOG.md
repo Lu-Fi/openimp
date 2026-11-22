@@ -9,6 +9,9 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: docs: beyond-vendor rows for the T33/T32 flip work lock and the IVDC mode lock (#779, #783)
+- docs/OPENIMP_BEYOND_VENDOR.md section 6: SetHVFLIP safe across a stop (open-tx-isp: flip work under the core lock, #779); IVDC direct mode fixed while a stream runs (`IMP_FrameSource_SetDirectMode` gets 0x80011000 / kernel -EBUSY, #783). Driver change on open-tx-isp `claude/otx-779-780`; user decision 2026-11-22.
+
 ## 2026-11-22: T23 Helix EMC scratch in the vendor 1.3.0 layout (#774)
 
 - In the IVDC direct mode only (tx-isp-t23 `direct_mode=1`), the native T23 H.264 encoder lays out its EMC scratch as the vendor `h264_api_enc` (0x3004c at the base, 0x30050 after 1 byte per macroblock, 0x30054/0x30058 after 2 more, the vendor's 0xa00 gap, one spare page): 20 KiB at 1280x720 instead of 936 KiB, 12 KiB instead of ~260 KiB at 640x360; needed to fit main + sub + JPEG next to the IVDC ring at rmem=8M (QEMU A12). Every other T23 keeps the T21-derived layout unchanged; `OPENIMP_T23_EMC=vendor|t21` overrides. Device proof on a real T23 pending (#774).
