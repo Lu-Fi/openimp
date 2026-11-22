@@ -19,7 +19,9 @@
 #include <pthread.h>
 #include <errno.h>
 #ifdef APITEST_T40
-#define CA_SFX "_t40"      /* case customalgo_t40 / customalgo_t41 */
+#define CA_SFX "_t40"      /* case customalgo_t40 / customalgo_t41 / customalgo_t33 */
+#elif defined(APITEST_T33)
+#define CA_SFX "_t33"
 #else
 #define CA_SFX "_t41"
 #endif
@@ -5229,11 +5231,18 @@ static void cs_ctmove_t40(void)
 #endif /* APITEST_T40 */
 
 /* T40 and T41 (same vendor protocol): case customalgo_t40 / customalgo_t41 */
-#if (defined(APITEST_T40) || defined(PLATFORM_T41)) && !defined(APITEST_T32)
-/* customalgo_t40 / customalgo_t41 (#65 #76): IMP_ISP_SetAeAlgoFunc / IMP_ISP_SetAwbAlgoFunc.  The vendor registers the callback records when the sensor is enabled
+#if (defined(APITEST_T40) || defined(PLATFORM_T41)) && (!defined(APITEST_T32) || defined(APITEST_T33))
+/* T33 (#784 group 4): the same case on the vendor 2.0.2.1 protocol; registration, open, handle, notify and close are
+ * checked, the effect checks below (T40 / T41 /proc keys) are left out.
+ * customalgo_t40 / customalgo_t41 (#65 #76): IMP_ISP_SetAeAlgoFunc / IMP_ISP_SetAwbAlgoFunc.  The vendor registers the callback records when the sensor is enabled
  * (a record set later only counts at the next EnableSensor), so the records are installed by algo_pre_t40() before IMP_ISP_EnableSensor in the
  * main flow (when this case is selected); the case then checks open / handle / notify and algo_post_t40() the close after DisableSensor.
  * The callbacks only count and answer "no change" (change = 0), so the picture is not touched. */
+#ifdef APITEST_T33
+#define CA_CONST            /* T33 2.0.2.1 header: the handle callbacks take non-const info pointers */
+#else
+#define CA_CONST const
+#endif
 static volatile int g_ae_open, g_ae_close, g_ae_handle, g_ae_notify, g_awb_open, g_awb_close, g_awb_handle;
 static volatile uint32_t g_ae_initmax, g_ae_info_time;
 static int g_algo_reg_ae = -99, g_algo_reg_awb = -99, g_algo_gate_rc = -99, g_algo_gate_errno;
@@ -5245,7 +5254,7 @@ static volatile uint32_t g_awb_req_r, g_awb_req_b, g_awb_cur_r, g_awb_cur_b;
 static volatile uint32_t g_ae_max_ag, g_ae_min_it;
 static int ae_cb_open(void *p, IMPISPAeInitAttr *a) { (void)p; g_ae_initmax = a->AeMaxIntegrationTime; g_ae_max_ag = a->AeMaxAGain; g_ae_min_it = a->AeMinIntegrationTime; g_ae_open++; return 0; }
 static void ae_cb_close(void *p) { (void)p; g_ae_close++; }
-static void ae_cb_handle(void *p, const IMPISPAeInfo *i, IMPISPAeAttr *a)
+static void ae_cb_handle(void *p, CA_CONST IMPISPAeInfo *i, IMPISPAeAttr *a)
 {
     (void)p;
     g_ae_info_time = i->AeIntegrationTime; g_ae_cur_it = i->AeIntegrationTime; g_ae_cur_ag = i->AeAGain; g_ae_cur_dg = i->AeDGain;
@@ -5260,7 +5269,7 @@ static void ae_cb_handle(void *p, const IMPISPAeInfo *i, IMPISPAeAttr *a)
 static int ae_cb_notify(void *p, IMPISPAeNotify n, void *d) { (void)p; (void)d; if (n == IMPISP_AE_NOTIFY_FPS_CHANGE) g_ae_notify++; return 0; }
 static int awb_cb_open(void *p, IMPISPAwbInitAttr *a) { (void)p; (void)a; g_awb_open++; return 0; }
 static void awb_cb_close(void *p) { (void)p; g_awb_close++; }
-static void awb_cb_handle(void *p, const IMPISPAwbInfo *i, IMPISPAwbAttr *a)
+static void awb_cb_handle(void *p, CA_CONST IMPISPAwbInfo *i, IMPISPAwbAttr *a)
 {
     (void)p;
     g_awb_cur_r = i->cur_r_gain; g_awb_cur_b = i->cur_b_gain;
@@ -5328,7 +5337,7 @@ static void cs_customalgo_t40(void)
     NEED(IMP_ISP_SetAwbAlgoFunc) {
         rep(FN(IMP_ISP_SetAwbAlgoFunc), g_algo_reg_awb, (g_algo_reg_awb == 0 && g_awb_open == 1 && g_awb_handle >= 5 && flow()) ? V_PASS : V_FAIL,
             "registered before EnableSensor: ret %d, open called %d, handle called %d times, frames flow%s", g_algo_reg_awb, g_awb_open, g_awb_handle,
-#ifdef APITEST_T40
+#if defined(APITEST_T40) || defined(APITEST_T33)
             "");
 #else
             " (T41: a documented extra beyond the vendor, whose module has no AWB library path)");
@@ -5345,7 +5354,9 @@ static void cs_customalgo_t40(void)
         rep(LBL("customalgo_notify" CA_SFX), r, (r != 0 && getenv("APITEST_QEMU")) ? V_NA : (r == 0 && g_ae_notify >= 1) ? V_PASS : V_FAIL,
             "SetSensorFPS 15/1 -> the active AE library got IMPISP_AE_NOTIFY_FPS_CHANGE %d time(s) (vendor: notify(priv, 0, NULL) after a successful set)", g_ae_notify);
     }
-#ifdef APITEST_T40
+#ifdef APITEST_T33
+    (void)isp_proc_val;
+#elif defined(APITEST_T40)
     /* effect checks (#65): the callback RESULT must reach the sensor / the white balance */
     if (g_algo_reg_ae == 0 && g_ae_handle >= 5) {
         Fst y0, y1, y2, y3;
@@ -5424,6 +5435,7 @@ static void cs_customalgo_t40(void)
             base, it_b, yb.y, found ? "" : " (NO well exposed base found)", dark, it_d, ag_d, yd.y, dark, gain, it_g, ag_g, yg.y, yr.y, yb.y, ok1, ok2, ok3, g_ae_cur_ag);
     }
 #endif
+#ifndef APITEST_T33
     /* AWB callback result vs picture (T40, and T41 where it is an extra beyond the vendor: #195) */
     if (g_algo_reg_awb == 0 && g_awb_handle >= 5) {
         Fst yb, yr, yu, yz;
@@ -5467,6 +5479,7 @@ static void cs_customalgo_t40(void)
             cr, cb, yb.u, yb.v, r1, b1, yr.u, yr.v, r2, b2, yu.u, yu.v, yz.u, yz.v, okr ? "yes" : "NO", okb ? "yes" : "NO", okf ? "yes" : "NO", okc ? "yes" : "NO");
         if (rgot && om != IMPISP_RUNNING_MODE_DAY) { IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &om); usleep(1500000); }
     }
+#endif /* !APITEST_T33 */
 }
 #else
 static void cs_customalgo_t40(void) {}

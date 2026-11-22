@@ -215,13 +215,21 @@ int32_t IMP_ISP_DisableTuning(void)
 
 /* ---- sensor ---------------------------------------------------------------- */
 /* value word num << 16 | den; the vendor checks no tuning state here */
+#ifdef PLATFORM_T33
+extern void OpenIMP_P1_AlgoNotifyFps(int num) __attribute__((weak));   /* src/t40/openimp_p1_algo.c */
+#endif
 int32_t IMP_ISP_Tuning_SetSensorFPS(IMPVI_NUM num, IMPISPSensorFps *fps)
 {
     int32_t rc = tun_check(num, fps);
 
     if (rc)
         return rc;
-    return tun_ioctl(num, T32_SET, ID_SENSOR_FPS, fps->num << 16 | fps->den, NULL);
+    rc = tun_ioctl(num, T32_SET, ID_SENSOR_FPS, fps->num << 16 | fps->den, NULL);
+#ifdef PLATFORM_T33
+    if (rc == 0 && OpenIMP_P1_AlgoNotifyFps)
+        OpenIMP_P1_AlgoNotifyFps((int)num);     /* vendor 0x11129c: an AE library with the flag set is told */
+#endif
+    return rc;
 }
 
 /* vendor: the ioctl's own result (-1) on failure */

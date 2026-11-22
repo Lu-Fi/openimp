@@ -38,6 +38,11 @@ static unsigned dump_bytes;
 static unsigned vpu_bytes;
 static unsigned long seq;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+/* guard (#784 group 4, 2026-11-22): fprintf is a cancellation point.  A worker thread cancelled while it held
+ * the log lock (custom AE / AWB worker at DisableSensor) left the lock taken and hung the next traced call.
+ * Cancellation is held off inside every locked region. */
+#define TLOCK(o) do { pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &(o)); pthread_mutex_lock(&lock); } while (0)
+#define TUNLOCK(o) do { pthread_mutex_unlock(&lock); pthread_setcancelstate((o), &(o)); } while (0)
 static pthread_once_t once = PTHREAD_ONCE_INIT;
 static int safe_copy(void *dst, const void *src, unsigned n);
 static int (*real_ioctl)(int, unsigned long, ...);
@@ -138,11 +143,13 @@ static void dump_words(unsigned long s, const char *tag, const void *arg, unsign
 
 void oi_trace_mark(const char *text)
 {
+    int o;
+
     pthread_once(&once, trace_init);
-    pthread_mutex_lock(&lock);
+    TLOCK(o);
     if (log_file)
         fprintf(log_file, "M %lu %ld %s\n", ++seq, (long)syscall(SYS_gettid), text);
-    pthread_mutex_unlock(&lock);
+    TUNLOCK(o);
 }
 
 void oi_trace_tuning_size(unsigned n)
@@ -190,6 +197,7 @@ static void dump_tuning(unsigned long s, const char *tag, const void *arg, unsig
 
 int ioctl(int fd, unsigned long req, ...)
 {
+    int co;
     va_list ap;
     void *arg;
     char link[32], path[64];
@@ -230,7 +238,7 @@ int ioctl(int fd, unsigned long req, ...)
     if (n > dump_bytes)
         n = dump_bytes;
     if (traced) {
-        pthread_mutex_lock(&lock);
+        TLOCK(co);
         s = ++seq;
         if ((dir & 4) || req == 0x2000496aUL || req == 0x20004976UL)
             dump_words(s, "in", arg, n);
@@ -244,18 +252,18 @@ int ioctl(int fd, unsigned long req, ...)
             tuning_bytes = 0;
             dump_tuning(s, "in", arg, tun);
         }
-        pthread_mutex_unlock(&lock);
+        TUNLOCK(co);
     }
     rc = real_ioctl(fd, req, arg);
     err = errno;
     if (traced) {
-        pthread_mutex_lock(&lock);
+        TLOCK(co);
         fprintf(log_file, "I %lu %ld %s %08lx %d %d\n", s, (long)syscall(SYS_gettid),
                 path, req, rc, rc < 0 ? err : 0);
         dump_words(s, "out", arg, n);    /* _IOW requests are written back too */
         if (tun)
             dump_tuning(s, "out", arg, tun);
-        pthread_mutex_unlock(&lock);
+        TUNLOCK(co);
     }
     errno = err;
     return rc;
