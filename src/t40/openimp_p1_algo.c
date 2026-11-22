@@ -210,6 +210,21 @@ static uint32_t ae_us_divisor(const unsigned char *info)
     return t * (fps >> 16);
 }
 
+/*
+ * T33 (#805): the open-tx-isp driver blocks a get until the next statistics frame, at most t33_calgo_wait_ms
+ * (default 500 ms), then answers EAGAIN (no frame, e.g. stream paused); a signal gives EINTR.  The worker asks again
+ * (the loop top is a cancellation point), so it never spins and still leaves on the cancel or on the close (EINVAL).
+ * T40 / T41: every error ends the worker, as before.
+ */
+static int algo_get_retry(void)
+{
+#ifdef PLATFORM_T33
+    return errno == EAGAIN || errno == EINTR;
+#else
+    return 0;
+#endif
+}
+
 /* cancel / exit of a worker: tell algo_join at once (without it every DisableSensor waited the full 2 s, #784) */
 static void algo_left(void *done)
 {
@@ -239,8 +254,11 @@ static void *ae_worker(void *arg)
                 break;
             continue;
         }
-        if (ioctl(a->fd, TISP_AE_GET, buf) != 0)
+        if (ioctl(a->fd, TISP_AE_GET, buf) != 0) {
+            if (algo_get_retry())
+                continue;
             break;
+        }
         if (a->ae.handle)
             a->ae.handle(a->ae.priv_data,
                          (ALGO_INFO_CONST IMPISPAeInfo *)((unsigned char *)buf + AE_INFO_OFF), attr);
@@ -281,8 +299,11 @@ static void *awb_worker(void *arg)
     set[1] = (uint32_t)num;
     for (;;) {
         pthread_testcancel();
-        if (ioctl(a->fd, TISP_AWB_GET, buf) != 0)
+        if (ioctl(a->fd, TISP_AWB_GET, buf) != 0) {
+            if (algo_get_retry())
+                continue;
             break;
+        }
         if (a->awb.handle)
             a->awb.handle(a->awb.priv_data,
                           (ALGO_INFO_CONST IMPISPAwbInfo *)((unsigned char *)buf + AE_INFO_OFF), attr);
