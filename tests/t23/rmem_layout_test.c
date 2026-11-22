@@ -23,20 +23,48 @@
 #include "dma_alloc.h"
 #include "rmem_arena.h"
 #include "t30/t30_helix_encoder.h"
+#include "t30/t23_helix_bs.h"
+#include "imp/imp_framesource.h"
 
+/* FrameSource channel sizes the encoder's area sizing sees (#768); all 0
+ * = no FrameSource, the 2 MiB default */
+static uint32_t fs_w[3], fs_h[3];
+
+int IMP_FrameSource_GetChnAttr(int chn, IMPFSChnAttr *attr)
+{
+    if (chn < 0 || chn >= 3 || !fs_w[chn])
+        return -1;
+    memset(attr, 0, sizeof(*attr));
+    attr->picWidth = (int)fs_w[chn];
+    attr->picHeight = (int)fs_h[chn];
+    return 0;
+}
+
+#ifndef RMEM_SIZE
 #define RMEM_SIZE   (22u << 20)
+#endif
 #define RMEM_PHYS   0x02a00000u
 #define FAKE_FD     4243
 
+#ifndef MAIN_W
 #define MAIN_W 1920u
+#endif
+#ifndef MAIN_H
 #define MAIN_H 1080u
+#endif
+#ifndef SUB_W
 #define SUB_W  640u
+#endif
+#ifndef SUB_H
 #define SUB_H  360u
+#endif
 /* VBM frame size: macroblock-aligned NV12 */
 #define FRAME(w, h) ((((w) + 15u) & ~15u) * (((h) + 15u) & ~15u) * 3u / 2u)
 #define POOL0 (2u * FRAME(MAIN_W, MAIN_H))   /* 6266880, as in the log */
 #define POOL1 (2u * FRAME(SUB_W, SUB_H))
+#ifndef ISP_NCU
 #define ISP_NCU 3133440u
+#endif
 #define OSD_PIECES 4u
 #define OSD_PIECE (68u << 10)
 
@@ -403,6 +431,37 @@ int main(void)
            "%zu KiB (with a 256 KiB snapshot buffer live)\n",
            pool_enables, worst_free >> 10);
     assert(top_allocations > 0);
+    /* #768: the shared area follows the largest FrameSource picture */
+    {
+        const uint32_t w720[2] = { 1280u, 640u }, h720[2] = { 720u, 360u };
+        const uint32_t w1080[1] = { 1920u }, h1080[1] = { 1080u };
+        uint32_t m720, s720, area;
+
+        assert(t23_bs_window_bytes(1280u, 720u) == 1408u << 10);
+        assert(t23_bs_window_bytes(640u, 360u) == 384u << 10);
+        assert(t23_bs_window_bytes(1920u, 1080u) == 2u << 20);
+        assert(t23_bs_window_bytes(176u, 144u) == 256u << 10);
+        assert(t23_bs_area_bytes(w720, h720, 2u, 0u) == (1408u << 10) + 4096u);
+        assert(t23_bs_area_bytes(w1080, h1080, 1u, 0u) == (2u << 20) + 4096u);
+        assert(t23_bs_area_bytes(w720, h720, 0u, 0u) == (2u << 20) + 4096u);
+        assert(t23_bs_area_bytes(w720, h720, 2u, 3u << 20) == 3u << 20);
+
+        fs_w[0] = 1280u; fs_h[0] = 720u; fs_w[1] = 640u; fs_h[1] = 360u;
+        rmem_arena_init(&arena, 32u << 20);
+        encoder_create(&sub_encoder, 640u, 360u);   /* timps: sub first */
+        s720 = (uint32_t)arena.used;
+        encoder_create(&main_encoder, 1280u, 720u);
+        m720 = (uint32_t)arena.used - s720;
+        area = OpenIMP_T23_HelixBs_Size();
+        encoder_destroy(&main_encoder);
+        encoder_destroy(&sub_encoder);
+        assert(arena.used == 0);
+        printf("720p sensor: area %u KiB, sub 640x360 %u KiB, main "
+               "1280x720 %u KiB\n", area >> 10, s720 >> 10, m720 >> 10);
+        assert(area == (1408u << 10) + 4096u);
+        memset(fs_w, 0, sizeof(fs_w));
+        memset(fs_h, 0, sizeof(fs_h));
+    }
     printf("T23 rmem layout simulation passed\n");
     return 0;
 }

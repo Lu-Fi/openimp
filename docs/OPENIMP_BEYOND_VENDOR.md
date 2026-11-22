@@ -308,6 +308,15 @@ force; `OPENIMP_MOTION_V2=0` (or `features = 0` via `SetConfigEx`) is the vendor
 | T40/T41: the vendor library has no reference-frame sharing (the AVPU keeps its own reference buffers); `IMP_Encoder_SetbufshareChn` (JPEG shares the stream manager) is as the vendor. Merged 2026-10-24 (`claude/t4x-bufshare`): T41 `IMP_Encoder_SetAvpuBsShare` and the vendor default of 2 stream slots per channel (saves 2.7 MB rmem at 1080p + 360p; OpenIMP used 4) | T40, T41 | none | on | Nothing | n/a | .34, decode clean, SSIM 1.000 against the default streams |
 | T30 Temper frame buffer "ncubuf" sized width x height x 4 instead of the vendor width x width x 4 (#697, user-approved 2026-11-20): the driver programs the Temper writer with height lines of width x 4 bytes (open-tx-isp tx_isp_t30_recovered.c:12278-12283), so 6.3 MB of rmem at 1920x1080 (5.9 MB at 1948x1109) are never written. A 64 KiB guard pattern behind the frame is checked at DisableSensor ("T30 temper guard intact" / "overwritten") | T30 | `OPENIMP_T30_TEMPER_VENDOR_SIZE=1` restores w x w x 4; `OPENIMP_T30_TEMPER_CANARY=<s>` checks the guard every s seconds | **on** | nothing to do | guard log line; env above | planned: canary proof on a T30 with Temper on (long run, day and night) |
 
+### 5.0 T23 Helix bitstream area sized to the pictures (2026-11-22, issue 768)
+The stock T23 libimp 1.3.0 allocates one encoder bitstream pool ("vpuBs") of 0x1fa400 bytes on every T23 cpu id
+(EncoderInit 0x4c6b4..0x4c6bc selects ids 15..20, 0x4c990/0x4c998 loads 0x1fa400), whatever the sensor size, unless
+the application calls `IMP_Encoder_SetPoolSize`. OpenIMP's shared area (`t23_bs_attach`) now holds the window of the
+largest FrameSource channel (one macroblock-aligned NV12 picture, 64 KiB steps, 256 KiB .. 2 MiB, plus a 4 KiB page):
+1412 KiB on a 1280x720 sensor instead of 2052 KiB, 2 MiB + 4 KiB at 1080p or when no channel is known (as before).
+Why: on 32 MB T23DL boards (rmem=8M) every 100 KiB counts. Evidence: host `tests/t23/rmem_layout_test.c` (720p
+sensor: area 1412 KiB, sub 640x360 2292 KiB incl. the area, main 1280x720 2876 KiB).
+
 ### 5.1 T41 media memory pools and `IMP_FrameSource_SetPool` (2026-10-27, issue 72)
 
 Vendor-equal part (T41 1.2.5/1.2.6): `IMP_System_MemPoolRequest(id, size, name)` carves one contiguous block out of rmem;
