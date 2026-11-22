@@ -111,10 +111,22 @@ int main(void)
     CHECK(OpenIMP_T23_IvdcLead((0x8000u | 10u) << 16, 290u, 300u) == 20u);
     CHECK(OpenIMP_T23_IvdcLead(10u << 16, 0x8000u | 290u, 300u) == 20u);
 
+    /* direct_mode=0: GET_DIRECT 0, nothing else changes (no ring, no
+     * IVDC frames, the T21 EMC layout stays: IvdcMode 0) */
+    fake_mode = 0;
+    CHECK(OpenIMP_T23_IvdcCreateChn(0) == 0 && ioctls == 1);
+    CHECK(OpenIMP_T23_IvdcMode() == 0 && !OpenIMP_T23_IvdcChnDirect(0));
+    CHECK(OpenIMP_T23_IvdcEnableChn(0, 1280, 720) == 0 && ioctls == 1 &&
+          ring_size == 0 && paddr_seen == 0);
+    OpenIMP_T23_IvdcDestroyChn(0);
+    fake_mode = 1;
+    ioctls = 0;
+
     /* channel 1 never asks the IVDC; channel 0 does (GET_DIRECT) */
     CHECK(OpenIMP_T23_IvdcCreateChn(1) == 0 && ioctls == 0);
     CHECK(OpenIMP_T23_IvdcCreateChn(0) == 0 && ioctls == 1);
     CHECK(OpenIMP_T23_IvdcChnDirect(0) == 1);
+    CHECK(OpenIMP_T23_IvdcMode() == 1);
     CHECK(OpenIMP_T23_IvdcChnDirect(1) == 0);
     CHECK(OpenIMP_T23_IvdcThreshold(0) == T23_IVDC_THRESHOLD);
 

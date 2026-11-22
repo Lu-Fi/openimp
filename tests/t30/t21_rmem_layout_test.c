@@ -414,9 +414,8 @@ static void check_ring_layout(int main_first)
     assert(find_tag("t23-helix-bs", 0, &b));
     /* 1080p ring + chroma gap, page-rounded by the allocator */
     assert(ring->size >= 0x3b1100u && ring->size <= 0x3b2000u);
-    /* vendor 1.3.0 EMC layout (#774): 1 + 2 bytes per macroblock, the
-     * 0xa00 tail and a spare page: 32 KiB at 1080p */
-    assert(emc->size == 32u << 10);
+    /* without IVDC direct mode the T21-derived EMC layout (#774) */
+    assert(emc->size == 2u << 20);
     assert(bs->size == (2u << 20) + 4096u);
     assert(emc->phys + emc->size == ring->phys);  /* EMC directly below */
     if (main_first)

@@ -1093,6 +1093,21 @@ static void helix_watermark(const T30HelixEncoder *encoder,
         (void)DMA_RmemFlushCache(luma, bytes, 1);
 }
 
+#if defined(PLATFORM_T23)
+/* EMC scratch layout choice (#774): the vendor 1.3.0 layout in the IVDC
+ * direct mode, the T21-derived one otherwise; OPENIMP_T23_EMC=vendor|t21 */
+static int t23_emc_vendor_layout(void)
+{
+    const char *env = getenv("OPENIMP_T23_EMC");
+
+    if (env && !strcmp(env, "vendor"))
+        return 1;
+    if (env && !strcmp(env, "t21"))
+        return 0;
+    return OpenIMP_T23_IvdcMode() != 0;
+}
+#endif
+
 /* A frame the VPU can read: in memory (phyAddr), or on the T23 over IVDC
  * (direct mode, openimp_t23_ivdc.c). */
 static int t30_frame_readable(const IMPFrameInfo *frame)
@@ -3188,9 +3203,11 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * all-I_PCM picture fits; at least 256 KiB, at most the 1 MiB of the
      * T21 layout). */
 #if defined(PLATFORM_T23)
-    /* T23: the stock 1.3.0 EMC layout (h264_api_enc), 13.5 KiB at 720p
-     * instead of 936 KiB; OPENIMP_T23_EMC=t21 keeps the T21-derived one */
-    if (!getenv("OPENIMP_T23_EMC") || strcmp(getenv("OPENIMP_T23_EMC"), "t21"))
+    /* T23: the stock 1.3.0 EMC layout (h264_api_enc, 20 KiB at 720p
+     * instead of 936 KiB) only in the IVDC direct mode, where rmem is
+     * short (#774, device proof pending); every other T23 keeps the
+     * T21-derived layout.  OPENIMP_T23_EMC=vendor|t21 overrides. */
+    if (t23_emc_vendor_layout())
         encoder->scratch_size = T23_HelixScratchLayoutStock(
             (params->width + 15u) / 16u, (params->height + 15u) / 16u,
             encoder->scratch_offset);

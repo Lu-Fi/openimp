@@ -229,6 +229,11 @@ uint32_t OpenIMP_T23_IvdcMemLine(void)
     return __atomic_load_n(&ivdc_mem_line, __ATOMIC_RELAXED);
 }
 
+int OpenIMP_T23_IvdcMode(void)
+{
+    return (int)__atomic_load_n(&ivdc_mode, __ATOMIC_RELAXED);
+}
+
 void OpenIMP_T23_IvdcSetRegReader(int (*fn)(uint32_t addr, uint32_t *val))
 {
     ivdc_reg_reader = fn;

@@ -34,6 +34,8 @@ int  OpenIMP_T23_IvdcChnDirect(int chn);
 int  OpenIMP_T23_IvdcThreshold(int chn);
 int  OpenIMP_T23_IvdcSetThreshold(int chn, int threshold);
 uint32_t OpenIMP_T23_IvdcMemLine(void);
+/* direct mode of the last GET_DIRECT (0: normal capture or no IVDC) */
+int  OpenIMP_T23_IvdcMode(void);
 
 /* Encoder side: 1 if the frame record is an IVDC frame */
 int  OpenIMP_T23_IvdcFrame(const void *frame);
