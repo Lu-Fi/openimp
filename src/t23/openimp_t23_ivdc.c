@@ -47,6 +47,7 @@
 #define IVDC_OVERFLOW   0x2cu
 #define IVDC_ISP_LINE   0x208u
 #define IVDC_VPU_LINE   0x3a8u
+#define IVDC_STATUS     0x7cu
 
 typedef struct {
     int fd;              /* /dev/misc-ivdc, -1 = none */
@@ -62,6 +63,7 @@ static IvdcChn ivdc_chn[IVDC_CHANNELS] = {
 };
 static uint32_t ivdc_mem_line;
 static uint32_t ivdc_mode;        /* last GET_DIRECT result */
+static unsigned int ivdc_start_skips; /* vendor qmem +0x6634 */
 static volatile uint32_t *ivdc_regs;
 static int ivdc_map_failed;
 static int (*ivdc_reg_reader)(uint32_t addr, uint32_t *val);
@@ -358,4 +360,43 @@ int OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
     if (time_ms)
         *time_ms = ts_us > 0 ? (uint64_t)ts_us / 1000u : 0u;
     return 0;
+}
+
+/* vendor update_h264_one_frmstrm @0x5d648 (libimp_all.c:35364-35372) and
+ * do_channel_process_jpege @0x59720 (:33258-33263): ivdc_regrw(0x1320007c)
+ * after the job, negative (bit 31) -> the picture is not delivered (H.264:
+ * bitstream released, the encoder restarts with an IDR) */
+int OpenIMP_T23_IvdcPictureBroken(void)
+{
+    uint32_t v = 0;
+    static unsigned int logged;
+
+    if (ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, &v) != 0 ||
+        !(v & 0x80000000u))
+        return 0;
+    if (logged++ < 5u || logged % 100u == 0u)
+        IMP_LOG_WARN("Encoder", "IVDC status 0x%08x: picture dropped (%u)",
+                     v, logged);
+    return 1;
+}
+
+/* vendor on_encoder_group_data_update @0x5b750 (libimp_all.c:34516-34523):
+ * for a type 3 frame and a channel whose picture count is 0, the global
+ * counter (< 3) is incremented and the channel skips the frame; at 3 it is
+ * reset and the frame goes through */
+int OpenIMP_T23_IvdcSkipStart(uint64_t channel_pictures)
+{
+    int skip = 0;
+
+    if (channel_pictures)
+        return 0;
+    pthread_mutex_lock(&ivdc_lock);
+    if (ivdc_start_skips < 3u) {
+        ivdc_start_skips++;
+        skip = 1;
+    } else {
+        ivdc_start_skips = 0;
+    }
+    pthread_mutex_unlock(&ivdc_lock);
+    return skip;
 }

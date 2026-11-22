@@ -18,7 +18,7 @@ static int fake_mode = 1;
 static uint32_t fake_line = 300;
 static uint32_t paddr_seen;
 static int ioctls;
-static uint32_t reg_ovf, reg_isp, reg_vpu;
+static uint32_t reg_ovf, reg_isp, reg_vpu, reg_status;
 static int fails;
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL %s:%d: %s\n", \
@@ -82,6 +82,7 @@ static int fake_reg(uint32_t addr, uint32_t *val)
     case 0x1320002cu: *val = reg_ovf; return 0;
     case 0x13200208u: *val = reg_isp; return 0;
     case 0x132003a8u: *val = reg_vpu; return 0;
+    case 0x1320007cu: *val = reg_status; return 0;
     }
     return -1;
 }
@@ -170,6 +171,21 @@ int main(void)
           OpenIMP_T23_IvdcThreshold(0) == 50);
     OpenIMP_T23_IvdcDestroyChn(0);
     CHECK(OpenIMP_T23_IvdcChnDirect(0) == 0);
+
+    /* vendor: IVDC status 0x1320007c bit 31 -> picture dropped */
+    reg_status = 0x7fffffffu;
+    CHECK(!OpenIMP_T23_IvdcPictureBroken());
+    reg_status = 0x80000000u;
+    CHECK(OpenIMP_T23_IvdcPictureBroken());
+
+    /* vendor: a channel without pictures skips the first 3 IVDC frames,
+     * one counter for all channels, reset when a channel passes */
+    CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
+    CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
+    CHECK(OpenIMP_T23_IvdcSkipStart(5) == 0);
+    CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
+    CHECK(OpenIMP_T23_IvdcSkipStart(0) == 0);
+    CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
 
     if (fails) {
         fprintf(stderr, "t23 ivdc test: %d failures\n", fails);

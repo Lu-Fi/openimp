@@ -318,6 +318,7 @@ typedef struct {
 #endif
     uint64_t jpeg_frame_generation;
     int jpeg_frame_requested;
+    uint64_t ivdc_jpeg_frames;      /* T23: IVDC frames lent to this JPEG channel */
     int jpeg_fanout;                /* JPEG frames from a video channel's
                                      * fan-out (last decision) */
     int frame_readers;              /* video polls between the receiving
@@ -950,6 +951,14 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
         }
 #endif
 #if defined(P2_JPEG_LEND)
+#if defined(PLATFORM_T23)
+        /* vendor on_encoder_group_data_update: a channel that has not had
+         * an IVDC frame yet skips the first 3; the request stays */
+        if (ivdc && OpenIMP_T23_IvdcSkipStart(jpeg->ivdc_jpeg_frames)) {
+            pthread_mutex_unlock(&jpeg->lock);
+            continue;
+        }
+#endif
         if (lend < 0)
             lend = (source->physical_address || ivdc) && p2_jpeg_lend_wanted();
         if (lend && !jpeg->jpeg_lent_frame &&
@@ -971,6 +980,10 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
 #endif
             jpeg->synthetic_frame.timestamp = source->timestamp;
             jpeg->jpeg_lent_frame = (void *)source;
+#if defined(PLATFORM_T23)
+            if (ivdc)
+                jpeg->ivdc_jpeg_frames++;
+#endif
             jpeg->jpeg_src_pitch = 0;   /* the lent frame keeps its own address */
             jpeg->jpeg_lent_source = source_channel;
             jpeg->jpeg_frame_requested = 0;

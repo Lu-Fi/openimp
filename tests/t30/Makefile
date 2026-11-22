@@ -122,9 +122,9 @@ helix_jpeg_test_t20: $(HJPEG_DEPS)
 	$(CC) $(HJPEG_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 -DOPENIMP_SW_JPEG=0 \
 	 $(ROOT)/src/core/imp_log_emit.c	-o $@ helix_jpeg_test.c $(ROOT)/src/t30/helix_jpeg.c -lm -pthread
 
-helix_jpeg_test_t23: $(HJPEG_DEPS)
+helix_jpeg_test_t23: $(HJPEG_DEPS) $(ROOT)/src/t23/openimp_t23_ivdc.c
 	$(CC) $(HJPEG_FLAGS) -DPLATFORM_T23 -DOPENIMP_SW_JPEG=0 $(ROOT)/src/core/imp_log_emit.c -o $@ \
-		helix_jpeg_test.c $(ROOT)/src/t30/helix_jpeg.c -lm -pthread
+		helix_jpeg_test.c $(ROOT)/src/t30/helix_jpeg.c $(ROOT)/src/t23/openimp_t23_ivdc.c -lm -pthread
 
 # IVS framework and move algorithm with the legacy T20/T21/T30 ABI; the test
 # source is shared with tests/t23. The frame record carries 32-bit
