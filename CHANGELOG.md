@@ -9,6 +9,9 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: docs: beyond-vendor rows for the T33/T32 flip work lock and the IVDC mode lock (#779, #783)
+- docs/OPENIMP_BEYOND_VENDOR.md section 6: SetHVFLIP safe across a stop (open-tx-isp: flip work under the core lock, #779); IVDC direct mode fixed while a stream runs (`IMP_FrameSource_SetDirectMode` gets 0x80011000 / kernel -EBUSY, #783). Driver change on open-tx-isp `claude/otx-779-780`; user decision 2026-11-22.
+
 ## 2026-11-22: T23 Helix EMC scratch: vendor 1.3.0 layout only on request (#774)
 
 - `OPENIMP_T23_EMC=vendor` lays out the EMC scratch as the vendor `h264_api_enc` (20 KiB instead of 936 KiB at 720p). Not used by default, also not in the IVDC direct mode: on a real T23N (Tapo C500, 2026-11-22) it broke the bitstream of OpenIMP's command list (decode errors from the first pictures) and, with a canary past its tail (`OPENIMP_T23_EMC_CANARY=1`), the VPU hung. Every T23 keeps the T21-derived layout (#774).
