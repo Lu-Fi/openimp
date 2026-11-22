@@ -12,6 +12,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-22: docs: beyond-vendor rows for the T33/T32 flip work lock and the IVDC mode lock (#779, #783)
 - docs/OPENIMP_BEYOND_VENDOR.md section 6: SetHVFLIP safe across a stop (open-tx-isp: flip work under the core lock, #779); IVDC direct mode fixed while a stream runs (`IMP_FrameSource_SetDirectMode` gets 0x80011000 / kernel -EBUSY, #783). Driver change on open-tx-isp `claude/otx-779-780`; user decision 2026-11-22.
 
+## 2026-11-22: T23 IVDC: status drop, start skip, device run (#767, #786, #787)
+
+- As the vendor 1.3.0: after an IVDC picture the IVDC status 0x1320007c is read and a picture with bit 31 set is dropped (H.264 restarts with an IDR; `update_h264_one_frmstrm` @0x5d648, `do_channel_process_jpege` @0x59720); a channel that has not coded yet skips the first 3 IVDC frames (`on_encoder_group_data_update` @0x5b750; JPEG: the fan-out keeps the request). Host test `tests/t23/ivdc_test.c`.
+- Real T23N (Tapo C500, 1080p), timps from /tmp with tx-isp-t23 `direct_mode=1`: 10 min main + sub + JPEG snapshot/MJPEG over IVDC, no hang, decode clean, selftest 20/20; `direct_mode=0` regression run clean. Open: the channel 0 picture over IVDC is garbled when the ISP flips (`image.hflip/vflip = 1`), fine without flips (#787).
+
 ## 2026-11-22: T23 Helix EMC scratch: vendor 1.3.0 layout only on request (#774)
 
 - `OPENIMP_T23_EMC=vendor` lays out the EMC scratch as the vendor `h264_api_enc` (20 KiB instead of 936 KiB at 720p). Not used by default, also not in the IVDC direct mode: on a real T23N (Tapo C500, 2026-11-22) it broke the bitstream of OpenIMP's command list (decode errors from the first pictures) and, with a canary past its tail (`OPENIMP_T23_EMC_CANARY=1`), the VPU hung. Every T23 keeps the T21-derived layout (#774).

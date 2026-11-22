@@ -45,6 +45,15 @@ int  OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
                            uint32_t *mem_line, uint32_t *threshold,
                            uint64_t *time_ms);
 
+/* After an IVDC picture: 1 when IVDC status 0x1320007c has bit 31 set,
+ * the picture is then dropped (vendor update_h264_one_frmstrm @0x5d648,
+ * do_channel_process_jpege @0x59720). */
+int  OpenIMP_T23_IvdcPictureBroken(void);
+/* 1 = skip this IVDC frame: a channel that has not coded a picture yet
+ * skips the first 3 IVDC frames (vendor on_encoder_group_data_update
+ * @0x5b750, one counter for all channels, reset when a channel passes). */
+int  OpenIMP_T23_IvdcSkipStart(uint64_t channel_pictures);
+
 /* host test hook: register read override (NULL = /dev/mem mapping) */
 void OpenIMP_T23_IvdcSetRegReader(int (*fn)(uint32_t addr, uint32_t *val));
 /* lead of the ISP write line over the VPU read line, wrap corrected */

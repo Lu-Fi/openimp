@@ -4153,6 +4153,9 @@ static int t30_helix_encode_job(T30HelixEncoder *encoder,
      * An IVDC frame has no memory: its picture comes over IVDC, unless the
      * ISP ran too far ahead (openimp_t23_ivdc.c, then it is dropped). */
     if (OpenIMP_T23_IvdcFrame(frame)) {
+        /* vendor: the first 3 IVDC frames of a channel are skipped */
+        if (OpenIMP_T23_IvdcSkipStart(encoder->frame_number))
+            return -1;
         if (OpenIMP_T23_IvdcCheck(frame, &encoder->ivdc_overflow,
                                   &encoder->ivdc_mem_line,
                                   &encoder->ivdc_threshold,
@@ -4629,6 +4632,15 @@ again:
             (void)DMA_RmemFlushCache(temporary + T30_SLICE_OFFSET,
                                      encoder->temporary.size -
                                          T30_SLICE_OFFSET, 2);
+        }
+        /* vendor: IVDC status bit 31 after the job -> no picture, the
+         * stream restarts with an IDR */
+        if (encoder->ivdc_on && run_ret == 0 && attempt < 2 && !overflow &&
+            OpenIMP_T23_IvdcPictureBroken()) {
+            encoder->ivdc_drops++;
+            encoder->force_idr = 1;
+            helix_eprc_drop(encoder);
+            return -1;
         }
         if (run_ret == 2 && encoder->ivdc_on) {
             encoder->ivdc_drops++;
