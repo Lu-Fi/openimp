@@ -497,17 +497,13 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
                   config->width);
     EMIT(0x10008, 0);
     EMIT(0x1000c, 0);
-#if defined(T21_HELIX_T23_DELTAS)
-    /* T23 1.3.0 h264_api_enc L95246-95247 (slice +0x3ac / +0x3a8):
-     * ((w + 63) / 64 * mb_height) << 16 | (w + 31) / 32 * mb_height;
-     * the T21 form below gives the same value only at 1920x1088 */
+    /* T23 1.3.0 h264_api_enc L95246-95247 and T21 1.0.33 h264_api_enc.isra.10
+     * (0x9469c, slice +0x3a8 = ((w + 31) >> 5) * mbh, +0x3ac = ((w + 63) >> 6) * mbh;
+     * H264E_T21_SliceInit 0x1d30c: value = u16 +0x3a8 | +0x3ac << 16, #825):
+     * the old mb_width * 17 / * 34 form was equal only at 1920x1088 */
     EMIT(0x10010, ((((uint32_t)config->width + 63u) >> 6) *
                    config->mb_height << 16) |
                   (((uint32_t)config->width + 31u) >> 5) * config->mb_height);
-#else
-    EMIT(0x10010, ((uint32_t)config->mb_width * 17u << 16) |
-                  ((uint32_t)config->mb_width * 34u));
-#endif
     /* ring: 0 for the IDR, the ring start for P (vendor T23 lists) */
     EMIT(0x10014, config->ref_share
                       ? (config->slice_type ? config->ring_start_y : 0u)
@@ -583,13 +579,10 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
 #endif
     EMIT(0x801c4, 0x44444444u);
     EMIT(0x801c8, 0);
-#if defined(T21_HELIX_T23_DELTAS)
-    /* T23 1.3.0: 0x00430000 at 720p and 360p (SliceInit L12572-12576,
-     * nibbles slice +0x1af/+0x1b0; equal to last_mby << 16 only at 1080p) */
+    /* T23 1.3.0: 0x00430000 at 720p and 360p.  T21 1.0.33: SliceInit 0x1d30c builds the
+     * 0x801cc value from the nibbles slice +0x19d..+0x1a2, which h264_api_enc.isra.10 sets to
+     * 0, 0, 0, 0, 4, 3 for every size: 0x00430000 (#825; last_mby << 16 was equal only at 1080p) */
     EMIT(0x801cc, 0x00430000u);
-#else
-    EMIT(0x801cc, (uint32_t)config->last_mby << 16);
-#endif
     EMIT(0x801d0, 0);
     EMIT(0x801d4, 0);
     for (i = 0; i < 96u; i++)

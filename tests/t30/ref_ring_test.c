@@ -578,9 +578,32 @@ static void test_vendor_t23_exact(void)
 }
 #endif
 
+/* #825: T21 1.0.33 h264_api_enc.isra.10 (0x9469c) sets slice +0x3a8 = ((w + 31) >> 5) * mbh,
+ * +0x3ac = ((w + 63) >> 6) * mbh and the 0x801cc nibbles +0x19d..+0x1a2 = 0, 0, 0, 0, 4, 3 for
+ * every size (H264E_T21_SliceInit 0x1d30c): the same 0x10010 / 0x801cc as the T23 1.3.0 lists */
+static void test_vendor_t21_825(void)
+{
+    static const struct { unsigned int w, h; uint32_t r10010; } v[] = {
+        { 640, 360, 0x00e601ccu }, { 1280, 720, 0x03840708u },
+        { 1920, 1080, (120u * 17u << 16) | 120u * 34u },
+    };
+    size_t k;
+
+    for (k = 0; k < 3; k++) {
+        T21H264SliceConfig c;
+        size_t pairs = 0;
+
+        fill(&c, k == 2 ? 0 : 1, v[k].w, v[k].h);
+        assert(T21_H264_BuildDescriptor(&c, &pairs) == 0);
+        assert(get(pairs, 0x10010) == v[k].r10010);
+        assert(get(pairs, 0x801cc) == 0x00430000u);
+    }
+}
+
 int main(void)
 {
     test_qp_fields();
+    test_vendor_t21_825();
     /* 1080p: 3.7 MiB instead of 2 x 3.0 MiB */
     assert(t21_ref_ring_bytes(120, 68) == 3870976u);
     assert(t21_ref_ring_bytes(120, 68) < 2u * (1920u * 1088u * 3u / 2u));
