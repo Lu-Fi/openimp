@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T23 Helix bitstream area sized to the largest FrameSource picture (#768, beyond vendor)
+- `t23_bs_attach` (src/t30/t30_helix_encoder.c) sizes the shared H.264/JPEG bitstream area with `t23_bs_area_bytes()` (src/t30/t23_helix_bs.h): the window of the largest FrameSource channel plus a page, 2 MiB + 4 KiB when none is known. 1280x720 sensor: 1412 KiB instead of 2052 KiB (stock vpuBs 0x1fa400 on every T23 cpu id, libimp 1.3.0 EncoderInit 0x4c990).
+- Host test: `tests/t23/rmem_layout_test.c` checks the window/area sizes and a 720p scenario; the 1080p simulation is unchanged. `make check` rc 0.
+
 ## 2026-11-21: OpenIMP identity marker guard (T32/T33, #545)
 
 - `tools/export-check.sh` fails a SoC whose `libimp.so` does not export `OpenIMP_P0_GetState` (the timps OpenIMP marker; without it an OpenIMP-flavour timpsd exits 78); `build-t32.sh` / `build-t33.sh` check it at link time. T32/T33 keep `OpenIMP_P0_GetState` as their only timps marker: `OpenIMP_AVC_Create` (AVPU/Helix-T40 codec) and `OpenIMP_Tuning_Create` (T40 ISP device) have no backend on the HERA SoCs (tools/export-check/README.md).
