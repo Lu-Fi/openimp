@@ -390,6 +390,9 @@ int main(int argc, char **argv)
     rep(FN(IMP_ISP_Open), ret, ret < 0 ? V_FAIL : V_PASS, "");
     if (ret >= 0) t_binpath_pre();
 #if defined(APITEST_T33)
+    if (ret >= 0) { extern void t33_binpath_pre(void); t33_binpath_pre(); }
+#endif
+#if defined(APITEST_T33)
     /* #491: APITEST_LDC_ONLINE=strength|<LUT file>: online LDC 16x16 on VI0 before AddSensor (the library sends it at AddSensor) */
     if (ret >= 0 && getenv("APITEST_LDC_ONLINE")) {
         extern int32_t IMP_ISP_LDC_OnlineSetStrength(IMPVI_NUM num, double strength) __attribute__((weak));

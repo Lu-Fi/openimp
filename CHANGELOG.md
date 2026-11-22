@@ -18,6 +18,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - New report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-final-1122-2026-11-22-3000.html` (67 pass / 7 fail, 17 rows invalid by the runner guards; open-tx-isp 518bcd0d + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
 ## 2026-11-22: T33 matrix column re-judged against the T33L device evidence
 - Docs only: T33 column ✅ 11 -> 14, ✅+ 4 -> 8, 🔧 29 -> 19, — 1 -> 4 (rows 1, 28, 43 -> ✅; 4, 7, 8, 24 -> ✅+; AI / AO / AEC -> — because the T33L module has no audio hardware). Picture-quality rows stay 🔧 (no light-box comparison yet); legend line of 🔧 corrected; details in docs/status/history.md.
+## 2026-11-22: T33 last three streamer functions on the T33L module (claude/t33-last3)
+- `IMP_ISP_Set/GetDefaultBinPath` and `IMP_Encoder_SetChnQpBounds` device-tested on the T33L module (OpenIMP only, timps stopped and restored, snapshot 200): T33 cells `qemu` / `host` -> `dev`, T33 streamer functions 255/258 -> 258/258 (matrix, HTML, API coverage regenerated).
+- Bin path: Get empty before Set, Set(day) read back equal, and the library log shows the file AddSensor loaded (`VI 0 day bin <path>`). Fix: on T33 `IMP_ISP_SetDefaultBinPath` now returns the vendor 2.0.2.1 error codes (disassembly 0x109770: NULL 0xfffff009, VI >= 4 0xfffff00c, unusable bin file 0xfffff00a) instead of -1.
+- QP bounds: H.264 and H.265 channel, windows 30..34 and 38..40 read back, slice QP of the stream (ffmpeg trace_headers) inside the window (33..34 / 38..40, wide window 32..41), restore 20..45; channel 16 and min > max refused.
+- New apitest case `t33last3` (explicit only, `APITEST_L3_BIN` = bin copy to load).
 
 ## 2026-11-22: docs round 21 (T23 IVDC / rmem, T33 #784 / #805 / #803, T31 #604)
 - Matrix: cell texts of T23 rows 13 / 22 / 24 / 30 / 36, T31 row 26 and T33 rows 4 / 8 / 22 / 24 / 26 / 27 / 28 / 30 extended with the 2026-11-22 evidence; no symbol moved. API evidence as of 2026-11-22; API reference: T32 / T33 `YuvInit` / `InputJpege` / P-skip / multi-section notes, new `Encoder_SetChnQpgAI_Yuv` entry.

@@ -982,7 +982,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "qemu",
+        "T33": "dev",
         "T40": "rt",
         "T41": "dev"
       },
@@ -1011,7 +1011,7 @@
         "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads",
         "T40": "apitest agg47 stock 2026-10-27 .184 (API round trip, no visible effect expected)",
         "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
-        "T33": "apitest t3233gaps o33a/o33b 2026-11-13 QEMU (no camera; open tx-isp-t33.ko ds-batch d4132a79 + OpenIMP libimp)"
+        "T33": "apitest t33last3 2026-11-22 .122 T33L (OpenIMP only): Get empty before Set; bad file 0xfffff00a, NULL 0xfffff009, VI 4 0xfffff00c as vendor 2.0.2.1 (0x109770); Set(day) read back equal and the library log 'VI 0 day bin <path>' at AddSensor shows the loaded file; audit t33-last3 dev/r3; QEMU o33a/o33b 2026-11-13"
       }
     },
     "ISP_Get/SetFrameDrop": {
@@ -9064,7 +9064,7 @@
         "T30": "n.a.",
         "T31": "dev",
         "T32": "host",
-        "T33": "host",
+        "T33": "dev",
         "T40": "dev",
         "T41": "dev"
       },
@@ -9091,7 +9091,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T32": "rc33_test vendor-2.2.0-rc33-setters-h264.txt.gz (host, QEMU apitest has no T32 case)",
-        "T33": "same code as T32 (rc33_test / gop33_test host oracles vs vendor 2.2.0; T33 QEMU rate-control runs 2026-11-14); no T33 apitest case yet"
+        "T33": "apitest t33last3 2026-11-22 .122 T33L (OpenIMP only): H.264 + H.265 channel, window 30..34 / 38..42 / restore 20..45 read back; slice QP of the stream (ffmpeg trace_headers) inside the window (33..34 / 38..40), wide window 32..41; channel 16 and min>max refused; audit t33-last3 dev/r3"
       }
     },
     "Encoder_SetChnQpBoundsPerFrame": {

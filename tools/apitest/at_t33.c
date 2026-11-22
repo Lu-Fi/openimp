@@ -1493,4 +1493,86 @@ void cs_t33e1(void)
     e1_unbound();
 }
 
+/* ---- case "t33last3": IMP_ISP_Set/GetDefaultBinPath and IMP_Encoder_SetChnQpBounds on the T33L camera ---------------------------
+ * Bin path: t33_binpath_pre() runs from main() between IMP_ISP_Open and IMP_ISP_AddSensor (the vendor needs the call before AddSensor).
+ * It reads the default (none stored), checks the vendor error codes (bad VI 0xfffff00c, NULL 0xfffff009, unusable bin file 0xfffff00a;
+ * vendor 2.0.2.1 IMP_ISP_SetDefaultBinPath disassembly: li s6,-4084 / -4087 / -4086), sets APITEST_L3_BIN (a bin copy under /tmp) for
+ * the day slot and reads it back; the library log line "VI 0 day bin <path>" at AddSensor shows the file that was loaded.
+ * QP bounds: cs_t33last3() runs an H.264 and an H.265 channel; per phase it sets the window, requests an IDR, writes the stream to
+ * /tmp/l3_<codec>_<phase>.bin (the host reads the QP with ffmpeg) and reads the window back. */
+void t33_binpath_pre(void)
+{
+    const char *want = getenv("APITEST_CASES"), *bin = getenv("APITEST_L3_BIN");
+    IMPISPDefaultBinAttr a, b;
+    int r0, r1, r2, r3, r4, r5;
+
+    if (!want || !strstr(want, "t33last3") || !IMP_ISP_SetDefaultBinPath || !IMP_ISP_GetDefaultBinPath) return;
+    memset(&a, 0, sizeof(a)); memset(&b, 0, sizeof(b));
+    a.mode = IMPISP_BIN_MODE_DAY;
+    r0 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    rep("IMP_ISP_GetDefaultBinPath", r0, V_PASS, "before the first Set, before AddSensor: ret 0x%x \"%.100s\" (empty = none stored)", X(r0), b.bname);
+    snprintf(a.bname, sizeof(a.bname), "/tmp/does-not-exist-l3.bin");
+    r1 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, &a);
+    r2 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, NULL);
+    r3 = IMP_ISP_SetDefaultBinPath((IMPVI_NUM)4, &a);
+    memset(&b, 0, sizeof(b)); r4 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    rep("IMP_ISP_SetDefaultBinPath", r1, (X(r1) == 0xfffff00au && X(r2) == 0xfffff009u && X(r3) == 0xfffff00cu && !b.bname[0]) ? V_PASS : V_FAIL,
+        "errors as the vendor: missing file 0x%x (want 0xfffff00a), NULL 0x%x (0xfffff009), VI 4 0x%x (0xfffff00c); nothing stored after them: \"%.60s\" (get 0x%x)",
+        X(r1), X(r2), X(r3), b.bname, X(r4));
+    if (!bin) return;
+    snprintf(a.bname, sizeof(a.bname), "%s", bin);
+    r1 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, &a);
+    memset(&b, 0, sizeof(b)); b.mode = IMPISP_BIN_MODE_DAY; r5 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    rep("IMP_ISP_GetDefaultBinPath", r5, (r5 == 0 && !strcmp(b.bname, bin)) ? V_PASS : V_FAIL, "after Set(day, %s): ret 0x%x \"%.100s\"", bin, X(r5), b.bname);
+    rep("IMP_ISP_SetDefaultBinPath", r1, (r1 == 0 && r5 == 0 && !strcmp(b.bname, bin)) ? V_PASS : V_FAIL,
+        "set %s for the day slot before AddSensor: ret 0x%x, read back %s (AddSensor loads it: library log line \"VI 0 day bin\")", bin, X(r1), !strcmp(b.bname, bin) ? "equal" : "DIFFERENT");
+}
+
+static void l3_cb(const unsigned char *b, size_t n, int k, void *arg)
+{
+    (void)k;
+    if (arg) fwrite(b, 1, n, (FILE *)arg);
+}
+
+#define L3MIN (codec ? rc->attrH265Cbr.minQp : rc->attrH264Cbr.minQp)
+#define L3MAX (codec ? rc->attrH265Cbr.maxQp : rc->attrH264Cbr.maxQp)
+static void l3_phase(int codec, const char *ph, int mn, int mx, int set)
+{
+    char fn[96];
+    FILE *fp;
+    int r = 0, r2, frames;
+    G(IMPEncoderAttrRcMode, rc);
+
+    if (set) { r = IMP_Encoder_SetChnQpBounds(0, mn, mx); usleep(300000); }
+    IMP_Encoder_RequestIDR(0);
+    snprintf(fn, sizeof(fn), "/tmp/l3_%s_%s.bin", codec ? "h265" : "h264", ph);
+    fp = fopen(fn, "wb");
+    frames = enc_e1_pull(0, 72, l3_cb, fp);   /* the whole run incl. SPS/PPS of the IDR; the host skips the first 12 frames (rate control settling) */
+    if (fp) fclose(fp);
+    memset(rc, 0, sizeof(*rc)); r2 = IMP_Encoder_GetChnAttrRcMode(0, rc);     /* the getter answers after the setter was applied by the encoder (#at_enc.c note): read after the frames */
+    rep("IMP_Encoder_SetChnQpBounds", r, (r == 0 && r2 == 0 && (!set || (L3MIN == mn && L3MAX == mx)) && frames > 60) ? V_PASS : V_FAIL,
+        "%s %s: set %d..%d ret 0x%x, read back %d..%d (ret 0x%x), %d frames in %s", codec ? "H.265" : "H.264", ph, mn, mx, X(r), L3MIN, L3MAX, X(r2), frames, fn);
+    gfree(rc);
+}
+
+void cs_t33last3(void)
+{
+    int codec, r;
+
+    if (!IMP_Encoder_SetChnQpBounds) return;
+    r = IMP_Encoder_SetChnQpBounds(16, 20, 40);
+    rep("IMP_Encoder_SetChnQpBounds", r, X(r) != 0 ? V_PASS : V_FAIL, "channel 16: 0x%x (the vendor refuses a channel number > 15)", X(r));
+    for (codec = 0; codec < 2; codec++) {
+        if (enc_e1_up(0, codec)) continue;
+        l3_phase(codec, "base", 20, 45, 0);
+        l3_phase(codec, "narrow1", 30, 34, 1);
+        r = IMP_Encoder_SetChnQpBounds(0, 40, 30);
+        rep("IMP_Encoder_SetChnQpBounds", r, X(r) != 0 ? V_PASS : V_FAIL, "min 40 > max 30: 0x%x (refused)", X(r));
+        l3_phase(codec, "narrow2", 38, 42, 1);
+        l3_phase(codec, "restore", 20, 45, 1);
+        enc_e1_down(0);
+        wdog("cases", 120);
+    }
+}
+
 #endif /* APITEST_T33 */
