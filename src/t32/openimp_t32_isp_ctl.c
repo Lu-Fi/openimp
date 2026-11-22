@@ -306,12 +306,21 @@ int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
 
 /* ---- custom AE / AWB records ------------------------------------------- */
 /* The vendor stores the record and sets the flag; its algorithm thread and the driver side
- * (AE_ALGO 0xc004541d) start at the next EnableSensor.  Stored here the same way; the
- * T32/T33 algorithm thread is not ported yet (custom AE/AWB effect: openimp #55). */
+ * (AE_ALGO 0xc004541d) start at the next EnableSensor.  T33 (#784 group 4): the record also
+ * goes to src/t40/openimp_p1_algo.c (PLATFORM_T33 variant), which opens it at EnableSensor,
+ * runs the worker threads and closes it at DisableSensor as the vendor 2.0.2.1 does.
+ * T32: stored only (the T32 2.2.0 thread is not checked against its binary yet). */
+#ifdef PLATFORM_T33
+extern int OpenIMP_P1_AlgoRegister(int num, int kind, const void *rec);
+#endif
 int32_t IMP_ISP_SetAeAlgoFunc(IMPVI_NUM num, IMPISPAeAlgoFunc *ae_func)
 {
     if (OpenIMP_T32_IspFd() < 0 || (unsigned)num >= VI_MAX)
         return E_STATE;
+#ifdef PLATFORM_T33
+    if (OpenIMP_P1_AlgoRegister((int)num, 0, ae_func))
+        return -1;
+#endif
     pthread_mutex_lock(&ctl_lock);
     if (!ae_func)
         algo[num].ae_on = 0;
@@ -327,6 +336,10 @@ int32_t IMP_ISP_SetAwbAlgoFunc(IMPVI_NUM num, IMPISPAwbAlgoFunc *awb_func)
 {
     if (OpenIMP_T32_IspFd() < 0 || (unsigned)num >= VI_MAX)
         return E_STATE;
+#ifdef PLATFORM_T33
+    if (OpenIMP_P1_AlgoRegister((int)num, 1, awb_func))
+        return -1;
+#endif
     pthread_mutex_lock(&ctl_lock);
     if (!awb_func)
         algo[num].awb_on = 0;

@@ -442,6 +442,13 @@ int IMP_ISP_DelSensor(IMPVI_NUM num, IMPSensorInfo *info)
     return rc < 0 ? -1 : 0;
 }
 
+#ifdef PLATFORM_T33
+extern void OpenIMP_P1_AlgoStart(int fd, int num) __attribute__((weak));   /* src/t40/openimp_p1_algo.c */
+extern void OpenIMP_P1_AlgoStop(int fd, int num) __attribute__((weak));
+#define OpenIMP_P1_AlgoStart(fd, n) do { if (OpenIMP_P1_AlgoStart) OpenIMP_P1_AlgoStart(fd, n); } while (0)
+#define OpenIMP_P1_AlgoStop(fd, n) do { if (OpenIMP_P1_AlgoStop) OpenIMP_P1_AlgoStop(fd, n); } while (0)
+#endif
+
 int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info)
 {
     T32IocInitArg in;
@@ -461,6 +468,10 @@ int IMP_ISP_EnableSensor(IMPVI_NUM num, IMPSensorInfo *info)
     }
 #define T32_ON(req) (in.enable = 1, in.vinum = (int32_t)num, T32_IOCTL(t32.isp_fd, req, &in))
     rc = T32_ON(G_INPUT);
+#ifdef PLATFORM_T33
+    if (rc == 0)                    /* vendor 0x1052cc: custom AE / AWB open between G_INPUT and STREAMON */
+        OpenIMP_P1_AlgoStart(t32.isp_fd, (int)num);
+#endif
     if (rc == 0)
         rc = T32_ON(STREAMON);
     if (rc == 0) {
@@ -498,6 +509,10 @@ int IMP_ISP_DisableSensor(IMPVI_NUM num)
     }
 #define T32_OFF(req) (in.enable = 0, in.vinum = (int32_t)num, T32_IOCTL(t32.isp_fd, req, &in))
     rc = T32_OFF(G_INPUT);
+#ifdef PLATFORM_T33
+    if (rc == 0)                    /* vendor 0x105f50: custom AE / AWB close before LINKS_STREAMOFF */
+        OpenIMP_P1_AlgoStop(t32.isp_fd, (int)num);
+#endif
     if (rc == 0)
         rc = T32_OFF(LINKS_STREAMOFF);
     if (rc == 0)
