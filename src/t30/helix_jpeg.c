@@ -1156,6 +1156,11 @@ static int helix_jpeg_job_locked(HelixJpegSlice *slice, uint32_t capacity,
         helix_jpeg.reason = "not a JPEG completion";
     else if (!helix_jpeg.channel.output_len)
         helix_jpeg.reason = "no length";
+#if defined(PLATFORM_T23)
+    /* vendor do_channel_process_jpege: IVDC status bit 31 -> dropped */
+    else if (helix_jpeg_ivdc && OpenIMP_T23_IvdcPictureBroken())
+        helix_jpeg.reason = "IVDC status";
+#endif
     else if (helix_limit_reached(capacity))
         helix_jpeg.reason = "bitstream limit reached";
     else if (helix_jpeg.channel.output_len >= capacity)

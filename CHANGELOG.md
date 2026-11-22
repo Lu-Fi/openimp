@@ -9,6 +9,11 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T23 IVDC: status drop, start skip, device run (#767, #786, #787)
+
+- As the vendor 1.3.0: after an IVDC picture the IVDC status 0x1320007c is read and a picture with bit 31 set is dropped (H.264 restarts with an IDR; `update_h264_one_frmstrm` @0x5d648, `do_channel_process_jpege` @0x59720); a channel that has not coded yet skips the first 3 IVDC frames (`on_encoder_group_data_update` @0x5b750; JPEG: the fan-out keeps the request). Host test `tests/t23/ivdc_test.c`.
+- Real T23N (Tapo C500, 1080p), timps from /tmp with tx-isp-t23 `direct_mode=1`: 10 min main + sub + JPEG snapshot/MJPEG over IVDC, no hang, decode clean, selftest 20/20; `direct_mode=0` regression run clean. Open: the channel 0 picture over IVDC is garbled when the ISP flips (`image.hflip/vflip = 1`), fine without flips (#787).
+
 ## 2026-11-22: T23 Helix EMC scratch: vendor 1.3.0 layout only on request (#774)
 
 - `OPENIMP_T23_EMC=vendor` lays out the EMC scratch as the vendor `h264_api_enc` (20 KiB instead of 936 KiB at 720p). Not used by default, also not in the IVDC direct mode: on a real T23N (Tapo C500, 2026-11-22) it broke the bitstream of OpenIMP's command list (decode errors from the first pictures) and, with a canary past its tail (`OPENIMP_T23_EMC_CANARY=1`), the VPU hung. Every T23 keeps the T21-derived layout (#774).
