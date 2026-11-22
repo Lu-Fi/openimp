@@ -94,6 +94,9 @@ typedef T30H264SliceConfig PlatformH264SliceConfig;
 #include "fisheye/fisheye.h"
 #endif
 #include "watermark/watermark.h"
+#if defined(PLATFORM_T23)
+#include "t23/openimp_t23_ivdc.h"
+#endif
 
 #if defined(PLATFORM_T23)
 /* Runtime capability marker for streamers: present (and 1) only in a libimp
@@ -476,6 +479,14 @@ struct T30HelixEncoder {
     uint32_t ovf_boost[2];
     uint32_t ovf_quiet[2];
     uint32_t overflows;         /* pictures dropped on overflow */
+    /* IVDC direct mode (T23, openimp_t23_ivdc.c): this picture's source is
+     * IVDC, and the channel node values for it */
+    int ivdc_on;
+    uint32_t ivdc_overflow;
+    uint32_t ivdc_mem_line;
+    uint32_t ivdc_threshold;
+    uint64_t ivdc_time_ms;
+    uint32_t ivdc_drops;
     uint32_t canary_hits;       /* overflows that wrote past the window */
     int shared_bs;              /* bitstream in the shared area */
 #endif
@@ -1082,6 +1093,17 @@ static void helix_watermark(const T30HelixEncoder *encoder,
         (void)DMA_RmemFlushCache(luma, bytes, 1);
 }
 
+/* A frame the VPU can read: in memory (phyAddr), or on the T23 over IVDC
+ * (direct mode, openimp_t23_ivdc.c). */
+static int t30_frame_readable(const IMPFrameInfo *frame)
+{
+#if defined(PLATFORM_T23)
+    if (OpenIMP_T23_IvdcFrame(frame))
+        return 1;
+#endif
+    return frame->phyAddr != 0;
+}
+
 static void t30_fill_slice(T30HelixEncoder *encoder,
                            const IMPFrameInfo *frame, uint32_t qp,
                            int idr, unsigned int output_index)
@@ -1153,6 +1175,15 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
                     (uint32_t)encoder->sps.i_mb_width * 16u *
                     (uint32_t)encoder->sps.i_mb_height * 16u;
     slice->raw[2] = 0;
+#if defined(PLATFORM_T23)
+    /* IVDC frame: the source is the IVDC block, luma +0x20 (0x80000000)
+     * and chroma +0x20 | 0x1000000 (vendor do_channel_process @0x5a040,
+     * channel +0x4a0/+0x4a4), the stride stays the picture's */
+    if (OpenIMP_T23_IvdcFrame(frame)) {
+        slice->raw[0] = frame->direct_phyAddr;
+        slice->raw[1] = frame->direct_phyAddr | T23_IVDC_SRC_UV_BIT;
+    }
+#endif
 #if !defined(PLATFORM_T23)
     if (encoder->grey.phys_addr)
         slice->raw[1] = encoder->grey.phys_addr;
@@ -3921,7 +3952,7 @@ int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
     if (encoder && encoder->shared_bs) {
         int ret;
 
-        if (!frame || !stream_out || !frame->phyAddr)
+        if (!frame || !stream_out || !t30_frame_readable(frame))
             return -1;
         /* this picture's window in the shared area, from the slice header
          * to the copy into the access unit (stock bsbufsem); the canary
@@ -3987,7 +4018,7 @@ static int t30_helix_encode_job(T30HelixEncoder *encoder,
     const uint8_t *hdr_ptr = NULL;
 #endif
 
-    if (!encoder || !frame || !stream_out || !frame->phyAddr)
+    if (!encoder || !frame || !stream_out || !t30_frame_readable(frame))
         return -1;
     /* Nothing below commits encoder state until the access unit exists: a
      * failed picture leaves a requested IDR, the GOP position and the
@@ -3996,7 +4027,20 @@ static int t30_helix_encode_job(T30HelixEncoder *encoder,
     /* The VPU reads input by physical address.  Only hand it a frame whose
      * address is the reserved-memory translation of its mapping and that
      * holds a complete macroblock-aligned NV12 picture; anything else is
-     * dropped here instead of becoming a DMA from arbitrary memory. */
+     * dropped here instead of becoming a DMA from arbitrary memory.
+     * An IVDC frame has no memory: its picture comes over IVDC, unless the
+     * ISP ran too far ahead (openimp_t23_ivdc.c, then it is dropped). */
+    if (OpenIMP_T23_IvdcFrame(frame)) {
+        if (OpenIMP_T23_IvdcCheck(frame, &encoder->ivdc_overflow,
+                                  &encoder->ivdc_mem_line,
+                                  &encoder->ivdc_threshold,
+                                  &encoder->ivdc_time_ms) != 0) {
+            encoder->ivdc_drops++;
+            return -1;
+        }
+        encoder->ivdc_on = 1;
+    } else {
+    encoder->ivdc_on = 0;
     if (!frame->virAddr || frame->size < encoder->input_size ||
         DMA_VirtToPhys((const void *)(uintptr_t)frame->virAddr) !=
             frame->phyAddr) {
@@ -4014,6 +4058,7 @@ static int t30_helix_encode_job(T30HelixEncoder *encoder,
                            encoder->input_size, 1) != 0) {
         IMP_LOG_ERR("Encoder", "T23 Helix: input flush failed");
         return -1;
+    }
     }
 #else
     /* The VPU reads the picture by physical address: refuse a frame that
@@ -4404,8 +4449,19 @@ again:
 
             encoder->channel.status = 0;
             encoder->channel.output_len = 0;
-            encoder->channel.frame_type = 0;
-            encoder->channel.time = 0;
+            /* IVDC frame: the soc_vpu node values helix vpu_start checks
+             * (vendor hwicodec_pf_h264e_t21_enc @0x3907c: source address
+             * bit 31 -> frame type 3, overflow count, ivdc_mem_line,
+             * threshold, frame time in ms) */
+            encoder->channel.frame_type = encoder->ivdc_on ? 3u : 0u;
+            encoder->channel.overflow_cnt =
+                encoder->ivdc_on ? encoder->ivdc_overflow : 0u;
+            encoder->channel.ivdc_mem_line =
+                encoder->ivdc_on ? encoder->ivdc_mem_line : 0u;
+            encoder->channel.data_threshold =
+                encoder->ivdc_on ? encoder->ivdc_threshold : 0u;
+            encoder->channel.time =
+                encoder->ivdc_on ? encoder->ivdc_time_ms : 0u;
             (void)clock_gettime(CLOCK_MONOTONIC, &t0);
             errno = 0;
             run_ret = ioctl(encoder->fd, T30_CHANNEL_RUN, &encoder->channel);
@@ -4414,6 +4470,11 @@ again:
             run_ms = (uint32_t)((t1.tv_sec - t0.tv_sec) * 1000 +
                                 (t1.tv_nsec - t0.tv_nsec) / 1000000);
             status = encoder->channel.status;
+            /* soc_vpu cancelled the IVDC job (2: ring overflow, frame too
+             * old or the ISP too far ahead, helix vpu_start): the vendor
+             * drops the picture, nothing was coded */
+            if (run_ret == 2 && encoder->ivdc_on)
+                break;
             late = run_ret == 0 && !(status & T23_SCH_STAT_ENDFLAG) &&
                    (status & T23_SCH_STAT_LATE) && !encoder->strict_status;
             if (run_ret == 0 && !(status & T23_SCH_STAT_ERRORS) &&
@@ -4446,6 +4507,15 @@ again:
             (void)DMA_RmemFlushCache(temporary + T30_SLICE_OFFSET,
                                      encoder->temporary.size -
                                          T30_SLICE_OFFSET, 2);
+        }
+        if (run_ret == 2 && encoder->ivdc_on) {
+            encoder->ivdc_drops++;
+            if (encoder->ivdc_drops <= 5u || encoder->ivdc_drops % 100u == 0u)
+                IMP_LOG_WARN("Encoder", "T23 Helix: IVDC frame %u cancelled "
+                             "by soc_vpu (%u drops)", encoder->frame_number,
+                             encoder->ivdc_drops);
+            helix_eprc_drop(encoder);
+            return -1;
         }
         if (overflow) {
             if (!t23_overflow_drop(encoder, idr, qp, encoder->channel.status,

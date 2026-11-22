@@ -113,6 +113,8 @@ int fs_qbuf(int fd, int index, unsigned long phys, unsigned int length);
  * (EINVAL/EPIPE: STREAMOFF, or the driver stopped it; not logged here), -1 any
  * other error. VBMKernelDequeue passes -2 and -3 on. */
 int fs_dqbuf(int fd, int *index_out, uint64_t *timestamp_out);
+int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
+                  uint32_t *meta_out);
 
 /* Bridge between VBM and kernel queue */
 int VBMPrimeKernelQueue(int chn, int fd, int limit);

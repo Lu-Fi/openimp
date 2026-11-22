@@ -41,6 +41,11 @@
  * area when one exists (stock vpuBs + bsbufsem), else to a buffer of its
  * own (src/t30/t23_helix_bs.h). */
 #include "t30/t23_helix_bs.h"
+#include "t23/openimp_t23_ivdc.h"
+
+/* The picture being coded comes over IVDC (direct mode, channel 0): set by
+ * helix_jpeg_run_locked under the lock for helix_jpeg_job_locked. */
+static int helix_jpeg_ivdc;
 #endif
 
 #ifndef OPENIMP_SW_JPEG
@@ -1125,7 +1130,13 @@ static int helix_jpeg_job_locked(HelixJpegSlice *slice, uint32_t capacity,
     helix_jpeg.channel.status = 0;
     helix_jpeg.channel.output_len = 0;
 #if defined(PLATFORM_T23)
-    helix_jpeg.channel.frame_type = 0;
+    /* vendor hwicodec_pf_jpege_t20_enc @0x3a948: a source address with bit
+     * 31 (IVDC) runs as frame type 3 with the IVDC node values, which the
+     * single-sensor mode 1 leaves 0 (see openimp_t23_ivdc.c) */
+    helix_jpeg.channel.frame_type = helix_jpeg_ivdc ? 3u : 0u;
+    helix_jpeg.channel.overflow_cnt = 0;
+    helix_jpeg.channel.ivdc_mem_line = 0;
+    helix_jpeg.channel.data_threshold = 0;
     helix_jpeg.channel.max_bs_act = 0;
     helix_jpeg.channel.time = 0;
 #endif
@@ -1825,6 +1836,22 @@ static int helix_jpeg_run_locked(const HelixJpegFrame *frame,
 
     memset(&slice, 0, sizeof(slice));
     slice.variant = HELIX_JPEG_VARIANT;
+#if defined(PLATFORM_T23)
+    /* IVDC frame (FrameSource channel 0 in direct mode): no picture in
+     * memory, the core reads it from the IVDC block, luma 0x80000000 and
+     * chroma | 0x1000000 at stride 0x1000 (vendor do_channel_process_jpege
+     * @0x59720, hwicodec_pf_jpege_t20_enc @0x3a948).  One job per picture:
+     * the lines pass once, no stripes and no repeat. */
+    helix_jpeg_ivdc = !frame->virt_addr &&
+                      (frame->phys_addr & T23_IVDC_SRC_Y) != 0;
+    if (helix_jpeg_ivdc) {
+        *path = "ivdc";
+        slice.raw_y = frame->phys_addr;
+        slice.raw_c = frame->phys_addr | T23_IVDC_SRC_UV_BIT;
+        stride = 0x1000u;
+        goto source_set;
+    }
+#endif
     if (chroma_offset < stride * frame->height ||
         (uint64_t)stride * frame->height * 3u / 2u > frame->size) {
         helix_jpeg.reason = "frame too small";
@@ -1868,6 +1895,9 @@ static int helix_jpeg_run_locked(const HelixJpegFrame *frame,
         slice.raw_y = helix_jpeg.source.phys_addr;
         slice.raw_c = slice.raw_y + stride * aligned_height;
     }
+#if defined(PLATFORM_T23)
+source_set:
+#endif
     slice.stride = stride;
     slice.width = frame->width;
     slice.mb_width = frame->width / 16u;
@@ -1877,7 +1907,11 @@ static int helix_jpeg_run_locked(const HelixJpegFrame *frame,
             ? HELIX_JPEG_PLANE_NV21 : HELIX_JPEG_PLANE_NV12;
     slice.qt = qt;
 
-    if (!helix_jpeg.max_bs && !helix_jpeg.probe_limit) {
+    if (!helix_jpeg.max_bs && !helix_jpeg.probe_limit
+#if defined(PLATFORM_T23)
+        && !helix_jpeg_ivdc
+#endif
+        ) {
         size_t file_length = 0;
 
         ret = helix_jpeg_stripes_locked(&slice, frame, qt, &output,
@@ -1898,7 +1932,11 @@ static int helix_jpeg_run_locked(const HelixJpegFrame *frame,
      * drop it.  The stock T23 library drops it and lowers the channel
      * quality by 5 for the following pictures. */
     for (attempt = 1; attempt <= 2 && ret == HELIX_RUN_FAILED && overflow &&
-                      helix_jpeg.max_bs && !helix_jpeg.probe_limit;
+                      helix_jpeg.max_bs && !helix_jpeg.probe_limit
+#if defined(PLATFORM_T23)
+                      && !helix_jpeg_ivdc
+#endif
+                      ;
          attempt++) {
         unsigned int i;
 
