@@ -317,18 +317,27 @@ int OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
         *threshold = 0;
     if (time_ms)
         *time_ms = 0;
-    /* The vendor checks and fills the node values only for the encoder
-     * channel's direct modes 2 and 3 (several sensors): "mode - 2 < 2" in
+    line = OpenIMP_T23_IvdcMemLine();
+    /* The vendor checks the frame only for the encoder channel's direct
+     * modes 2 and 3 (several sensors): "mode - 2 < 2" in
      * on_encoder_group_data_update @0x5b750 and do_channel_process
      * @0x5a040.  Mode 1 (one sensor) codes every IVDC frame with frame
-     * type 3 and zero node values (soc_vpu then checks the overflow count
-     * and the lead against its own data_threshold). */
-    if (__atomic_load_n(&ivdc_mode, __ATOMIC_RELAXED) - 2u >= 2u)
+     * type 3, but still hands soc_vpu the channel's ring size: the mode-1
+     * loop of on_encoder_group_data_update (libimp_all.c:34672-34677) sets
+     * overflow_cnt_vpu = 0, timestamp_ivdc_vpu = 0 and ivdc_mem_line_vpu =
+     * channel +0xa34 (the GET_MEM_LINE value, IMP_Encoder_CreateChn
+     * :36719-36726) for a type-3 frame; data_threshold_vpu is not written
+     * there (0).  helix vpu_start adds that mem_line to the lead when the
+     * ISP and VPU line counters are in different ring wrap phases; with 0
+     * a kick after the wrap got a negative lead and was cancelled (#807). */
+    if (__atomic_load_n(&ivdc_mode, __ATOMIC_RELAXED) - 2u >= 2u) {
+        if (mem_line)
+            *mem_line = line;
         return 0;
+    }
     memcpy(&frame_ovf, f + T23_FRAME_OVERFLOW, 4);
     memcpy(&frame_thr, f + T23_FRAME_THRESHOLD, 4);
     memcpy(&ts_us, f + 0x30, 8);
-    line = OpenIMP_T23_IvdcMemLine();
     if (ivdc_reg_read(IVDC_REG_BASE + IVDC_OVERFLOW, &ovf) == 0) {
         /* on_encoder_group_data_update: log 0x61b */
         if (ovf > frame_ovf) {

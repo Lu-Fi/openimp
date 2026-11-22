@@ -148,11 +148,17 @@ int main(void)
     frame[T23_FRAME_TYPE] = 0;
     CHECK(!OpenIMP_T23_IvdcFrame(frame));
 
-    /* mode 1: no drop check, zero node values (vendor "mode - 2 < 2") */
+    /* mode 1: no drop check (vendor "mode - 2 < 2"); node values overflow
+     * 0, time 0, threshold 0, but the ring size (vendor mode-1 loop,
+     * libimp_all.c:34672-34677, #807) */
     make_frame(frame, 0, 300, 5000000);
     reg_ovf = 5; reg_isp = 400u << 16; reg_vpu = 0;
     CHECK(OpenIMP_T23_IvdcCheck(frame, &ovf, &line, &thr, &ms) == 0);
-    CHECK(ovf == 0 && line == 0 && thr == 0 && ms == 0);
+    CHECK(ovf == 0 && line == 300 && thr == 0 && ms == 0);
+    /* the helix vpu_start lead with that node: a kick after the ring wrap
+     * (ISP 0x8067, VPU 0x78, the #807 trace) is 283 lines, not negative */
+    CHECK(OpenIMP_T23_IvdcLead(0x8067u << 16, 0x78u, line) == 283u);
+    CHECK(OpenIMP_T23_IvdcLead(0x8067u << 16, 0x78u, 0u) > 500u);
     OpenIMP_T23_IvdcDestroyChn(0);
 
     /* mode 2: overflow and lead drop, else the node values */
