@@ -16,6 +16,8 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-22: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
 
 - New report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-final-1122-2026-11-22-3000.html` (67 pass / 7 fail, 17 rows invalid by the runner guards; open-tx-isp 518bcd0d + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+## 2026-11-22: T33 matrix column re-judged against the T33L device evidence
+- Docs only: T33 column ✅ 11 -> 14, ✅+ 4 -> 8, 🔧 29 -> 19, — 1 -> 4 (rows 1, 28, 43 -> ✅; 4, 7, 8, 24 -> ✅+; AI / AO / AEC -> — because the T33L module has no audio hardware). Picture-quality rows stay 🔧 (no light-box comparison yet); legend line of 🔧 corrected; details in docs/status/history.md.
 
 ## 2026-11-22: docs round 21 (T23 IVDC / rmem, T33 #784 / #805 / #803, T31 #604)
 - Matrix: cell texts of T23 rows 13 / 22 / 24 / 30 / 36, T31 row 26 and T33 rows 4 / 8 / 22 / 24 / 26 / 27 / 28 / 30 extended with the 2026-11-22 evidence; no symbol moved. API evidence as of 2026-11-22; API reference: T32 / T33 `YuvInit` / `InputJpege` / P-skip / multi-section notes, new `Encoder_SetChnQpgAI_Yuv` entry.
