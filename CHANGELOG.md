@@ -9,16 +9,18 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
-## 2026-11-22: T33 multi-section mode and bitstream pool sizes like vendor 2.0.2.1 (#784, group 3)
+## 2026-11-22: docs: Release 1 release note draft with the T23 flip upgrade note (#795)
+- docs/releases/Release-1.md (new, in preparation): T23 H+V flip now flips both axes; cameras that had H+V set to get an upright picture must adjust their flip setting once.
 
+## 2026-11-22: docs: beyond-vendor row for the T23 direct-mode flip split (#787)
+- docs/OPENIMP_BEYOND_VENDOR.md section 6: with direct_mode=1, HFLIP stays in the MSCA and VFLIP goes to the sensor (user OK 2026-11-22).
+
+## 2026-11-22: T33 multi-section mode and bitstream pool sizes like vendor 2.0.2.1 (#784, group 3)
 - **Encoder_SetMultiSectionMode / SetIvpuBsSize, T33: cache -> dev.** As vendor EncoderInit (objdump 0xe09d0.., cpu type 1 path): the HERA section buffer is size KiB x 2 with BSFULL stops of size KiB while the mode is on (default 250), else one whole-picture buffer of SetIvpuBsSize bytes (default 8294400) without EMC 0x9001c / 0x9005c / 0x90064. The setters keep on = (mode != 0) and count 2 (the vendor ignores cnt).
 - **Encoder_SetJpegMultiSectionMode / SetJpegBsSize, T33: cache -> dev.** The JPEG engine likewise: mode on = section stops (control bit 29, 0x4c = size KiB), mode off = limit word and over-limit stop with limit 0x2c = SetJpegBsSize (default 512000). A picture over the limit is dropped with an error (the vendor asserts in ivdc_jpege_process and aborts the process, QEMU vjlim).
 - Not ported from T23: the T33 vendor has no per-section hand-out (mode 2), so src/t23/t23_multisection.h does not apply.
 - QEMU vendor vs OpenIMP (H.264 vms1 / oms1b, vms0 / oms0, H.265 v5ms0 / o5ms0, JPEG vjb / ojb, vjm1 / ojm1, vjm0 / ojm0): 0 non-address register differences and the same register set per job, apart from the reference address registers 0x10008 / 0x1000c / 0x28014 / 0x28018 / 0x30070 / 0x30074 (+0x10180 H.265) that differ the same way in the default A/B. T33L (OpenIMP only, d8): H.264 1080p QP 4 with 100 KiB sections and with one 2 MiB buffer, JPEG with 100 KiB sections and with the 300000 byte limit: all streams decode, snapshot 200.
 - Code: src/t32/openimp_t33_sections.h (pure C), OpenIMP_T32_EncSections (openimp_t32_fs_enc_ext.c), the HERA / JPEG set-up in openimp_t32_encoder.c, list skips in openimp_t33_hera.c / openimp_t33_hera_h265.c. Test tests/t33/ms784_test.c. Lab: t32_trace_sample T32_ENC_MS ("ms=M:S,jms=M:S,ivpu=N,jbs=N" before IMP_System_Init).
-
-## 2026-11-22: docs: beyond-vendor row for the T23 direct-mode flip split (#787)
-- docs/OPENIMP_BEYOND_VENDOR.md section 6: with direct_mode=1, HFLIP stays in the MSCA and VFLIP goes to the sensor (user OK 2026-11-22).
 
 ## 2026-11-22: T33 RC parameters like vendor 2.0.2.1 (#784, group 2)
 
