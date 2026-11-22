@@ -92,6 +92,8 @@ int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize);
 int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize);
 int IMP_Encoder_SetChnFrmUsedMode(int encChn, const IMPEncoderAttrFrmUsed *attr);
 int IMP_Encoder_GetChnFrmUsedMode(int encChn, IMPEncoderAttrFrmUsed *attr);
+int IMP_FrameSource_SetFrameDepthCopyType(int chnNum, int b_nocopy_depth);
+int IMP_FrameSource_SetYuvAlign(int chnNum, void *param);   /* T33: not in imp_framesource.h for T32 */
 int IMP_OSD_CreateGroup(int grpNum);
 int IMP_OSD_DestroyGroup(int grpNum);
 IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *prAttr);
@@ -829,6 +831,18 @@ again:
     }
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
+    if (getenv("T32_FS_ALIGN")) {       /* #784 group 4: "E:W:H" SetYuvAlign before EnableChn (0/1/2 = 8/16/32 byte) */
+        struct { int32_t enable, w, h; } al;   /* IMPFrameAlign of the T33 2.0.2.1 header */
+        int e = 0, aw = 0, ah = 0;
+
+        sscanf(getenv("T32_FS_ALIGN"), "%d:%d:%d", &e, &aw, &ah);
+        al.enable = e;
+        al.w = aw;
+        al.h = ah;
+        STEP(IMP_FrameSource_SetYuvAlign(0, &al));
+    }
+    if (getenv("T32_FS_NOCOPY"))        /* #784 group 4: SetFrameDepthCopyType before SetFrameDepth */
+        STEP(IMP_FrameSource_SetFrameDepthCopyType(0, atoi(getenv("T32_FS_NOCOPY"))));
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
         MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, kbps));
