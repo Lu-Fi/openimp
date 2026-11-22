@@ -49,6 +49,10 @@ int  OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
  * the picture is then dropped (vendor update_h264_one_frmstrm @0x5d648,
  * do_channel_process_jpege @0x59720). */
 int  OpenIMP_T23_IvdcPictureBroken(void);
+int  OpenIMP_T23_IvdcStatusRead(uint32_t *v);
+int  OpenIMP_T23_IvdcPictureBrokenSt(uint32_t v);
+void OpenIMP_T23_IvdcTraceSt(const char *tag, uint32_t frame, int ret,
+                             uint32_t status, uint32_t ms, uint32_t st);
 /* 1 = skip this IVDC frame: a channel that has not coded a picture yet
  * skips the first 3 IVDC frames (vendor on_encoder_group_data_update
  * @0x5b750, one counter for all channels, reset when a channel passes). */

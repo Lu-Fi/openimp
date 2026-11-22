@@ -4809,6 +4809,7 @@ again:
 
         int run_errno = 0;
         uint32_t run_ms = 0;
+        uint32_t ivdc_st = 0;      /* #807: 0x7c read once per job */
 
         for (attempt = 0; attempt < 2; attempt++) {
             uint32_t status;
@@ -4857,9 +4858,12 @@ again:
             run_ms = (uint32_t)((t1.tv_sec - t0.tv_sec) * 1000 +
                                 (t1.tv_nsec - t0.tv_nsec) / 1000000);
             status = encoder->channel.status;
-            if (encoder->ivdc_on)
-                OpenIMP_T23_IvdcTrace("H1", encoder->frame_number, run_ret,
-                                      status, run_ms);
+            /* #807: one 0x7c read per job, used by the trace and the drop */
+            if (encoder->ivdc_on) {
+                (void)OpenIMP_T23_IvdcStatusRead(&ivdc_st);
+                OpenIMP_T23_IvdcTraceSt("H1", encoder->frame_number, run_ret,
+                                        status, run_ms, ivdc_st);
+            }
             /* soc_vpu cancelled the IVDC job (2: ring overflow, frame too
              * old or the ISP too far ahead, helix vpu_start): the vendor
              * drops the picture, nothing was coded */
@@ -4901,7 +4905,7 @@ again:
         /* vendor: IVDC status bit 31 after the job -> no picture, the
          * stream restarts with an IDR */
         if (encoder->ivdc_on && run_ret == 0 && attempt < 2 && !overflow &&
-            OpenIMP_T23_IvdcPictureBroken()) {
+            OpenIMP_T23_IvdcPictureBrokenSt(ivdc_st)) {
             encoder->ivdc_drops++;
             encoder->force_idr = 1;
             helix_eprc_drop(encoder);

@@ -379,6 +379,28 @@ int OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
  * do_channel_process_jpege @0x59720 (:33258-33263): ivdc_regrw(0x1320007c)
  * after the job, negative (bit 31) -> the picture is not delivered (H.264:
  * bitstream released, the encoder restarts with an IDR) */
+/* #807: 0x7c is a live state (it changes within a job's end); read it
+ * once after the job and hand the same value to the trace and the drop
+ * decision (a read per user made the trace build deliver aborted and drop
+ * complete pictures). Returns 0 when read. */
+int OpenIMP_T23_IvdcStatusRead(uint32_t *v)
+{
+    *v = 0;
+    return ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, v);
+}
+
+int OpenIMP_T23_IvdcPictureBrokenSt(uint32_t v)
+{
+    static unsigned int logged;
+
+    if (!(v & 0x80000000u))
+        return 0;
+    if (logged++ < 5u || logged % 100u == 0u)
+        IMP_LOG_WARN("Encoder", "IVDC status 0x%08x: picture dropped (%u)",
+                     v, logged);
+    return 1;
+}
+
 int OpenIMP_T23_IvdcPictureBroken(void)
 {
     uint32_t v = 0;
@@ -417,8 +439,8 @@ int OpenIMP_T23_IvdcSkipStart(uint64_t channel_pictures)
 /* #807 test trace (OPENIMP_T23_IVDC_TRACE=1): one line per IVDC job phase on
  * stderr - monotonic ms, tag, frame, ISP line, VPU line, lead, status reg,
  * job result, job ms */
-void OpenIMP_T23_IvdcTrace(const char *tag, uint32_t frame, int ret,
-                           uint32_t status, uint32_t ms)
+static void ivdc_trace(const char *tag, uint32_t frame, int ret,
+                       uint32_t status, uint32_t ms, const uint32_t *st_in)
 {
     static int on = -1;
     uint32_t isp = 0, vpu = 0, st = 0;
@@ -430,13 +452,29 @@ void OpenIMP_T23_IvdcTrace(const char *tag, uint32_t frame, int ret,
         return;
     (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_ISP_LINE, &isp);
     (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_VPU_LINE, &vpu);
-    (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, &st);
+    if (st_in)
+        st = *st_in;
+    else
+        (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, &st);
     clock_gettime(CLOCK_MONOTONIC, &t);
     fprintf(stderr, "IVT %lu.%03lu %s f=%u isp=%04x vpu=%04x lead=%d st=%08x ret=%d s=%08x ms=%u\n",
             (unsigned long)t.tv_sec, (unsigned long)(t.tv_nsec / 1000000), tag, frame,
             isp >> 16, vpu & 0xffffu,
             (int)OpenIMP_T23_IvdcLead(isp, vpu, OpenIMP_T23_IvdcMemLine()), st, ret,
             status, ms);
+}
+
+void OpenIMP_T23_IvdcTrace(const char *tag, uint32_t frame, int ret,
+                           uint32_t status, uint32_t ms)
+{
+    ivdc_trace(tag, frame, ret, status, ms, NULL);
+}
+
+/* the trace with the status the caller read (and decides with) */
+void OpenIMP_T23_IvdcTraceSt(const char *tag, uint32_t frame, int ret,
+                             uint32_t status, uint32_t ms, uint32_t st)
+{
+    ivdc_trace(tag, frame, ret, status, ms, &st);
 }
 
 /* #807 IVDC kick gate (beyond the vendor's mode 1, user OK 2026-11-22).

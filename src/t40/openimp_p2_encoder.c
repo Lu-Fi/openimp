@@ -4019,6 +4019,109 @@ static void p2_demask_after_picture(P2EncoderChannel *ch, int channel)
 }
 #endif
 
+#if defined(PLATFORM_T23)
+#include "t23/openimp_t23_ivdc_pace.h"
+/*
+ * #807: an encoder channel fed by IVDC direct mode is kicked on the
+ * frame-start event, like the vendor (no output-rate timer), and its rate
+ * is the vendor frame-count mask (openimp_t23_ivdc_pace.h).
+ * OPENIMP_T23_IVDC_PUSH=1 turns it on (default off, see below).  Beyond the vendor,
+ * default off: OPENIMP_T23_IVDC_STALE_US=N skips an event older than N us
+ * at the kick (no IDR; the vendor kicks it late).
+ */
+static T23IvdcPace p2_ivdc_pace[P2_ALL_CHANNELS];
+static unsigned int p2_ivdc_kicks[P2_ALL_CHANNELS];
+static unsigned int p2_ivdc_mask_skips[P2_ALL_CHANNELS];
+static unsigned int p2_ivdc_drained[P2_ALL_CHANNELS];
+static unsigned int p2_ivdc_stale[P2_ALL_CHANNELS];
+
+static int p2_ivdc_push_on(void)
+{
+    static int on = -1;
+    const char *e;
+
+    if (on < 0) {
+        /* default off: on the QC3 the push kick (99 % of the kicks within
+         * 60 lines of the frame start) aborted more jobs than the timer
+         * (374 vs 155 per minute, main only), see CHANGELOG #807 */
+        e = getenv("OPENIMP_T23_IVDC_PUSH");
+        on = e && e[0] == '1';
+    }
+    return on;
+}
+
+static uint64_t p2_ivdc_stale_us(void)
+{
+    static int64_t v = -1;
+    const char *e;
+
+    if (v < 0) {
+        e = getenv("OPENIMP_T23_IVDC_STALE_US");
+        v = e ? strtoll(e, NULL, 0) : 0;
+        if (v < 0)
+            v = 0;
+    }
+    return (uint64_t)v;
+}
+
+static int64_t p2_ivdc_frame_ts(const void *frame)
+{
+    int64_t ts;
+
+    memcpy(&ts, (const uint8_t *)frame + 0x28, sizeof(ts));
+    return ts;
+}
+
+/* *frame was just taken.  Moves to the newest ready event (older ones are
+ * released: their picture is gone from the live ring), steps the vendor
+ * mask once per input event.  Returns 0 to code *frame, 1 when it was
+ * released (wait for the next event). */
+static int p2_ivdc_pick(int channel, int source, void **frame,
+                        unsigned int out_fps)
+{
+    T23IvdcPace *pace = &p2_ivdc_pace[channel];
+    void *next = NULL;
+    int keep;
+    uint64_t stale = p2_ivdc_stale_us();
+
+    (void)t23_ivdc_pace_input(pace, (uint64_t)p2_ivdc_frame_ts(*frame),
+                              out_fps);
+    keep = t23_ivdc_pace_take(pace);
+    while (VBMGetFrame(source, &next) == 0) {
+        (void)p2_release_source_frame(source, *frame);
+        p2_ivdc_drained[channel]++;
+        *frame = next;
+        (void)t23_ivdc_pace_input(pace, (uint64_t)p2_ivdc_frame_ts(next),
+                                  out_fps);
+        /* a kept slot of a replaced event passes to the newest */
+        keep |= t23_ivdc_pace_take(pace);
+    }
+    if (!keep) {
+        p2_ivdc_mask_skips[channel]++;
+        (void)p2_release_source_frame(source, *frame);
+        *frame = NULL;
+        return 1;
+    }
+    if (stale) {
+        int64_t age = IMP_System_GetTimeStamp() - p2_ivdc_frame_ts(*frame);
+
+        if (age > (int64_t)stale) {
+            p2_ivdc_stale[channel]++;
+            (void)p2_release_source_frame(source, *frame);
+            *frame = NULL;
+            return 1;
+        }
+    }
+    if (++p2_ivdc_kicks[channel] % 750u == 1u)
+        IMP_LOG_INFO("Encoder", "ch %d IVDC push: kicks %u, mask skips %u, "
+                     "drained %u, stale %u (input %u fps -> %u)",
+                     channel, p2_ivdc_kicks[channel],
+                     p2_ivdc_mask_skips[channel], p2_ivdc_drained[channel],
+                     p2_ivdc_stale[channel], pace->in_fps, out_fps);
+    return 0;
+}
+#endif
+
 static int p2_polling_stream(int channel, uint32_t timeout_ms)
 {
     static unsigned int trace_count;
@@ -4055,6 +4158,8 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     int process_result;
     OpenIMPProfileStamp poll_profile;
 #if defined(PLATFORM_T23)
+    int ivdc_push = 0;
+    unsigned int ivdc_out_fps = 25u;
     uint64_t pace_start_us;
     uint64_t pace_paced_us = 0;
     uint64_t pace_frame_us = 0;
@@ -4110,6 +4215,15 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     now_us = p2_monotonic_us();
     wait_us = ch->next_frame_due_us > now_us
         ? ch->next_frame_due_us - now_us : 0u;
+#if defined(PLATFORM_T23)
+    /* #807: IVDC direct: kicked by the frame-start event, no timer */
+    if (p2_ivdc_push_on() && ch->codec_type != IMP_ENC_TYPE_JPEG &&
+        OpenIMP_T23_IvdcChnDirect(ch->source_channel)) {
+        ivdc_push = 1;
+        wait_us = 0;
+        ivdc_out_fps = (fps_num + fps_den / 2u) / fps_den;
+    }
+#endif
     pthread_mutex_unlock(&ch->lock);
 
     timeout_us = (uint64_t)timeout_ms * 1000u;
@@ -4186,6 +4300,12 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
              * T31 waits up to 2 s like libimp, this loop has its own
              * deadline and StopRecvPic check */
             if (VBMGetFrame(ch->source_channel, &frame) == 0) {
+#if defined(PLATFORM_T23)
+                if (ivdc_push &&
+                    p2_ivdc_pick(channel, ch->source_channel, &frame,
+                                 ivdc_out_fps))
+                    continue;
+#endif
 #if defined(PLATFORM_T31)
                 /* DiscardInitialFrame: the frame is dropped before encoding */
                 if (!p2_discard_take(ch->group))
