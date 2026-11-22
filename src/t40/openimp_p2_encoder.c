@@ -32,6 +32,9 @@
 #include "openimp_profile.h"
 #include <openimp/openimp_encoder_telemetry.h>
 #include "imp_log_int.h"
+#if defined(PLATFORM_T23)
+#include "t23/openimp_t23_ivdc.h"
+#endif
 #include "trace_control.h"
 #include "openimp_mono_cond.h"
 #include "p2_rc_readback.h"
@@ -896,8 +899,15 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
 #if defined(P2_JPEG_LEND)
     int lend = -1;          /* decided once per frame, if anyone asks */
 #endif
+    int ivdc = 0;
 
-    if (!source || !source->virtual_address || !source->size)
+#if defined(PLATFORM_T23)
+    /* an IVDC frame (FrameSource channel 0 in direct mode) has no memory:
+     * it can only be lent, with the IVDC source as its address
+     * (openimp_t23_ivdc.c, helix_jpeg.c) */
+    ivdc = source && OpenIMP_T23_IvdcFrame(source);
+#endif
+    if (!source || (!source->virtual_address && !ivdc) || !source->size)
         return -1;
 
     for (channel = 0; channel < P2_MAX_CHANNELS; channel++) {
@@ -941,7 +951,7 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
 #endif
 #if defined(P2_JPEG_LEND)
         if (lend < 0)
-            lend = source->physical_address && p2_jpeg_lend_wanted();
+            lend = (source->physical_address || ivdc) && p2_jpeg_lend_wanted();
         if (lend && !jpeg->jpeg_lent_frame &&
             p2_frame_pin_lend(&p2_frame_pins, source_channel,
                               (void *)source) == 0) {
@@ -954,6 +964,11 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
             jpeg->synthetic_frame.size = source->size;
             jpeg->synthetic_frame.virtual_address = source->virtual_address;
             jpeg->synthetic_frame.physical_address = source->physical_address;
+#if defined(PLATFORM_T23)
+            if (ivdc)
+                memcpy(&jpeg->synthetic_frame.physical_address,
+                       (const uint8_t *)source + 0x20, sizeof(uint32_t));
+#endif
             jpeg->synthetic_frame.timestamp = source->timestamp;
             jpeg->jpeg_lent_frame = (void *)source;
             jpeg->jpeg_src_pitch = 0;   /* the lent frame keeps its own address */
@@ -965,6 +980,12 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
             continue;
         }
 #endif
+        if (ivdc) {
+            /* not lent (lending off or this channel still holds one):
+             * nothing to copy, the request stays for the next frame */
+            pthread_mutex_unlock(&jpeg->lock);
+            continue;
+        }
         if (jpeg->jpeg_frame_capacity < source->size) {
             resized = NULL;
 #if defined(P2_JPEG_RMEM_COPY)

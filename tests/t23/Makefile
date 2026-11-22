@@ -292,7 +292,7 @@ $(P2_MULTISECTION): p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_enc
 		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
 		p2_multisection_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \
-		-lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
+		$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
 
 # SetChnROI / GetChnROI of the T23 encoder against a stub codec (vendor 1.3.0)
 $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
@@ -302,4 +302,4 @@ $(P2_ROI): p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(HELIX_INCLUDES) -I$(PROJECT_DIR)/src/t40 -no-pie \
 		p2_roi_test.c $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c \
 		$(PROJECT_DIR)/src/openimp_profile.c $(PROJECT_DIR)/src/t40/t31_stream_layout.c \
-		-lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"
+		$(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o "$@"

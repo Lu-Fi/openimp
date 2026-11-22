@@ -14459,7 +14459,10 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
         /* IVDC frame (channel 0 in direct mode): the JPEG core reads it
          * from the IVDC block (helix_jpeg.c; vendor do_channel_process_jpege
          * @0x59720 takes frame +0x20 as the source) */
-        if (codec_type == IMP_ENC_TYPE_JPEG && OpenIMP_T23_IvdcFrame(frame)) {
+        /* a lent frame (encoder fan-out) already carries the IVDC source;
+         * a FrameSource record (phys and virt 0) is checked for type 3 */
+        if (codec_type == IMP_ENC_TYPE_JPEG && !phys_addr && !virt_addr &&
+            OpenIMP_T23_IvdcFrame(frame)) {
             memcpy(&hw_frame.phys_addr, (const uint8_t *)frame + 0x20,
                    sizeof(uint32_t));
             hw_frame.virt_addr = 0;

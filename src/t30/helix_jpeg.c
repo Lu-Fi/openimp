@@ -1988,7 +1988,11 @@ done:
     stream->timestamp = frame->timestamp;
     stream->frame_type = HW_FRAME_TYPE_I;
     helix_jpeg.pictures++;
-    if (helix_jpeg.dump_dir && helix_jpeg.dumps < 4u)
+    if (helix_jpeg.dump_dir && helix_jpeg.dumps < 4u
+#if defined(PLATFORM_T23)
+        && !helix_jpeg_ivdc         /* nothing in memory to dump */
+#endif
+        )
         helix_dump(frame, slice.raw_y == frame->phys_addr && frame->phys_addr
                        ? (const uint8_t *)(uintptr_t)frame->virt_addr
                        : (const uint8_t *)(uintptr_t)
@@ -2030,7 +2034,13 @@ int OpenIMP_HelixJpeg_EncodeEx(const HelixJpegFrame *frame,
 
     if (flags)
         *flags = 0;
-    if (!frame || !qt || !stream || !frame->virt_addr ||
+    if (!frame || !qt || !stream ||
+        (!frame->virt_addr
+#if defined(PLATFORM_T23)
+         /* IVDC frame: no memory, the IVDC source (helix_jpeg_run_locked) */
+         && !(frame->phys_addr & T23_IVDC_SRC_Y)
+#endif
+         ) ||
         frame->width < HELIX_JPEG_MIN_WIDTH || (frame->width & 15u) ||
         frame->width > HELIX_JPEG_MAX_DIM || frame->height < 16u ||
         (frame->height & 1u) || frame->height > HELIX_JPEG_MAX_DIM)
