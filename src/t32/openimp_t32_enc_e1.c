@@ -164,6 +164,7 @@ void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h)
         return;
     pthread_mutex_lock(&e1_lock);
     h->chroma264 = E1.trans264;
+    h->chroma265 = E1.trans265.chroma_cr_qp_offset;
     h->crop = E1.crop.enable ? 1 : 0;
     if (h->crop) {
         h->crop_x = E1.crop.x;
@@ -373,10 +374,20 @@ int IMP_Encoder_SetH265TransCfg(int encChn, const IMPEncoderH265TransCfg *t)
     pthread_mutex_lock(&e1_lock);
     int ok = e1_get(encChn, &ci) == 0;
     if (ok && ci.codec == 2) {
+        /* vendor 2.0.2.1 (#784, QEMU v265t / v265n): the pictures and the PPS use the larger of the two
+         * offsets, clipped to -12..12, for cb and cr ({13, 0} -> 12/12, {-2, 3} -> 3/3, {-5, -2} -> -2) */
+#if defined(PLATFORM_T33)
+        int m = t->chroma_cr_qp_offset > t->chroma_cb_qp_offset ? t->chroma_cr_qp_offset : t->chroma_cb_qp_offset;
+
+        m = m < -12 ? -12 : m > 12 ? 12 : m;
+        E1.trans265_pend.chroma_cr_qp_offset = m;
+        E1.trans265_pend.chroma_cb_qp_offset = m;
+#else                                   /* T32 2.2.0: not compared with its vendor library, per field */
         E1.trans265_pend.chroma_cr_qp_offset = t->chroma_cr_qp_offset < -12 ? -12 : t->chroma_cr_qp_offset > 12 ? 12 :
                                                   t->chroma_cr_qp_offset;
         E1.trans265_pend.chroma_cb_qp_offset = t->chroma_cb_qp_offset < -12 ? -12 : t->chroma_cb_qp_offset > 12 ? 12 :
                                                   t->chroma_cb_qp_offset;
+#endif
     }
     pthread_mutex_unlock(&e1_lock);
     return 0;

@@ -55,8 +55,8 @@ static void params(const T32H265Seq *s, T30HevcVps *vps, T30HevcSps *sps, T30Hev
         sps->conf_top = s->crop_y;
         sps->conf_bottom = s->height - s->crop_y - s->crop_h;
     }
-    pps->cb_qp_offset = 0;
-    pps->cr_qp_offset = 0;
+    pps->cb_qp_offset = s->chroma_qp_offset;
+    pps->cr_qp_offset = s->chroma_qp_offset;
 }
 
 static size_t nal(uint8_t *out, uint32_t type, T30HevcBits *b)

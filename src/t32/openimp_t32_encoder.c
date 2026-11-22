@@ -375,6 +375,10 @@ static void e1_at_idr(struct t32_enc_chn *e)
             a->seq5.crop_h = hd.crop_h;
             chg = 1;
         }
+        if (a->seq5.chroma_qp_offset != hd.chroma265) {
+            a->seq5.chroma_qp_offset = hd.chroma265;
+            a->pps_len = t32_h265_pps(&a->seq5, a->pps);
+        }
     } else {
         if (a->seq.crop != hd.crop || a->seq.crop_x != hd.crop_x || a->seq.crop_y != hd.crop_y ||
             a->seq.crop_w != hd.crop_w || a->seq.crop_h != hd.crop_h) {
@@ -1270,7 +1274,10 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     T32HeraH265Pic p;
     T32H265Slice sl;
 
+    if (idr)
+        e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
+    p.chroma_qp_offset = a->seq5.chroma_qp_offset;
     p.width = w;
     p.height = h;
     p.p_frame = !idr;
@@ -1309,7 +1316,6 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     s->npacks = 0;
     if (idr) {
-        e1_at_idr(e);
         memcpy(out, a->vps, a->vps_len);
         h265_pack(s, 0, (uint32_t)a->vps_len, IMP_H265_NAL_VPS, f->timeStamp);
         at = (uint32_t)a->vps_len;

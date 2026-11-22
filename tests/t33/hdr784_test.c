@@ -117,6 +117,11 @@ int main(void)
     nal_eq("H.265 SPS after crop off", buf, n,
            "42010101600000030090000003000003003fa005020169fe5aa924c22010000003001000000300f080");
 
+    s5.crop = 0;
+    s5.chroma_qp_offset = 3;            /* vendor v265s: {cr 3, cb -2} -> PPS cb 3, cr 3 */
+    n = t32_h265_pps(&s5, buf);
+    nal_eq("H.265 PPS chroma offset 3", buf, n, "4401c072cc602240");
+
     /* HERA: a 640x368 I picture at QP 30 without and with the offset */
     memset(&t, 0, sizeof(t));
     t.pic.width = 640;

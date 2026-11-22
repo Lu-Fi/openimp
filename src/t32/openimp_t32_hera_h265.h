@@ -50,6 +50,7 @@ typedef struct {
     uint32_t aux[T32_HERA5_AUX];        /* analysis buffers (t32_hera_h265_aux_sizes) */
     const uint8_t *rc_slice;            /* NULL (FIXQP), or the H.265 controller's slice block
                                          * (T65_SLICE_BYTES, vendor layout; revision 6, #720) */
+    int chroma_qp_offset;               /* T33: SetH265TransCfg (#784), -12..12, cb = cr */
 } T32HeraH265Pic;
 
 /* sizes of the analysis buffers the engine reads and writes */

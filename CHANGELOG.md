@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T33 H265TransCfg like vendor 2.0.2.1 (#784, part 2)
+
+- **Encoder_Get/SetH265TransCfg (T33: cache -> dev)**: from the next IDR the larger of the two offsets (clipped to -12..12) goes to cb and cr in the PPS and the HERA list (0x38004, 0x4001c, 0x50004), as the vendor in QEMU ({13,0} -> 12, {-2,3} -> 3, {-5,-2} -> -2); T33L PPS equal. One apitest sequence before the first stream still differs (vendor 12/12, OpenIMP 3/3), noted in the evidence.
+
 ## 2026-11-22: T33 cache/err API cells against vendor 2.0.2.1 (#784, part 1)
 
 - **OSD_Get/SetRgnAttr_ISP, OSD_SetGroupCallback (T33: err -> dev)**: the 2026-11-17 failures were test faults: apitest `rgnisp` expected the T41 codes (vendor 2.0.2.1 accepts sensor < 5, its module returns mask_en 1) and read the luma of the IVDC-direct main channel; the group-callback FAIL was the stream stall of that image. QEMU vendor = OpenIMP, T33L: Get PASS, Set codes equal, callback 10 of 10 frames.
