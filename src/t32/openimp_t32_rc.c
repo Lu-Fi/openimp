@@ -1028,6 +1028,17 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
  * (16 x 9 bytes), which i264e_ratecontrol_start copies for the controller;
  * H.265 I265eReconfig::ReconfigPFrame (0x983ec): -> i265e+0x110, rcStart
  * copies it to rc+0x2a8 */
+void t32_rc_gdr(T32Rc *rc, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
+                uint32_t cycle)
+{
+    if (rc->on && rc->t33)
+        t32_rc33_set_gdr(rc->t33, gate, req, en, req_frames, frames, cycle);
+#ifdef PLATFORM_T33
+    if (rc->on && rc->t65)
+        t32_rc65_set_gdr(rc->t65, gate, req, en, req_frames, frames, cycle);
+#endif
+}
+
 void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9])
 {
     if (!rc->on)

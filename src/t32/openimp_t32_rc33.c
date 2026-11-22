@@ -364,6 +364,19 @@ void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode)
     e33_st_U8(&c->X, A_F + 0x164, mode);
 }
 
+void t32_rc33_set_gdr(T32Rc33 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
+                      uint32_t cycle)
+{
+    E33 *X = &c->X;
+
+    e33_st_U8(X, A_F + 0x151, gate);
+    e33_st_U8(X, A_F + 0x152, req);
+    e33_st_U8(X, A_F + 0x153, en);
+    e33_st_U32(X, A_F + 0x154, req_frames);
+    e33_st_U32(X, A_F + 0x158, frames);
+    e33_st_U32(X, A_F + 0x15c, cycle);
+}
+
 int t32_rc33_set_param(T32Rc33 *c, unsigned id, const uint32_t *a)
 {
     T33Pending *p = &c->pend;
@@ -1245,6 +1258,19 @@ static void t65_take_pending(T32Rc65 *c)
     t32_rc65_configure(c);
 }
 #endif
+
+void t32_rc65_set_gdr(T32Rc65 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
+                      uint32_t cycle)
+{
+    E33 *X = &c->X;
+
+    e33_st_U8(X, A5_F + 0x22d8, gate);
+    e33_st_U8(X, A5_F + 0x22d9, req);
+    e33_st_U8(X, A5_F + 0x22da, en);
+    e33_st_U32(X, A5_F + 0x22dc, req_frames);
+    e33_st_U32(X, A5_F + 0x22e0, frames);
+    e33_st_U32(X, A5_F + 0x22e4, cycle);
+}
 
 /* I265eRatectrl_rcStart (0x83ba0) */
 int t32_rc65_start(T32Rc65 *c, int idr)

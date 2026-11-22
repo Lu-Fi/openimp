@@ -83,6 +83,7 @@ int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
 #include "t32/openimp_t32_enc_e1.h"
+#include "t32/openimp_t32_gdr.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_encoder.c is the PLATFORM_T32 build only"
@@ -142,6 +143,7 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t pictures;                  /* H.265: pictures coded */
     int qp_i, qp_p;
     uint32_t gop, gop_pos, idr_pic_id, section_kb;
+    int32_t gdr_d;                      /* H.264: pictures since the last RequestGDR, -1 none (#784) */
     int have_ref, idr_req;
     uint32_t ref_y, ref_c;              /* the last reconstruction */
     uint32_t sections, overflows;
@@ -1012,10 +1014,21 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     uint32_t aux[4], at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
     int glue_idr = glue_picture(e);
-    int idr = glue_idr || a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
+    int idr = glue_idr || a->idr_req || !a->have_ref, esc = 0;
     T32HeraH264Pic p;
     T32H264Slice sl;
+    T32E1Gdr g;
 
+    /* intra refresh (#784): the encode loop's per-picture fields, then the
+     * picture type as i264e_decide_slice_type_and_rd decides it */
+    OpenIMP_T32_E1GdrTake(chn_no(e), &g);
+    if (!idr)
+        idr = t32_gdr_slice_type(&a->gop_pos, &a->gdr_d, a->gop, g.req, g.en);
+    if (idr) {
+        a->gop_pos = 0;
+        a->gdr_d = -1;
+    }
+    t32_rc_gdr(&a->rc, g.gate, g.req, g.en, g.req_frames, g.frames, g.cycle);
     if (idr)
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
@@ -1075,6 +1088,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     if (!n) {
         IMP_LOG_ERR(TAG, "HERA list: %ux%u qp %d refused", w, h, p.qp);
         rc_picture_lost(e);
+        a->idr_req |= idr;              /* a lost IDR comes again with the next picture */
         return -1;
     }
 
@@ -1105,6 +1119,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     if (hera_run_shared(e, n, out, cap, &at, &esc, hera_stat_regs, T32_HERA_STATS) != 0) {
         rc_picture_lost(e);
+        a->idr_req |= idr;
         return -1;
     }
     /* FRAME_END: the slice's size and the statistics the engine left; after
@@ -1132,10 +1147,8 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     a->have_ref = 1;
     if (idr) {
         a->idr_req = 0;
-        a->gop_pos = 0;
         a->idr_pic_id = (a->idr_pic_id + 1u) & 0xffffu;
     }
-    a->gop_pos = a->gop ? (a->gop_pos + 1u) % a->gop : a->gop_pos + 1u;
     return 0;
 }
 
@@ -1270,10 +1283,21 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     uint32_t at = 0, cap = s->bs.size, n, i;
     uint8_t *out = t32_vpu_buf_va(&s->bs);
     int glue_idr = glue_picture(e);
-    int idr = glue_idr || a->idr_req || !a->have_ref || a->gop_pos == 0, esc = 0;
+    int idr = glue_idr || a->idr_req || !a->have_ref, esc = 0;
     T32HeraH265Pic p;
     T32H265Slice sl;
+    T32E1Gdr g;
 
+    /* intra refresh (#784): as H.264 (the vendor H.265 loop 0xdf48c fills the
+     * same fields; no periodic IDR while GDR runs) */
+    OpenIMP_T32_E1GdrTake(chn_no(e), &g);
+    if (!idr)
+        idr = t32_gdr_slice_type(&a->gop_pos, &a->gdr_d, a->gop, g.req, g.en);
+    if (idr) {
+        a->gop_pos = 0;
+        a->gdr_d = -1;
+    }
+    t32_rc_gdr(&a->rc, g.gate, g.req, g.en, g.req_frames, g.frames, g.cycle);
     if (idr)
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
@@ -1311,6 +1335,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     if (!n) {
         IMP_LOG_ERR(TAG, "HERA H.265 list: %ux%u qp %d refused", w, h, p.qp);
         rc_picture_lost(e);
+        a->idr_req |= idr;
         return -1;
     }
 
@@ -1342,6 +1367,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     at += (uint32_t)t32_h265_slice_head(&a->seq5, &sl, out + at, &esc);
     if (hera_run_shared(e, n, out, cap, &at, &esc, hera5_stat_regs, T32_HERA5_STATS) != 0) {
         rc_picture_lost(e);
+        a->idr_req |= idr;
         return -1;
     }
     /* rcEnd: the slice's size, the 38 statistics the engine left and after
@@ -1377,11 +1403,8 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     a->have_ref = 1;
     a->last_p = !idr;
     a->pictures++;
-    if (idr) {
+    if (idr)
         a->idr_req = 0;
-        a->gop_pos = 0;
-    }
-    a->gop_pos = a->gop ? (a->gop_pos + 1u) % a->gop : a->gop_pos + 1u;
     return 0;
 }
 

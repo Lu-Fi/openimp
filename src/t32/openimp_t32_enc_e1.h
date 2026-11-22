@@ -35,4 +35,15 @@ typedef struct {
 } T32E1Hdr;
 void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h);
 
+/* The per-picture intra-refresh (GDR) fields the vendor 2.0.2.1 encode loop
+ * (0xde3e8) copies from the channel (SetGDRCfg / RequestGDR) into the picture
+ * parameters, which i264e_update_fenc (0x6ff80) puts at F+0x151..0x15c: gate
+ * (always 1), request (taken: the channel flag is cleared), enable, request
+ * frames (the last request's), frames and cycle (0 with GDR off). */
+typedef struct {
+    uint8_t gate, req, en;
+    uint32_t req_frames, frames, cycle;
+} T32E1Gdr;
+void OpenIMP_T32_E1GdrTake(int encChn, T32E1Gdr *g);
+
 #endif
