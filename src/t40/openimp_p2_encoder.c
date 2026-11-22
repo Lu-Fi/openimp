@@ -3077,6 +3077,24 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
                         codec_rc.attrRcMode.attrVbr.iMinQP,
                     codec_rc.attrRcMode.attrVbr.iMaxQP > 51 ? 51 :
                         codec_rc.attrRcMode.attrVbr.iMaxQP);
+#elif defined(PLATFORM_T31)
+        /* #604: T31 CBR hands its rc attribute to the codec here, and
+         * p2_normalise_rc_qps turned iInitialQP -1 into 26, which
+         * overwrote the bits-per-pixel QP of p2_codec_params (device .26:
+         * first IDR QP 26, vendor 40).  Derive it first (ComputeRCParam
+         * 0x449dc), as p2_codec_params does. */
+        if (has_rc && codec_rc.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&
+            codec_rc.attrRcMode.attrCbr.iInitialQP < 0)
+            codec_rc.attrRcMode.attrCbr.iInitialQP = (int16_t)
+                p2_t40_auto_initial_qp(
+                    attr, p2_attr_codec_type(attr),
+                    attr->rcAttr.attrRcMode.attrCbr.uTargetBitRate * 1000u,
+                    attr->rcAttr.outFrmRate.frmRateNum,
+                    attr->rcAttr.outFrmRate.frmRateDen,
+                    codec_rc.attrRcMode.attrCbr.iMinQP < 1 ? 1 :
+                        codec_rc.attrRcMode.attrCbr.iMinQP,
+                    codec_rc.attrRcMode.attrCbr.iMaxQP > 51 ? 51 :
+                        codec_rc.attrRcMode.attrCbr.iMaxQP);
 #endif
         if (has_rc)
             p2_normalise_rc_qps(&codec_rc);

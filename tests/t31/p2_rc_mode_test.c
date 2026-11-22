@@ -231,6 +231,7 @@ static int rc_param_calls;
 static unsigned int rc_param_mode;
 static unsigned int rc_param_target;
 static unsigned int rc_param_max;
+static int rc_param_init_qp;
 
 int AL_Codec_Encode_SetRcQualityCap(void *c, int mode, unsigned int psnr)
 {
@@ -259,6 +260,8 @@ int AL_Codec_Encode_SetRcParam(void *c, void *p)
     rc_param_mode = rc->attrRcMode.rcMode;
     rc_param_target = rc->attrRcMode.attrCappedVbr.uTargetBitRate;
     rc_param_max = rc->attrRcMode.attrCappedVbr.uMaxBitRate;
+    rc_param_init_qp = rc->attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR
+        ? rc->attrRcMode.attrCbr.iInitialQP : 0;
     return 0;
 }
 
@@ -320,6 +323,22 @@ int main(void)
               "mode %d read back as %d psnr %u", capped[i], mode.rcMode,
               mode.attrCappedVbr.uMaxPSNR);
     }
+
+    /* #604: CBR iInitialQP -1 reaches the codec as the vendor 1.1.6
+     * bits-per-pixel QP (ComputeRCParam 0x449dc; .26 capture 360p 384 kbit
+     * 15 fps: first IDR QP 28), not as the normalised 26 */
+    make_attr(&attr, IMP_ENC_RC_MODE_CBR);
+    attr.rcAttr.outFrmRate.frmRateNum = 15;
+    attr.rcAttr.attrRcMode.attrCbr.uTargetBitRate = 384;
+    attr.rcAttr.attrRcMode.attrCbr.iInitialQP = -1;
+    attr.rcAttr.attrRcMode.attrCbr.iMinQP = 20;
+    attr.rcAttr.attrRcMode.attrCbr.iMaxQP = 45;
+    rc_param_calls = 0;
+    rc_param_init_qp = 0;
+    CHECK(IMP_Encoder_CreateChn(3, &attr) == 0, "CreateChn CBR");
+    CHECK(rc_param_calls == 1 && rc_param_init_qp == 28,
+          "CBR start QP %d (%d rc calls), vendor 28", rc_param_init_qp,
+          rc_param_calls);
 
     /* run time: a new cap, then CBR clears it */
     mode.rcMode = IMP_ENC_RC_MODE_CAPPED_QUALITY;
