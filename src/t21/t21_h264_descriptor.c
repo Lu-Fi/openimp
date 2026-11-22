@@ -395,7 +395,9 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x40010, config->raw[0]);
     EMIT(0x40014, config->raw[1]);
     EMIT(0x40034, config->raw[2]);
-    EMIT(0x40038, (config->stride[0] << 16) | config->stride[1]);
+    EMIT(0x40038, config->raw_stride
+                     ? (config->raw_stride << 16) | config->raw_stride
+                     : (config->stride[0] << 16) | config->stride[1]);
     EMIT(0x40018, T21_VRAM_TOPMV);
     EMIT(0x4001c, T21_VRAM_TOPPA);
     EMIT(0x40020, T21_VRAM_ME);
@@ -628,7 +630,9 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0xb0018, config->reference_c);
     EMIT(0xb0030, config->ref_share ? config->ring_start_y : config->raw[0]);
     EMIT(0xb0034, config->ref_share ? config->ring_start_c : config->raw[1]);
-    EMIT(0xb0010, (config->stride[0] << 16) | config->stride[1]);
+    EMIT(0xb0010, config->raw_stride
+                     ? (config->raw_stride << 16) | config->raw_stride
+                     : (config->stride[0] << 16) | config->stride[1]);
     /* OEM h264_api_enc: lambda 384 + 48 / 96 + 12 per QP above 33 (the
      * fixed table; slice fields +1058..+1063; T21 and T23) */
     EMIT(0xb001c, 0x180u + 48u * lambda_step);
