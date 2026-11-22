@@ -43,6 +43,7 @@ typedef struct {
     uint32_t section_kb;                /* 0: no sections; else BSFULL after this many KiB */
     uint32_t cps, ai, qpt, ipc;         /* analysis outputs (t32_hera_aux_sizes) */
     const uint8_t *rc_slice;            /* NULL, or the T33 controller's slice block (below) */
+    int no8x8;                          /* T32 list: Main, 0x68018 bit 5 clear (stand-alone encoder, vendor 2.2.0 YuvEncode, #752) */
 } T32HeraH264Pic;
 
 /* the ring's stride and rows per plane (luma; chroma has half the rows) */

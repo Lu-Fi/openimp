@@ -16,7 +16,7 @@ HERA_DEPS := $(HERA_SRC) $(PROJECT_DIR)/src/t32/openimp_t33_hera.h $(PROJECT_DIR
 OSD_BIN := $(BUILD)/t33-osd-sw-test
 OSD_SRC := osd_sw_test.c $(PROJECT_DIR)/src/t32/openimp_t33_osd_sw.c
 
-YUV_BIN := $(BUILD)/t33-yuv-stub-test
+YUV_BIN := $(BUILD)/t33-yuv-rc-test
 
 .PHONY: check
 check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN)
@@ -35,7 +35,7 @@ $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(HERA_SRC) -lm
 
-# unbound YUV / JPEG encoder stage 1 (#752): vendor argument checks and return codes
-$(YUV_BIN): yuv_stub_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvstub.h
+# stand-alone YUV / JPEG encoder (#752): vendor argument checks, return codes, parameter maps
+$(YUV_BIN): yuv_rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvrc.h
 	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) $(INC) -o $@ yuv_stub_test.c
+	$(CC) $(CFLAGS) $(INC) -o $@ yuv_rc_test.c
