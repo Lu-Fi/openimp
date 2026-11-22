@@ -168,6 +168,7 @@ int OpenIMP_T32_SystemInitDone(void)
  * system init allocates it (OSD module init), its exit frees it */
 int IMP_OSD_Init_ISP(void);
 void IMP_OSD_Exit_ISP(void);
+void OpenIMP_T32_IspOsdModule(int up);
 
 int IMP_System_Init(void)
 {
@@ -184,6 +185,7 @@ int IMP_System_Init(void)
         t32.system_generation++;
         if (IMP_OSD_Init_ISP() < 0)
             IMP_LOG_ERR(TAG, "ISP OSD pool not allocated; ISP OSD regions unavailable");
+        OpenIMP_T32_IspOsdModule(1);
     }
     pthread_mutex_unlock(&t32.lock);
     return 0;
@@ -193,6 +195,7 @@ int IMP_System_Exit(void)
 {
     pthread_mutex_lock(&t32.lock);
     if (t32.system_init) {
+        OpenIMP_T32_IspOsdModule(0);
         IMP_OSD_Exit_ISP();
         OpenIMP_T32_IvdcSystemExit();
     }
