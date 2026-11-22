@@ -3187,7 +3187,18 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * 0.26 MiB at 360p), and a bitstream window of one raw picture (an
      * all-I_PCM picture fits; at least 256 KiB, at most the 1 MiB of the
      * T21 layout). */
-#if defined(PLATFORM_T23) || defined(PLATFORM_T20)
+#if defined(PLATFORM_T23)
+    /* T23: the stock 1.3.0 EMC layout (h264_api_enc), 13.5 KiB at 720p
+     * instead of 936 KiB; OPENIMP_T23_EMC=t21 keeps the T21-derived one */
+    if (!getenv("OPENIMP_T23_EMC") || strcmp(getenv("OPENIMP_T23_EMC"), "t21"))
+        encoder->scratch_size = T23_HelixScratchLayoutStock(
+            (params->width + 15u) / 16u, (params->height + 15u) / 16u,
+            encoder->scratch_offset);
+    else
+        encoder->scratch_size = T23_HelixScratchLayout(
+            (params->width + 15u) / 16u, (params->height + 15u) / 16u,
+            encoder->scratch_offset);
+#elif defined(PLATFORM_T20)
     /* T20 (and T10 through the T20 build) keeps the earlier layout: the
      * 1 MiB layout is only measured on a T21 (cam-D) */
     encoder->scratch_size = T23_HelixScratchLayout(
