@@ -63,6 +63,39 @@ static inline uint32_t t31_vendor_idr_distance(uint32_t gop,
     return freq > 0xffffu ? 0xffffu : freq;
 }
 
+/*
+ * GOP length a run-time setter leaves in effect (#804).  IMP_Encoder_
+ * SetChnGopLength (0x88810) and SetChnGopAttr (0x87070) only store the
+ * pending GOP attribute (channel +316, length at +320); the encoder thread
+ * applies it before the next picture (glue 0x7efc8..0x7f0ec), with the
+ * channel output rate num/den as stored (not reduced) and in float:
+ *   new length:  s = len * den / num, plus 1.0 (0xde464) unless whole
+ *                seconds, g = trunc(s * num / den) & 0xffff
+ *   unchanged length (only the same-scene count changed):
+ *                g = trunc((len * den / num) * num / den) & 0xffff
+ * then AL_Codec_Encode_SetGopParam (0x7ad0c) with uGopLength = g and
+ * freqIDR = g * uMaxSameSenceCnt (0 -> 1), which runs ValidateGopParam
+ * (0x77e30): the IDR distance is t31_vendor_idr_distance(g, ...).
+ * GOP 25 at 15 fps -> g 39 (float 39.999996) -> IDR every 45.
+ */
+static inline uint32_t t31_vendor_set_gop(uint32_t len, int changed,
+                                          uint32_t num, uint32_t den)
+{
+    volatile float s, t;
+    uint32_t frames;
+
+    if (!num || !den)
+        return len;
+    frames = len * den;
+    s = (float)frames;
+    s = s / (float)num;
+    if (changed && frames % num)
+        s = s + 1.0f;
+    t = s * (float)num;
+    t = t / (float)den;
+    return (uint32_t)t & 0xffffu;
+}
+
 /* AL_TRCParam.uCPBSize of an IMP channel: 270000 ticks of 90 kHz
  * (AL_Codec_Encode_SetDefaultParam 0x790b8, see avpu_t31_al_param). */
 #define T31_VENDOR_CPB_TICKS 270000u

@@ -6146,6 +6146,25 @@ int IMP_Encoder_GetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
     return 0;
 }
 
+#if defined(PLATFORM_T31)
+/* #804: apply a pending GOP as the vendor T31 1.1.6 encoder-thread glue
+ * (0x7efc8..0x7f0ec, t31_vendor_hwrc.h): the length in effect, then the
+ * IDR distance through SetGopParam / ValidateGopParam (0x7ad0c, 0x77e30) */
+static int p2_t31_apply_gop(P2EncoderChannel *ch, IMPEncoderGopAttr *eff,
+                            int changed)
+{
+    uint32_t num = ch->attr.rcAttr.outFrmRate.frmRateNum;
+    uint32_t den = ch->attr.rcAttr.outFrmRate.frmRateDen;
+
+    eff->uGopLength = (uint16_t)t31_vendor_set_gop(eff->uGopLength, changed,
+                                                   num, den);
+    ch->attr.gopAttr = *eff;
+    eff->gopLength = (uint16_t)t31_vendor_idr_distance(
+        eff->uGopLength, eff->uMaxSameSenceCnt, num, den);
+    return AL_Codec_Encode_SetGopParam(ch->codec, eff);
+}
+#endif
+
 int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
 {
 #if defined(PLATFORM_T41)
@@ -6178,6 +6197,26 @@ int IMP_Encoder_SetChnGopAttr(int channel, IMPEncoderGopAttr *gop)
 #endif
     if (!p2_valid_channel(channel) || !gop || !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T31)
+    {
+        /* vendor T31 1.1.6 (#804): stored as pending; before the next
+         * picture the glue takes a new length with one second added unless
+         * it is whole seconds, an unchanged one through the float round
+         * trip, applies nothing when length and same-scene count are both
+         * unchanged, and SetGopParam's ValidateGopParam rounds the IDR
+         * distance up to whole seconds (t31_vendor_set_gop) */
+        P2EncoderChannel *ch = &p2_channels[channel];
+        IMPEncoderGopAttr eff = *gop;
+        int changed = eff.uGopLength != ch->attr.gopAttr.uGopLength;
+
+        if (!eff.uGopLength)
+            return 0;
+        if (!changed &&
+            eff.uMaxSameSenceCnt == ch->attr.gopAttr.uMaxSameSenceCnt)
+            return 0;
+        return p2_t31_apply_gop(ch, &eff, changed);
+    }
+#endif
 #if defined(PLATFORM_T40)
     {
         /* vendor T40 1.3.1: stored as pending (channel +0x13c); before the
@@ -6240,9 +6279,29 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
             -1 : 0;
     }
 #endif
+#if defined(PLATFORM_T31)
+    /* vendor T31 1.1.6 (0x88810): any length is stored, no check; a length
+     * of 0 or less is never applied here */
+    if (p2_valid_channel(channel) && length <= 0 &&
+        p2_channels[channel].created)
+        return 0;
+#endif
     if (!p2_valid_channel(channel) || length <= 0 ||
         !p2_channels[channel].created)
         return -1;
+#if defined(PLATFORM_T31)
+    {
+        /* #804: the encoder-thread glue as in SetChnGopAttr */
+        P2EncoderChannel *ch = &p2_channels[channel];
+        IMPEncoderGopAttr eff = ch->attr.gopAttr;
+        int changed = (uint32_t)length != ch->attr.gopAttr.uGopLength;
+
+        if (!changed)
+            return 0;
+        eff.uGopLength = (uint16_t)length;
+        return p2_t31_apply_gop(ch, &eff, changed);
+    }
+#endif
 #if defined(PLATFORM_T40)
     {
         /* vendor T40 1.3.1: stored as pending (channel +0x140); before the

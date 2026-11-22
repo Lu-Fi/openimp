@@ -50,6 +50,28 @@ int main(void)
            t31_vendor_idr_distance(999u, 1u, 15u, 1u), 990u);
     expect("gop 7 @0 kept", t31_vendor_idr_distance(7u, 1u, 0u, 1u), 7u);
 
+    /* #804 run-time GOP (encoder-thread glue 0x7efc8, float, one second
+     * added unless whole seconds), then ValidateGopParam */
+    expect("set 25 @15 (float: 39.999996)",
+           t31_vendor_set_gop(25u, 1, 15u, 1u), 39u);
+    expect("set 25 @15 idr", t31_vendor_idr_distance(
+        t31_vendor_set_gop(25u, 1, 15u, 1u), 1u, 15u, 1u), 45u);
+    expect("set 30 @15 (whole)", t31_vendor_set_gop(30u, 1, 15u, 1u), 30u);
+    expect("set 50 @15 (float: 64.99999)",
+           t31_vendor_set_gop(50u, 1, 15u, 1u), 64u);
+    expect("set 50 @15 idr", t31_vendor_idr_distance(
+        t31_vendor_set_gop(50u, 1, 15u, 1u), 1u, 15u, 1u), 75u);
+    expect("set 15 @25", t31_vendor_set_gop(15u, 1, 25u, 1u), 40u);
+    expect("set 15 @25 idr", t31_vendor_idr_distance(
+        t31_vendor_set_gop(15u, 1, 25u, 1u), 1u, 25u, 1u), 50u);
+    expect("set 50 @25 (whole)", t31_vendor_set_gop(50u, 1, 25u, 1u), 50u);
+    expect("set 25 @30000/1001", t31_vendor_set_gop(25u, 1, 30000u, 1001u),
+           54u);
+    expect("unchanged 40 @15", t31_vendor_set_gop(40u, 0, 15u, 1u), 40u);
+    expect("unchanged 40 @15 same 2 idr", t31_vendor_idr_distance(
+        t31_vendor_set_gop(40u, 0, 15u, 1u), 2u, 15u, 1u), 90u);
+    expect("set 7 @0 kept", t31_vendor_set_gop(7u, 1, 0u, 1u), 7u);
+
     /* H.264 1080p (8 groups, 120x68 MB) 1000 kbit GOP 25 @ 15 */
     expect("avc 1080p IDR", word15(1000u, 15u, 25u, 8u, 8160u, 1), 0x14cu);
     expect("avc 1080p P", word15(1000u, 15u, 25u, 8u, 8160u, 0), 0x37u);
