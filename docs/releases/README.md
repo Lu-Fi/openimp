@@ -5,6 +5,7 @@ of the open stack live in this repository; open-tx-isp points here.
 
 | Release | Tag | Date | Release note |
 |---|---|---|---|
+| Release 1 (in preparation) | - | - | [Release-1.md](Release-1.md) |
 | RC3 (newest) | `v2026.11.07-rc3` | 2026-11-07 | [RC3.md](RC3.md) |
 | RC2 | `v2026.10.25-rc2` | 2026-10-25 | [../RELEASE_NOTES_RC2.md](../RELEASE_NOTES_RC2.md) |
 | RC1 | `v2026.10.11-rc1` | 2026-10-11 | [../RELEASE-v2026.10.11-rc1.md](../RELEASE-v2026.10.11-rc1.md) |
