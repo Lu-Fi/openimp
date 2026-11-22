@@ -302,6 +302,39 @@ static void ai_flow(int dev)
         NEED(IMP_AI_DisableHs) { r = IMP_AI_DisableHs(); RET0(IMP_AI_DisableHs, r, ""); }
     }
 #endif
+#if defined(APITEST_T33) && HAS_IMP_AI_EnableLpf && HAS_IMP_AI_EnableDrcAndEq && HAS_IMP_AI_GetAlgoOrder
+    /* T33 (#devcells): LPF, DRC + EQ and the algorithm order of the AI chain on the board (frames must keep flowing, order must read back) */
+    {
+        static float eq_table[20];
+        IMPAudioDrcEqConfig drc = { 500, 1000000, 0.3f, 0, 0, 8000, 20, eq_table };
+        AudioAI_Type order[3] = { AI_MODULE_HPF, AI_MODULE_NS, AI_MODULE_AGC }, got_order[3] = { 0, 0, 0 }, old[3] = { 0, 0, 0 };
+        int rg, rs, rn;
+
+        NEED(IMP_AI_SetLpfCoFrequency) { r = IMP_AI_SetLpfCoFrequency(500); RET0(IMP_AI_SetLpfCoFrequency, r, "500 Hz (no getter)"); }
+        NEED(IMP_AI_EnableLpf) {
+            r = IMP_AI_EnableLpf(attr);
+            n = ai_frames(dev, 5, &rms, &tsok);
+            CHECK(IMP_AI_EnableLpf, r, n == 5, "%d of 5 frames follow, rms %u", n, rms);
+            NEED(IMP_AI_DisableLpf) { r = IMP_AI_DisableLpf(); RET0(IMP_AI_DisableLpf, r, ""); }
+        }
+        NEED(IMP_AI_EnableDrcAndEq) {
+            r = IMP_AI_EnableDrcAndEq(attr, &drc, 1, 1);
+            n = ai_frames(dev, 5, &rms, &tsok);
+            CHECK(IMP_AI_EnableDrcAndEq, r, n == 5, "%d of 5 frames follow, rms %u", n, rms);
+            NEED(IMP_AI_DisableDrcAndEq) { r = IMP_AI_DisableDrcAndEq(); RET0(IMP_AI_DisableDrcAndEq, r, ""); }
+        }
+        NEED(IMP_AI_SetAlgoOrder) {
+            rg = IMP_AI_GetAlgoOrder(dev, 0, old);
+            rs = IMP_AI_SetAlgoOrder(dev, 0, order);
+            r = IMP_AI_GetAlgoOrder(dev, 0, got_order);
+            rn = IMP_AI_SetAlgoOrder(dev, 0, NULL);
+            CHECK(IMP_AI_SetAlgoOrder, rs, rg == 0 && r == 0 && got_order[0] == AI_MODULE_HPF && got_order[1] == AI_MODULE_NS && got_order[2] == AI_MODULE_AGC,
+                  "HPF,NS,AGC set, read back %d %d %d (was %d %d %d); NULL order -> %d", got_order[0], got_order[1], got_order[2], old[0], old[1], old[2], rn);
+            NEED(IMP_AI_GetAlgoOrder) { rep(FN(IMP_AI_GetAlgoOrder), r, (r == 0 && got_order[0] == AI_MODULE_HPF) ? V_PASS : V_FAIL, "%d %d %d", got_order[0], got_order[1], got_order[2]); }
+            IMP_AI_SetAlgoOrder(dev, 0, old);
+        }
+    }
+#endif
 #if HAS_IMP_AI_Set_WebrtcProfileIni_Path
     NEED(IMP_AI_Set_WebrtcProfileIni_Path) {
         if (access("/etc/webrtc_profile.ini", R_OK) == 0) {
@@ -438,6 +471,22 @@ static void ao_flow(void)
     NEED(IMP_AO_GetPubAttr) { r = IMP_AO_GetPubAttr(ao, got); gchk(got); CHECK(IMP_AO_GetPubAttr, r, got->samplerate == AUDIO_SAMPLE_RATE_16000, "rate %d mode %d", got->samplerate, got->soundmode); }
     NEED(IMP_AO_Enable) { r = IMP_AO_Enable(ao); RET0(IMP_AO_Enable, r, "dev %d", ao); if (r) goto out; }
     NEED(IMP_AO_EnableChn) { r = IMP_AO_EnableChn(ao, 0); RET0(IMP_AO_EnableChn, r, "chn 0"); }
+#if defined(APITEST_T33) && HAS_IMP_AO_GetAlgoOrder
+    {   /* T33 (#devcells): two playback slots (AO_MODULE_BUTT = 2): read, swap, read back, restore; NULL arrays refused */
+        AudioAO_Type o0[2] = { 0, 0 }, o1[2] = { AO_MODULE_AGC, AO_MODULE_HPF }, o2[2] = { 0, 0 };
+        int rg0, rs, rg2, rn;
+
+        NEED(IMP_AO_SetAlgoOrder) {
+            rg0 = IMP_AO_GetAlgoOrder(ao, 0, o0);
+            rs = IMP_AO_SetAlgoOrder(ao, 0, o1);
+            rg2 = IMP_AO_GetAlgoOrder(ao, 0, o2);
+            rn = IMP_AO_SetAlgoOrder(ao, 0, NULL);
+            CHECK(IMP_AO_SetAlgoOrder, rs, rg0 == 0 && rg2 == 0 && o2[0] == AO_MODULE_AGC && o2[1] == AO_MODULE_HPF, "AGC,HPF set, read back %d %d (was %d %d); NULL order -> %d", o2[0], o2[1], o0[0], o0[1], rn);
+            NEED(IMP_AO_GetAlgoOrder) rep(FN(IMP_AO_GetAlgoOrder), rg2, (rg2 == 0 && o2[0] == AO_MODULE_AGC) ? V_PASS : V_FAIL, "%d %d (first read %d: %d %d)", o2[0], o2[1], rg0, o0[0], o0[1]);
+            IMP_AO_SetAlgoOrder(ao, 0, o0);
+        }
+    }
+#endif
     NEED(IMP_AO_SetVolMute) { r = IMP_AO_SetVolMute(ao, 0, 1); RET0(IMP_AO_SetVolMute, r, "rt: mute on (kept muted for all AO tests)"); }
     NEED(IMP_AO_SetVol) {
         G(int, v); int was = 0, r2, r3;
