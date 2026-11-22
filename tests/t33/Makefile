@@ -39,13 +39,18 @@ PSK_SRC := pskip784_test.c $(PROJECT_DIR)/src/t32/openimp_t32_rc.c $(PROJECT_DIR
 	$(PROJECT_DIR)/src/eprc/eprc_t33_h264.c $(PROJECT_DIR)/src/eprc/eprc_t33_h265.c
 RC_SRC := rc784_test.c $(filter-out pskip784_test.c,$(PSK_SRC))
 
+# #784 group 3: multi-section / bitstream pools and the lists without BSFULL vs vendor 2.0.2.1 (QEMU vms0 / vjm0)
+MS_BIN := $(BUILD)/t33-ms784-test
+MS_SRC := ms784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
+
 .PHONY: check
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(RC_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(RC_BIN) $(MS_BIN)
 	$(YUV_BIN)
 	$(HDR_BIN)
 	$(GDR_BIN)
 	$(PSK_BIN)
 	$(RC_BIN)
+	$(MS_BIN)
 	gzip -dc vendor-2.0.2.1-hera-h264.txt.gz vendor-2.0.2.1-hera-h265.txt.gz > $(BUILD)/t33-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t33-hera-lists.txt
 	gzip -dc vendor-2.0.2.1-osd-sw.txt.gz > $(BUILD)/t33-osd-sw.txt
@@ -83,3 +88,7 @@ $(GDR_BIN): $(GDR_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_gdr.h $(PROJECT_DIR)/s
 $(YUV_BIN): yuv_rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvrc.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ yuv_rc_test.c
+
+$(MS_BIN): $(MS_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t33_sections.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ $(MS_SRC) -lm

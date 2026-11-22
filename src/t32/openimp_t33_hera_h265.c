@@ -423,6 +423,11 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
 
         if (!(e->when & want))
             continue;
+        /* SetMultiSectionMode(0) (#784 group 3, QEMU vms0 / v5ms0 vs vendor
+         * 2.0.2.1): no stop at a full section, so no second half address and
+         * no BSFULL enable / size */
+        if (!p->section_kb && (e->reg == EMC_BS1 || e->reg == EMC_BSFULL_EN || e->reg == EMC_BSFULL_SIZE))
+            continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
             uint32_t v = t33_h265_cqp(t->pic.chroma_qp_offset, e->reg, t33_h265_field(t, e->reg, def, st, k));
