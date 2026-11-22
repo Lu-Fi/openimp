@@ -90,6 +90,10 @@ compile t32_skeleton src/t32/openimp_t32_skeleton.c
 compile t32_isp src/t32/openimp_t32_isp.c
 # 2.x ISP control calls and FrameSource / encoder state calls (#54-#60, #39-#45): vendor
 # 2.x headers like the tuning unit (their types: PM, LDC mode, joints, frame-used mode)
+# custom AE / AWB algorithm threads (#784 group 4): the T40 protocol file, PLATFORM_T33 variant
+"$compiler" $strict_flags -I"$T33_HEADERS" -I"$project_dir/src" \
+    -c "$project_dir/src/t40/openimp_p1_algo.c" -o "$output_dir/t33_algo.o"
+objects="$objects $output_dir/t33_algo.o"
 for unit in isp_ctl fs_enc_ext enc_e3 enc_e1; do
     "$compiler" $strict_flags -I"$T33_HEADERS" -I"$project_dir/src" \
         -c "$project_dir/src/t32/openimp_t32_$unit.c" -o "$output_dir/t32_$unit.o"

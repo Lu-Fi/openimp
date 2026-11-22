@@ -611,6 +611,55 @@ static void isposd_teardown(void)
     }
 }
 
+/* #784 group 4: T32_ISP_ALGO=1 registers a custom AE + AWB library before EnableSensor (callbacks count and log the
+ * values they get, answer change = 0); =2 also answers change = 1 (AE: line unit, 400 lines, again / dgain 1024;
+ * AWB: r / b 256), so the set ioctls run.  T33 2.0.2.1 layouts as raw words (IMPISPAeInfo 1996 bytes: unit at +1936,
+ * sensor_attr hts / vts / fps at +1976; IMPISPAeAttr 56 bytes, change first; IMPISPAwbAttr 16 bytes). */
+int IMP_ISP_SetAeAlgoFunc(int num, void *rec);
+int IMP_ISP_SetAwbAlgoFunc(int num, void *rec);
+static volatile int algo_mode, ae_n_open, ae_n_close, ae_n_handle, ae_n_notify, awb_n_open, awb_n_close, awb_n_handle;
+static volatile uint32_t ae_init_w[32], ae_info_w[6], awb_info_w[4];
+static int ae_open_cb(void *p, void *init) { (void)p; memcpy((void *)ae_init_w, init, sizeof(ae_init_w)); ae_n_open++; return 0; }
+static void ae_close_cb(void *p) { (void)p; ae_n_close++; }
+static void ae_handle_cb(void *p, void *info, void *attr)
+{
+    const uint32_t *i = info;
+    uint32_t *a = attr;
+
+    (void)p;
+    ae_info_w[0] = i[1936 / 4]; ae_info_w[1] = i[1936 / 4 + 1]; ae_info_w[2] = i[1936 / 4 + 2];
+    ae_info_w[3] = i[1976 / 4]; ae_info_w[4] = i[1976 / 4 + 1]; ae_info_w[5] = i[1976 / 4 + 2];
+    memset(a, 0, 56);
+    if (algo_mode == 2) { a[0] = 1; a[1] = 0; a[2] = 400; a[3] = 1024; a[4] = 1024; a[5] = 1024; }
+    ae_n_handle++;
+}
+static int ae_notify_cb(void *p, int n, void *d) { (void)p; (void)d; if (n == 0) ae_n_notify++; return 0; }
+static int awb_open_cb(void *p, void *init) { (void)p; (void)init; awb_n_open++; return 0; }
+static void awb_close_cb(void *p) { (void)p; awb_n_close++; }
+static void awb_handle_cb(void *p, void *info, void *attr)
+{
+    const uint32_t *i = info;
+    uint32_t *a = attr;
+
+    (void)p;
+    memcpy((void *)awb_info_w, i, sizeof(awb_info_w));
+    memset(a, 0, 16);
+    if (algo_mode == 2) { a[0] = 1; a[1] = 256; a[2] = 256; }
+    awb_n_handle++;
+}
+static int awb_notify_cb(void *p, int n, void *d) { (void)p; (void)n; (void)d; return 0; }
+static void *ae_rec[5] = { (void *)0x1234, (void *)ae_open_cb, (void *)ae_close_cb, (void *)ae_handle_cb, (void *)ae_notify_cb };
+static void *awb_rec[5] = { (void *)0x5678, (void *)awb_open_cb, (void *)awb_close_cb, (void *)awb_handle_cb, (void *)awb_notify_cb };
+
+static void algo_print(const char *at)
+{
+    printf("T32A %s ae open %d handle %d notify %d close %d | init maxit %u maxag %u fps 0x%x | info unit %u it %u ag %u hts %u vts %u fps 0x%x"
+           " | awb open %d handle %d close %d | info r %u b %u rs %u bs %u\n", at, ae_n_open, ae_n_handle, ae_n_notify, ae_n_close,
+           ae_init_w[9], ae_init_w[10], ae_init_w[25], ae_info_w[0], ae_info_w[1], ae_info_w[2], ae_info_w[3], ae_info_w[4], ae_info_w[5],
+           awb_n_open, awb_n_handle, awb_n_close, awb_info_w[0], awb_info_w[1], awb_info_w[2], awb_info_w[3]);
+    fflush(stdout);
+}
+
 static int step(const char *name, int rc)
 {
     printf("T32S %-40s rc=%d\n", name, rc);
@@ -709,6 +758,10 @@ int main(int argc, char **argv)
     }
     MUST(IMP_ISP_Open());
     MUST(IMP_ISP_AddSensor(IMPVI_MAIN, &si));
+    if (getenv("T32_ISP_ALGO") && (algo_mode = atoi(getenv("T32_ISP_ALGO")))) {
+        STEP(IMP_ISP_SetAeAlgoFunc(0, ae_rec));
+        STEP(IMP_ISP_SetAwbAlgoFunc(0, awb_rec));
+    }
     MUST(IMP_ISP_EnableSensor(IMPVI_MAIN, &si));
     if (osd)
         STEP(IMP_OSD_SetPoolSize(512 * 1024));
@@ -1134,9 +1187,20 @@ again:
         goto again;
     }
 teardown:
+    if (algo_mode) {
+        int (*sfps)(int, uint32_t *) = (int (*)(int, uint32_t *))dlsym(RTLD_DEFAULT, "IMP_ISP_Tuning_SetSensorFPS");
+        uint32_t f[2] = { 25, 1 };
+
+        algo_print("run");
+        if (sfps)
+            printf("T32A SetSensorFPS 25/1 rc %d\n", sfps(0, f));
+        algo_print("fps");
+    }
     STEP(IMP_ISP_DisableTuning());
     STEP(IMP_System_Exit());
     STEP(IMP_ISP_DisableSensor(IMPVI_MAIN));
+    if (algo_mode)
+        algo_print("disabled");
     STEP(IMP_ISP_DelSensor(IMPVI_MAIN, &si));
     STEP(IMP_ISP_Close());
     stream_copy_out();
