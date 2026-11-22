@@ -9,6 +9,13 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T31 CBR: IDR distance, HWRC IDR target, EP3 base and start QP like vendor 1.1.6 (#604)
+- **IDR distance.** The vendor GOP check (ValidateGopParam 0x77e30, run by AL_Codec_Encode_Create) rounds uGopLength * uMaxSameSenceCnt up to whole seconds of the rate: GOP 25 at 15 fps -> IDR every 30, GOP 50 -> 60. OpenIMP T31 coded an IDR every uGopLength. New helper src/t40/t31_vendor_hwrc.h (t31_vendor_idr_distance), used for the CreateChn GOP (run-time GOP setters unchanged).
+- **HWRC cmd[0x15]/cmd[0x18].** GetTargetSize (0x59afc): P = 85 % of the picture budget, IDR = min(budget * (1 + 0.15 * (GOP - 1)), CPB) * 95 %, spread over the HWRC grid (UpdateHwRateCtrlParam 0x5a740). The old fixed IDR factor (7.93 budgets) was this formula at GOP 50 only. Capture T31L 1080p CBR 1000 kbit 15 fps: IDR word vendor 0x14c (H.264) / 0x33e (H.265), open was 0x205 / 0x50f, now equal; 360p 0x515 (was 0x44f).
+- **EP3 tables.** PreprocessHwRateCtrl (0x59d64) takes a set pMaxPictureSize as the table base: CBR now uses uMaxPictureSize * 1000 (default 2 x bit rate) as T40 #556: IDR row 0 2850000, P 2035713 at 1000 kbit (vendor equal; open was 1425000 / 1017855).
+- **Start QP.** AL_Common_Encoder_ComputeRCParam (0x449dc) derives iInitialQP -1 from the bits-per-pixel table at rodata 0xe27e0 (rows equal to the T40 table): CBR first IDR QP 40 (H.264 1080p) / 33 (H.265) / 28 (360p 384 kbit) as the vendor; open started at 26.
+- Tests: tests/t31/hwrc_target_test.c (vendor command words of the capture and the older 360p/1080p oracles).
+
 ## 2026-11-22: docs: Release 1 release note draft with the T23 flip upgrade note (#795)
 - docs/releases/Release-1.md (new, in preparation): T23 H+V flip now flips both axes; cameras that had H+V set to get an upright picture must adjust their flip setting once.
 

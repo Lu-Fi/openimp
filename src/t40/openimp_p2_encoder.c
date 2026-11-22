@@ -1546,6 +1546,11 @@ extern int AL_Codec_Encode_SetRcOptionsT41(void *codec, uint32_t options);
 extern int AL_Codec_Encode_SetMaxPictureSizeT41(void *codec, uint32_t i_bits,
                                                 uint32_t p_bits, int set_p);
 #endif
+#if defined(PLATFORM_T31)
+#include "t40/t40_vendor_cmd.h"
+#include "t40/t31_vendor_hwrc.h"
+extern int AL_Codec_Encode_SetMaxPictureSizeT31(void *codec, uint32_t i_bits);
+#endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
 extern int AL_Codec_Encode_SetMaxPictureSizeT40(void *codec, uint32_t i_bits);
 extern int AL_Codec_Encode_SetRcOptionsT40(void *codec, uint32_t options);
@@ -1972,6 +1977,14 @@ static uint32_t p2_attr_gop_length(const IMPEncoderCHNAttr *attr)
      * seconds (not floored), ValidateGopParam rounds the IDR distance up
      * to a multiple of the rate: GOP 25 at 20 fps -> IDR every 40 */
     return p2_t41_create_distance(attr);
+#elif defined(PLATFORM_T31)
+    /* #604: vendor 1.1.6 codes an IDR every uGopLength * uMaxSameSenceCnt
+     * pictures rounded up to whole seconds of the rate (ValidateGopParam,
+     * t31_vendor_hwrc.h): GOP 25 at 15 fps -> 30 */
+    return t31_vendor_idr_distance(attr->gopAttr.uGopLength,
+                                   attr->gopAttr.uMaxSameSenceCnt,
+                                   attr->rcAttr.outFrmRate.frmRateNum,
+                                   attr->rcAttr.outFrmRate.frmRateDen);
 #else
     return attr->gopAttr.uGopLength;
 #endif
@@ -2130,7 +2143,7 @@ static const char *p2_rc_mode_name(unsigned int mode)
     }
 }
 
-#if defined(PLATFORM_T40) || defined(PLATFORM_T41)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T41) || defined(PLATFORM_T31)
 static int p2_t40_auto_initial_qp(const IMPEncoderCHNAttr *attr,
                                   uint32_t codec_type, uint32_t bitrate,
                                   uint32_t fps_num, uint32_t fps_den,
@@ -2241,6 +2254,17 @@ static void p2_codec_params(unsigned char *params, const IMPEncoderCHNAttr *attr
             /* T41 1.2.6 AL_Common_Encoder_ComputeRCParam (0xdb880) /
              * GetInitialQP (0xdb798): the same bits-per-pixel table as the
              * T40.  CBR only: its controller starts from this I QP. */
+            if (qp < 0 &&
+                attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
+                qp = p2_t40_auto_initial_qp(attr, codec_type, bitrate,
+                                            fps_num, fps_den,
+                                            min_qp, max_qp);
+#elif defined(PLATFORM_T31)
+            /* #604: T31 1.1.6 AL_Common_Encoder_ComputeRCParam (0x449dc):
+             * iInitialQP -1 takes the T40 bits-per-pixel table (rodata
+             * 0xe27e0, AVC / +0x120 HEVC, rows equal), vendor capture CBR
+             * 1080p 1000 kbit 15 fps: first IDR QP 40 (H.264) / 33 (H.265),
+             * 360p 384 kbit: 28.  CBR only so far (device-proven). */
             if (qp < 0 &&
                 attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR)
                 qp = p2_t40_auto_initial_qp(attr, codec_type, bitrate,
@@ -2917,6 +2941,12 @@ static int p2_create_chn(int channel, IMPEncoderCHNAttr *attr)
         AL_Codec_Encode_SetMaxPictureSizeT41(
             ch->codec, attr->rcAttr.attrRcMode.attrVbr.uMaxPictureSize * 1000u,
             0u, 0);
+#elif defined(PLATFORM_T31)
+    /* #604: vendor 1.1.6 CBR EP3 targets from uMaxPictureSize */
+    if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&
+        attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize <= 0xffffffffu / 1000u)
+        AL_Codec_Encode_SetMaxPictureSizeT31(
+            ch->codec, attr->rcAttr.attrRcMode.attrCbr.uMaxPictureSize * 1000u);
 #elif defined(PLATFORM_T40)
     /* #556: vendor 1.3.1 HEVC CBR EP3 targets from uMaxPictureSize */
     if (attr->rcAttr.attrRcMode.rcMode == IMP_ENC_RC_MODE_CBR &&

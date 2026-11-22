@@ -330,6 +330,11 @@ typedef struct ALAvpuContext {
     uint32_t hwrc_attr_min_qp;
     uint32_t hwrc_attr_max_qp;
 #endif
+#if defined(PLATFORM_T31)
+    /* #604 CBR: uMaxPictureSize * 1000 (0 = not set), base of the EP3 HWRC
+     * tables as the vendor 1.1.6 PreprocessHwRateCtrl (I; P 5/7). */
+    uint32_t t31_max_picture_bits;
+#endif
 #if defined(PLATFORM_T40) && !defined(PLATFORM_T41)
     /* FixQP: picture type whose lambda words EP1 holds (0 = not yet). */
     uint32_t t40_ep1_lambda_type;

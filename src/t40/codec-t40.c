@@ -71,6 +71,7 @@ static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #include "t31_stream_layout.h"
 #include "t31_eval_info.h"
 #include "t31_hevc_headers.h"
+#include "t31_vendor_hwrc.h"
 #endif
 #if defined(PLATFORM_T41)
 #include "t41_stream_layout.h"
@@ -1674,6 +1675,13 @@ static size_t avpu_t40_init_ep3_ring(ALAvpuContext *ctx)
         ctx->t40_max_picture_bits &&
         avpu_t40_knob(AVPU_T40_KNOB_HEVC_HWRC_QP, "OPENIMP_T40_HEVC_HWRC_QP"))
         bitrate = ctx->t40_max_picture_bits;
+#elif defined(PLATFORM_T31)
+    /* #604 (vendor 1.1.6 PreprocessHwRateCtrl 0x59d64, T31L capture CBR
+     * 1000 / 384 kbit): a set pMaxPictureSize replaces GetTargetSize as the
+     * table base: IDR row 0 = 2000000 * 95 % * 150 % (uMaxPictureSize
+     * default 2 x bit rate), P 5/7 of it. */
+    if (ctx->rc_mode == HW_RC_MODE_CBR && ctx->t31_max_picture_bits)
+        bitrate = ctx->t31_max_picture_bits;
 #endif
     memset(base, 0,
            AVPU_T40_EP3_SLOT_SIZE * AVPU_T40_EP3_SLOT_COUNT);
@@ -3516,12 +3524,22 @@ static void avpu_t31_hevc_fill_cmd(const ALAvpuContext *ctx, uint32_t *cmd,
                     (((group_count - 1u) & 0x3ffu) << 6) |
                     ((columns_per_group - 1u) & 0x3fu);
         per_group = bitrate * fps_den * group_count;
+#if defined(PLATFORM_T31)
+        /* #604: vendor GetTargetSize over the HWRC grid (t31_vendor_hwrc.h):
+         * the IDR target grows with the GOP length. */
+        word15 = t31_vendor_hwrc_word15(
+            t31_vendor_target_size((uint32_t)bitrate, fps_num, fps_den,
+                                   ctx->gop_length ? ctx->gop_length : 25u,
+                                   is_idr),
+            group_count, ctb_count);
+#else
         if (is_idr)
             word15 = (uint32_t)(per_group * 8u / ((uint64_t)ctb_count * fps_num) *
                                 9914u / 10000u);
         else
             word15 = (uint32_t)(per_group * 17u /
                                 ((uint64_t)ctb_count * fps_num * 20u));
+#endif
         cmd[0x15] = word15 & 0x00ffffffu;
         cmd[0x16] = 0x3f000000u |
                     ((uint32_t)(per_group / ((uint64_t)ctb_count * fps_num)) &
@@ -5651,17 +5669,16 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
          * command-list semantics:
          *
          *   - initial IDR QP is one below the common bits-per-LCU estimate;
-         *   - cmd[0x15] is the per-picture target distributed over the T31
-         *     HWRC grid (the 9914/10000 factor recovers OEM's integer seed);
+         *   - cmd[0x15] is the vendor GetTargetSize picture target
+         *     distributed over the T31 HWRC grid (#604);
          *   - cmd[0x16] is the long-term per-frame target;
          *   - cmd[0x18]'s low field is cmd[0x15] in 128-bit units.
          *
-         * For the captured 640x360, 25 fps, 1 Mbps oracle this produces the
-         * exact OEM IDR values 0x6bc, 0x3f000121 and 0xc210000d without
+         * For the captured 640x360, 25 fps, 1 Mbps, GOP 50 oracle this
+         * produces the exact OEM IDR values 0x6bc, 0x3f000121 and 0xc210000d without
          * baking that resolution or bitrate into the implementation.
          */
         uint32_t t31_picture_qp = picture_qp;
-        uint64_t t31_picture_target;
         uint64_t t31_long_term_target;
         uint32_t t31_picture_number =
             is_idr ? 0u : ctx->frame_number - ctx->idr_frame_number;
@@ -5672,30 +5689,18 @@ static void fill_cmd_regs_enc1(const ALAvpuContext* ctx, uint32_t* cmd,
         if (t31_picture_qp > max_qp)
             t31_picture_qp = max_qp;
 
-        t31_picture_target =
-            (uint64_t)(ctx->bitrate ? ctx->bitrate : 2000000u) *
-            fps_den * hwrc_group_count * 8u;
-        if (lcu_count != 0u && fps_num != 0u)
-            t31_picture_target /= (uint64_t)lcu_count * fps_num;
-        else
-            t31_picture_target = 0u;
-        if (is_idr) {
-            hwrc_word15 =
-                (uint32_t)((t31_picture_target * 9914u) / 10000u);
-        } else if (lcu_count != 0u && fps_num != 0u) {
-            /*
-             * OEM P pictures use 85% of the long-term bits-per-group target.
-             * Keep the fractional precision until the final divide: this
-             * recovers both captured values exactly (0x64 at 1080p/3 Mbps
-             * and 0xb8 at 360p/1 Mbps).
-             */
-            hwrc_word15 = (uint32_t)(
-                (uint64_t)(ctx->bitrate ? ctx->bitrate : 2000000u) *
-                fps_den * hwrc_group_count * 17u /
-                ((uint64_t)lcu_count * fps_num * 20u));
-        } else {
-            hwrc_word15 = 0u;
-        }
+        /*
+         * #604: vendor GetTargetSize (0x59afc) spread over the HWRC grid
+         * (UpdateHwRateCtrlParam 0x5a740), t31_vendor_hwrc.h: P = 85 % of
+         * the per-picture budget, IDR = (1 + 0.15 * (GOP - 1)) budgets
+         * capped at the CPB, times 95 %.  The old fixed IDR factor 7.93
+         * (0x6bc at 360p/1 Mbps) was this formula at GOP 50 only.
+         */
+        hwrc_word15 = t31_vendor_hwrc_word15(
+            t31_vendor_target_size(
+                ctx->bitrate ? ctx->bitrate : 2000000u, fps_num, fps_den,
+                ctx->gop_length ? ctx->gop_length : 25u, is_idr),
+            hwrc_group_count, lcu_count);
         if (lcu_count != 0u && fps_num != 0u) {
             t31_long_term_target =
                 (uint64_t)(ctx->bitrate ? ctx->bitrate : 2000000u) *
@@ -15088,6 +15093,17 @@ int AL_Codec_Encode_SetMaxPictureSizeT41(void *codec, uint32_t i_bits,
            sizeof(enc->avpu.t41_max_picture_bits));
     LOG_CODEC("SetMaxPictureSize: codec=%p I=%u P=%u bits", codec,
               enc->t41_max_picture_bits[2], enc->t41_max_picture_bits[1]);
+    return 0;
+}
+#endif
+
+#if defined(PLATFORM_T31)
+/* #604: uMaxPictureSize of a CBR channel in bits (EP3 HWRC targets). */
+int AL_Codec_Encode_SetMaxPictureSizeT31(void *codec, uint32_t i_bits)
+{
+    if (codec == NULL)
+        return -1;
+    ((AL_CodecEncode *)codec)->avpu.t31_max_picture_bits = i_bits;
     return 0;
 }
 #endif

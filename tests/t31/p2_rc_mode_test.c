@@ -247,6 +247,9 @@ int AL_Codec_Encode_SetQpIPDelta(void *c, int a)
     ip_delta = a;
     return 0;
 }
+#if defined(PLATFORM_T31)
+int AL_Codec_Encode_SetMaxPictureSizeT31(void *c, uint32_t b) { (void)c; (void)b; return 0; }
+#endif
 int AL_Codec_Encode_SetRcParam(void *c, void *p)
 {
     IMPEncoderRcAttr *rc = p;
