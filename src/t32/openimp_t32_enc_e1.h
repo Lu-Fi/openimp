@@ -46,4 +46,16 @@ typedef struct {
 } T32E1Gdr;
 void OpenIMP_T32_E1GdrTake(int encChn, T32E1Gdr *g);
 
+/* The per-picture P-skip fields of the vendor 2.0.2.1 encode loop (H.264
+ * 0xde428, H.265 0xdf4cc): with SetPskipCfg on, thr = t32_pskip_thr()
+ * (openimp_t32_pskip.h); en = 1, maxFrames; off: all 0.  req = RequestPskip (taken: the
+ * channel flag is cleared; independent of en).  i264e_update_fenc puts them
+ * at F+0x160 / 0x165 / 0x166 / 0x168, I265eFrame::recvPic at frame +0xf8 /
+ * 0xfe / 0xff / 0x100. */
+typedef struct {
+    uint32_t thr, max_frames;
+    uint8_t en, req;
+} T32E1Pskip;
+void OpenIMP_T32_E1PskipTake(int encChn, int rc_mode, uint32_t bitrate, T32E1Pskip *p);
+
 #endif

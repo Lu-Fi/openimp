@@ -122,6 +122,8 @@ int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p);
 /* ROI regions (#726): 16 records of 9 bytes into the parameter block's ROI table */
 void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9]);
 /* the picture's intra-refresh (GDR) fields to the controller (#784; T33 H.265 too) */
+/* the picture's P-skip fields to the controller (#784; T33 H.265 too) */
+void t32_rc_pskip(T32Rc *rc, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames);
 void t32_rc_gdr(T32Rc *rc, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
                 uint32_t cycle);
 

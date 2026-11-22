@@ -364,6 +364,16 @@ void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode)
     e33_st_U8(&c->X, A_F + 0x164, mode);
 }
 
+void t32_rc33_set_pskip(T32Rc33 *c, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames)
+{
+    E33 *X = &c->X;
+
+    e33_st_U32(X, A_F + 0x160, thr);
+    e33_st_U8(X, A_F + 0x165, en);
+    e33_st_U8(X, A_F + 0x166, req);
+    e33_st_U32(X, A_F + 0x168, max_frames);
+}
+
 void t32_rc33_set_gdr(T32Rc33 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
                       uint32_t cycle)
 {
@@ -1258,6 +1268,16 @@ static void t65_take_pending(T32Rc65 *c)
     t32_rc65_configure(c);
 }
 #endif
+
+void t32_rc65_set_pskip(T32Rc65 *c, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames)
+{
+    E33 *X = &c->X;
+
+    e33_st_U32(X, A5_F + 0x22e8, thr);
+    e33_st_U8(X, A5_F + 0x22ee, en);
+    e33_st_U8(X, A5_F + 0x22ef, req);
+    e33_st_U32(X, A5_F + 0x22f0, max_frames);
+}
 
 void t32_rc65_set_gdr(T32Rc65 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
                       uint32_t cycle)
