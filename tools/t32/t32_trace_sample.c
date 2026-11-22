@@ -90,6 +90,8 @@ int IMP_Encoder_SetJpegMultiSectionMode(int mode, int size, int cnt);   /* T33 2
 int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt);
 int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize);
 int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize);
+int IMP_Encoder_SetChnFrmUsedMode(int encChn, const IMPEncoderAttrFrmUsed *attr);
+int IMP_Encoder_GetChnFrmUsedMode(int encChn, IMPEncoderAttrFrmUsed *attr);
 int IMP_OSD_CreateGroup(int grpNum);
 int IMP_OSD_DestroyGroup(int grpNum);
 IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *prAttr);
@@ -882,6 +884,18 @@ again:
         }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
+        if (getenv("T32_ENC_FRMUSED")) {        /* #784: "E:M:T" SetChnFrmUsedMode after CreateChn */
+            IMPEncoderAttrFrmUsed fu = {0}, rb = {0};
+            int e = 0, m = 0, t = 0;
+
+            sscanf(getenv("T32_ENC_FRMUSED"), "%d:%d:%d", &e, &m, &t);
+            fu.enable = e != 0;
+            fu.frmUsedMode = (EncFrmUsedMode)m;
+            fu.frmUsedTimes = (uint32_t)t;
+            STEP(IMP_Encoder_SetChnFrmUsedMode(0, &fu));
+            STEP(IMP_Encoder_GetChnFrmUsedMode(0, &rb));
+            printf("T32S frmused %d %d %u\n", (int)rb.enable, (int)rb.frmUsedMode, rb.frmUsedTimes);
+        }
         if (osd) {
             MUST(osd_setup());
             MUST(IMP_System_Bind(&src, &ocell));
