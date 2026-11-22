@@ -31,6 +31,7 @@
 #define T32_ENC_ERR_PARAM   ((int)0x80040002)
 #define T32_ENC_ERR_NOCHN   ((int)0x80040008)
 #define T32_ENC_ERR_MODE    ((int)0x80040080)
+#define E1_ERR_PARAM        ((int)0x80040002)
 #define E1_ERR_NULL         ((int)0x80040010)
 #define E1_ERR_FULL         ((int)0x80040800)
 #define E1_ERR_OFF          ((int)0x80048000)
@@ -54,7 +55,7 @@ struct t32_e1 {
     IMPEncoderCropCfg crop, crop_pend;
     int qpg, qpg_pend;
     IMPEncoderSrdCfg srd, srd_pend;
-    int changeref, grey, mbrc, pskip_req, gdr_req, pad, trig_mode;
+    int changeref, grey, mbrc, pskip_req, gdr_req, gdr_req_frames, pad, trig_mode;
     uint32_t trig_level;
     uint8_t pad_attr[32];
     IMPEncoderGDRCfg gdr;
@@ -589,10 +590,37 @@ int IMP_Encoder_RequestGDR(int encChn, int gdrFrames)
 
     pthread_mutex_lock(&e1_lock);
     rc = e1_get(encChn, &ci);
-    if (!rc)
-        E1.gdr_req = gdrFrames >= 2 && gdrFrames <= 10 ? gdrFrames : E1.gdr.gdrFrames;
+    if (!rc) {
+        /* vendor 0x1087a0: frames 2..10, else the configured frames (none: error) */
+        if (gdrFrames >= 2 && gdrFrames <= 10)
+            E1.gdr_req_frames = gdrFrames;
+        else if (E1.gdr.gdrFrames)
+            E1.gdr_req_frames = E1.gdr.gdrFrames;
+        else
+            rc = E1_ERR_PARAM;
+        if (!rc)
+            E1.gdr_req = 1;
+    }
     pthread_mutex_unlock(&e1_lock);
     return rc;
+}
+
+void OpenIMP_T32_E1GdrTake(int encChn, T32E1Gdr *g)
+{
+    memset(g, 0, sizeof(*g));
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return;
+    pthread_mutex_lock(&e1_lock);
+    g->gate = 1;
+    g->en = E1.gdr.enable != 0;
+    if (g->en) {
+        g->frames = (uint32_t)E1.gdr.gdrFrames;
+        g->cycle = (uint32_t)E1.gdr.gdrCycle;
+    }
+    g->req = E1.gdr_req != 0;
+    E1.gdr_req = 0;
+    g->req_frames = (uint32_t)E1.gdr_req_frames;
+    pthread_mutex_unlock(&e1_lock);
 }
 
 int IMP_Encoder_SetPskipCfg(int encChn, const IMPEncoderPskipCfg *p)

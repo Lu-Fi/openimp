@@ -25,10 +25,17 @@ HDR_SRC := hdr784_test.c $(PROJECT_DIR)/src/t32/openimp_t32_h264.c $(PROJECT_DIR
 	$(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/radix/t30_radix_cabac.c \
 	$(PROJECT_DIR)/src/t30/h264enc/cabac.c $(PROJECT_DIR)/src/t30/h264enc/common.c
 
+# #784: intra refresh (GDR) picture types and the controller's MB flag map vs vendor 2.0.2.1 (QEMU)
+GDR_BIN := $(BUILD)/t33-gdr784-test
+GDR_SRC := gdr784_test.c $(PROJECT_DIR)/src/t32/openimp_t32_rc.c $(PROJECT_DIR)/src/eprc/eprc.c \
+	$(PROJECT_DIR)/src/eprc/eprc_mbrc.c $(PROJECT_DIR)/src/t32/openimp_t32_rc33.c \
+	$(PROJECT_DIR)/src/eprc/eprc_t33_h264.c $(PROJECT_DIR)/src/eprc/eprc_t33_h265.c
+
 .PHONY: check
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN)
 	$(YUV_BIN)
 	$(HDR_BIN)
+	$(GDR_BIN)
 	gzip -dc vendor-2.0.2.1-hera-h264.txt.gz vendor-2.0.2.1-hera-h265.txt.gz > $(BUILD)/t33-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t33-hera-lists.txt
 	gzip -dc vendor-2.0.2.1-osd-sw.txt.gz > $(BUILD)/t33-osd-sw.txt
@@ -47,6 +54,11 @@ $(HDR_BIN): $(HDR_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_h264.h $(PROJECT_DIR)/
 	$(PROJECT_DIR)/src/t32/openimp_t32_hera.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(HDR_SRC) -lm
+
+$(GDR_BIN): $(GDR_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_gdr.h $(PROJECT_DIR)/src/t32/openimp_t32_rc.h \
+	$(PROJECT_DIR)/src/t32/openimp_t32_rc33.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off '-D_Static_assert(c,m)=' $(INC) -o $@ $(GDR_SRC) -lm
 
 # stand-alone YUV / JPEG encoder (#752): vendor argument checks, return codes, parameter maps
 $(YUV_BIN): yuv_rc_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvrc.h

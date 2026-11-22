@@ -9,6 +9,13 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T33 GDR (intra refresh) like vendor 2.0.2.1 (#784, part 3)
+
+- **Encoder_SetGDRCfg / RequestGDR (T32/T33, H.264 and H.265)**: the per-picture fields of the vendor encode loop (0xde3e8 / 0xdf48c: gate, request, enable, request frames, frames, cycle) go to the controller (i264e F+0x151..0x15c, i265e F+0x22d8..0x22e4), and the picture type follows i264e_decide_slice_type_and_rd (0x7062c): no periodic IDR while GDR is on, a request codes a P and moves the next IDR one GOP after it, RequestGDR checks the frames like the vendor (0x80040002 without frames).
+- QEMU A/B (CBR, 1920x1088, GOP 15, GDR 1/30/5 at picture 2, RequestGDR 5 at 26): H.264 per-MB flag maps (EMC 0x90030, new HERA_CAP_MBMAP capture) byte-equal to the vendor in all 50 jobs (0x9000 on MB rows 0-12, 13-25, 26-39, 40-53, 54-67 in pictures 26-30), no non-address HERA register difference, no IDR after picture 0 on both. H.265: MD_GDR masks (0x40400..) equal; the vendor applies H.265 requests (RequestIDR too) one picture later.
+- Open: FIXQP runs no T33 H.264 controller in OpenIMP, so GDR gives no refresh bands there (vendor: bands), #790; the H.265 request picture, #791. T33L (OpenIMP): 70 frames GOP 30 without IDR, apitest PASS 379 FAIL 0.
+- Tests: tests/t33/gdr784_test.c (picture-type rule, controller MB map vs the vendor bands); apitest t33e1 GDR stream case (70 frames: IDR list, sizes); t32_trace_sample `T32_X_NOIDR=1` (X calls without the IDR).
+
 ## 2026-11-22: T33 H265TransCfg like vendor 2.0.2.1 (#784, part 2)
 
 - **Encoder_Get/SetH265TransCfg (T33: cache -> dev)**: from the next IDR the larger of the two offsets (clipped to -12..12) goes to cb and cr in the PPS and the HERA list (0x38004, 0x4001c, 0x50004), as the vendor in QEMU ({13,0} -> 12, {-2,3} -> 3, {-5,-2} -> -2); T33L PPS equal. One apitest sequence before the first stream still differs (vendor 12/12, OpenIMP 3/3), noted in the evidence.

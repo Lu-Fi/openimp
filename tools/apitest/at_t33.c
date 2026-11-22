@@ -984,7 +984,7 @@ static void e1_hex(const void *p, size_t n, char *out, size_t cap)
 }
 
 typedef struct {
-    int h265, idr[64], nidr, sei, user, frames;
+    int h265, idr[64], nidr, sei, user, frames, sz[16];
     char sps[200], pps[120], seihex[120];
 } E1Scan;
 
@@ -993,6 +993,7 @@ static void e1_cb(const unsigned char *b, size_t n, int k, void *arg)
     E1Scan *e = arg;
     size_t i, j;
 
+    if (k >= 0 && k < 16) e->sz[k] = (int)n;
     e->frames++;
     for (i = 0; i + 4 < n; i++) {
         unsigned t;
@@ -1252,7 +1253,21 @@ static void e1_live(int h265)
         q1 = IMP_Encoder_RequestGDR(0, 5); q2 = IMP_Encoder_RequestGDR(0, 1);
         rep("IMP_Encoder_RequestGDR", 0, V_PASS, "%s: GDR on: 5 0x%x, 1 0x%x", cn, X(q1), X(q2));
         IMP_Encoder_RequestGDR(0, 5);
-        e1_stream("IMP_Encoder_RequestGDR", h265, 12, 0, "GDR 1/30/5 after RequestGDR 5");
+        {   /* #784: vendor 2.0.2.1 (QEMU vgc / v5gc): no periodic IDR while GDR runs; the request codes
+             * five refresh pictures (H.264 MB rows 0-12, 13-25, 26-39, 40-53, 54-67) */
+            E1Scan e;
+            char ids[200];
+            IMPEncoderGOPSizeCfg gs = { -1 };
+
+            memset(&e, 0, sizeof(e));
+            e.h265 = h265;
+            if (IMP_Encoder_GetGOPSize) IMP_Encoder_GetGOPSize(0, &gs);
+            enc_e1_pull(0, 70, e1_cb, &e);
+            e1_idrs(&e, ids, sizeof(ids));
+            rep("IMP_Encoder_RequestGDR", 0, e.frames == 70 && e.nidr == 0 ? V_PASS : V_FAIL,
+                "%s: GDR 1/30/5 after RequestGDR 5: %d frames (GOP %d), IDR at %s; bytes %d %d %d %d %d %d | %d %d %d", cn, e.frames, gs.gopsize,
+                e.nidr ? ids : "none", e.sz[0], e.sz[1], e.sz[2], e.sz[3], e.sz[4], e.sz[5], e.sz[6], e.sz[7], e.sz[8]);
+        }
         IMP_Encoder_SetGDRCfg(0, &off); IMP_Encoder_GetGDRCfg(0, &g5);
         rep("IMP_Encoder_GetGDRCfg", 0, V_PASS, "%s: off -> get %d/%d/%d", cn, (int)g5.enable, g5.gdrCycle, g5.gdrFrames);
     }

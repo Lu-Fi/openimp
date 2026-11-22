@@ -97,6 +97,11 @@ void t32_rc33_init(T32Rc33 *c);
 /* the per-picture motion mode (F+0x164): i264e_update_fenc sets 2, the
  * unicorn reference runs leave 0 */
 void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode);
+/* the picture's intra-refresh fields (i264e_update_fenc 0x6ff80 from the
+ * picture parameters: F+0x151 gate, 0x152 request, 0x153 enable, 0x154
+ * request frames, 0x158 frames, 0x15c cycle), taken by the next start */
+void t32_rc33_set_gdr(T32Rc33 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
+                      uint32_t cycle);
 /* i264e_ratecontrol_start for the picture @since_idr pictures after the
  * last IDR (0: IDR): the picture QP, -1 when the controller's picture type
  * does not match (the vendor logs and keeps the last QP).  At an IDR with
@@ -250,6 +255,12 @@ int t32_rc65_init(T32Rc65 *c);
 /* I265eRatectrl_rcStart for a picture the encoder codes as @idr (an I
  * picture) or P: the picture QP, -1 when the controller's picture type
  * differs (the vendor aborts; the QP of the last picture stays in c->qp) */
+/* the picture's intra-refresh fields (F+0x22d8 gate, 0x22d9 request, 0x22da
+ * enable, 0x22dc request frames, 0x22e0 frames, 0x22e4 cycle; the vendor
+ * 2.0.2.1 encode loop 0xdf48c fills them from the channel), taken by the
+ * next rcStart */
+void t32_rc65_set_gdr(T32Rc65 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
+                      uint32_t cycle);
 int t32_rc65_start(T32Rc65 *c, int idr);
 /* the row words rcEnd reads: revision 6 after an I picture the coded size
  * of every 64-line row as for H.264 (T33_HERA_ROW_SEL / T33_HERA_ROW);

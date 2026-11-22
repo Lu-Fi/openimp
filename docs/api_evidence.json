@@ -7631,14 +7631,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "audit: userspace implementation T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (cycle outside 3..65535 -> 120, frames outside 2..10 -> 6, off keeps the rest); no GDR refresh; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): stored at chn+0x14ec..0x14f4, read per picture by the encode loop (0xee3e8 / 0xef48c) into the picture request (+0x7b8 ..) -> the vendor applies it; still cache in OpenIMP (port open in #784). QEMU H.264 FIXQP (#784, runs vb20 / vgdr2): with GDR on (1/30/5) the vendor writes no periodic IDR any more (baseline IDR every 15 frames; GDR run: P only from frame 11 to 44), the HERA registers of the P pictures do not change, so the refresh lives in the per-MB maps (not captured yet).",
+      "note": "audit: userspace implementation T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (cycle outside 3..65535 -> 120, frames outside 2..10 -> 6, off keeps the rest); no GDR refresh; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): stored at chn+0x14ec..0x14f4, read per picture by the encode loop (0xee3e8 / 0xef48c) into the picture request (+0x7b8 ..) -> the vendor applies it; ported in part 3. QEMU H.264 FIXQP (#784, runs vb20 / vgdr2): with GDR on (1/30/5) the vendor writes no periodic IDR any more (baseline IDR every 15 frames; GDR run: P only from frame 11 to 44), the HERA registers of the P pictures do not change, so the refresh lives in the per-MB maps (not captured yet). Port (2026-11-22, #784 part 3): the per-picture fields of the encode loop go to the controller (H.264 F+0x151..0x15c, H.265 F+0x22d8..0x22e4) and the picture type follows i264e_decide_slice_type_and_rd (0x7062c, Ghidra 0x8062c): no periodic IDR while GDR is on, a request codes a P and moves the next IDR one GOP after it. QEMU CBR A/B (vgc/ogc, HERA_CAP_MBMAP): H.264 MB flag maps byte-equal in all 50 jobs (0x9000 on MB rows 0-12/13-25/26-39/40-53/54-67 after RequestGDR 5), no non-address register difference; H.265 (v5g2/o5g2) MD_GDR masks equal, the vendor applies H.265 requests (RequestIDR too) one picture later. T33L d4 (OpenIMP): 70 frames GOP 30 without IDR, H.264 refresh pictures 6435..2727 bytes then 795. Open: FIXQP gives no bands (#790).",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33-cache d4 2026-11-22 .122 (OpenIMP): GDR 1/30/5 + RequestGDR 5, 70 frames, IDR none; QEMU HERA vgc = ogc (MB maps, CBR), v5g2 / o5g2 (H.265)"
       }
     },
     "Encoder_Get/SetH264TransCfg": {
@@ -8710,14 +8710,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
       },
-      "note": "audit: userspace implementation T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal; no GDR refresh; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x14f8/0x14fc, read and cleared per picture by the encode loop (0xee40c) -> the vendor applies it; still cache in OpenIMP (port open in #784). QEMU (#784, vgdr2): no register change on the requested pictures; the refresh is not visible in the HERA registers (per-MB maps, not captured yet).",
+      "note": "audit: userspace implementation T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal; no GDR refresh; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x14f8/0x14fc, read and cleared per picture by the encode loop (0xee40c) -> the vendor applies it; ported in part 3. QEMU (#784, vgdr2): no register change on the requested pictures; the refresh is not visible in the HERA registers (per-MB maps, not captured yet). Port (2026-11-22, #784 part 3): the per-picture fields of the encode loop go to the controller (H.264 F+0x151..0x15c, H.265 F+0x22d8..0x22e4) and the picture type follows i264e_decide_slice_type_and_rd (0x7062c, Ghidra 0x8062c): no periodic IDR while GDR is on, a request codes a P and moves the next IDR one GOP after it. QEMU CBR A/B (vgc/ogc, HERA_CAP_MBMAP): H.264 MB flag maps byte-equal in all 50 jobs (0x9000 on MB rows 0-12/13-25/26-39/40-53/54-67 after RequestGDR 5), no non-address register difference; H.265 (v5g2/o5g2) MD_GDR masks equal, the vendor applies H.265 requests (RequestIDR too) one picture later. T33L d4 (OpenIMP): 70 frames GOP 30 without IDR, H.264 refresh pictures 6435..2727 bytes then 795. Open: FIXQP gives no bands (#790).",
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33-cache d4 2026-11-22 .122 (OpenIMP): GDR 1/30/5 + RequestGDR 5, 70 frames, IDR none; QEMU HERA vgc = ogc (MB maps, CBR), v5g2 / o5g2 (H.265)"
       }
     },
     "Encoder_RequestIDR": {

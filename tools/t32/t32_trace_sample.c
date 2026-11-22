@@ -977,7 +977,8 @@ again:
                         }
 #undef XF
                         printf("T32C %d X %s = %d (0x%x)\n", i, nm, r, (unsigned)r);
-                        printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
+                        if (!getenv("T32_X_NOIDR"))     /* #784: GDR / Pskip need the pictures without an IDR */
+                            printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
                     }
                 }
                 ch = strchr(ch, ',');
