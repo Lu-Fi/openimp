@@ -515,6 +515,69 @@ static void test_sub_stream_lists(void)
     assert(p.recon_y != r.base_y);     /* the old 39-picture period is gone */
 }
 
+#if defined(T21_HELIX_T23_DELTAS)
+/* #799 step 4: vendor 1.3.0 command lists in QEMU A12 (audit issue799
+ * s4/vt-v1.log).  Exact ring (no 64-line rounding): 360p ring Y 0x1e1ec00
+ * .. 0x1e80400 (624 lines), C +0x100 .. +199680; 720p 976 lines.  P1 wrap
+ * byte 0x26 (360p) and 0x3c (720p) must survive in 0x50000 bits 14..21;
+ * 0x10010, 0x800fc, 0x801cc, 0x801c0 and 0x80198[0] as the vendor. */
+static void test_vendor_t23_exact(void)
+{
+    static const struct {
+        unsigned int w, h;
+        uint32_t ring_y, wrap, r10010, b0000, r50000;
+    } v[] = {
+        { 640, 360, 399360u, 0x26u, 0x00e601ccu, 0x00022663u, 0x544999b1u },
+        { 1280, 720, 1249280u, 0x3cu, 0x03840708u, 0x00023c63u, 0x544f19b1u },
+    };
+    size_t k;
+
+    for (k = 0; k < 2; k++) {
+        T21H264SliceConfig c;
+        T21RefRing r;
+        T21RefRingPos p;
+        size_t pairs = 0;
+        uint32_t mbw = (v[k].w + 15u) / 16u, mbh = (v[k].h + 15u) / 16u;
+
+        t21_ref_ring_init_ex(&r, 0x01e1ec00u, mbw, mbh, 1);
+        assert(r.ring_y == v[k].ring_y && r.ring_c == v[k].ring_y / 2u);
+        assert(t21_ref_ring_bytes_ex(mbw, mbh, 1) ==
+               v[k].ring_y * 3u / 2u + 0x100u);
+        t21_ref_ring_pos(&r, 1, &p);
+        assert(p.wrap_rows == v[k].wrap);
+        fill(&c, 1, v[k].w, v[k].h);
+        c.ref_share = 1;
+        c.ring_flags = T21_RING_VENDOR_ME;
+        c.ring_wrap_rows = p.wrap_rows;
+        c.ring_start_y = p.start_y;
+        c.ring_start_c = p.start_c;
+        c.ring_end_y = p.end_y;
+        c.ring_end_c = p.end_c;
+        c.reference_y = p.ref_y;
+        c.reference_c = p.ref_c;
+        c.output_y = p.recon_y;
+        c.output_c = p.recon_c;
+        assert(T21_H264_BuildDescriptor(&c, &pairs) == 0);
+        assert(get(pairs, 0x50000) == v[k].r50000);
+        assert(get(pairs, 0xb0000) == v[k].b0000);
+        assert(get(pairs, 0x10010) == v[k].r10010);
+        assert(get(pairs, 0x800fc) == 0x55004304u);
+        assert(get(pairs, 0x801cc) == 0x00430000u);
+        assert(get(pairs, 0x801c0) == 0x30000006u);
+        assert(get(pairs, 0x80198) == 0x88888000u);
+    }
+    /* 1080p: the vendor 0x10010 equals the T21 form */
+    {
+        T21H264SliceConfig c;
+        size_t pairs = 0;
+
+        fill(&c, 0, 1920, 1080);
+        assert(T21_H264_BuildDescriptor(&c, &pairs) == 0);
+        assert(get(pairs, 0x10010) == ((120u * 17u << 16) | 120u * 34u));
+    }
+}
+#endif
+
 int main(void)
 {
     test_qp_fields();
@@ -540,6 +603,9 @@ int main(void)
     test_registers(1);
     test_oem_values();
     test_vendor_t23();
+#if defined(T21_HELIX_T23_DELTAS)
+    test_vendor_t23_exact();
+#endif
     test_sub_stream_evidence();
     test_sub_stream_lists();
     {

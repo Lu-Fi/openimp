@@ -44,6 +44,16 @@ static inline uint32_t t21_ref_ring_lines(uint32_t mb_height)
     return (mb_height * 16u + 63u) & ~63u;
 }
 
+/* exact != 0: the vendor T23 1.3.0 ring, picture lines not rounded
+ * (BUF_SHARE_CFG @0x358a0: (mb_height * 16 + (3 + 1) * 64) lines; QEMU
+ * A12 trace: 976 lines at 720p, 624 at 360p).  The 64-line rounding
+ * above was only needed while 0x50000 bits 14/15 were forced on, which
+ * corrupted a wrap byte with its low bits clear (#799 step 4). */
+static inline uint32_t t21_ref_ring_lines_ex(uint32_t mb_height, int exact)
+{
+    return exact ? mb_height * 16u : t21_ref_ring_lines(mb_height);
+}
+
 typedef struct {
     uint32_t base_y, base_c;    /* ring start */
     uint32_t ring_y, ring_c;    /* ring sizes in bytes */
@@ -61,16 +71,22 @@ typedef struct {
 } T21RefRingPos;
 
 /* Bytes for one macroblock-aligned mb_width x mb_height picture. */
-static inline uint32_t t21_ref_ring_bytes(uint32_t mb_width,
-                                          uint32_t mb_height)
+static inline uint32_t t21_ref_ring_bytes_ex(uint32_t mb_width,
+                                             uint32_t mb_height, int exact)
 {
     uint32_t stride = mb_width * 16u;
 
-    uint32_t lines = t21_ref_ring_lines(mb_height);
+    uint32_t lines = t21_ref_ring_lines_ex(mb_height, exact);
 
     return (lines + T21_REF_RING_EXTRA_LINES) * stride +
            T21_REF_RING_CHROMA_GAP +
            (lines / 2u + T21_REF_RING_EXTRA_LINES / 2u) * stride;
+}
+
+static inline uint32_t t21_ref_ring_bytes(uint32_t mb_width,
+                                          uint32_t mb_height)
+{
+    return t21_ref_ring_bytes_ex(mb_width, mb_height, 0);
 }
 
 /* Bytes of the two separate reference pictures (one macroblock: 256 luma
@@ -82,10 +98,16 @@ static inline uint32_t t21_ref_pair_bytes(uint32_t mb_width,
 }
 
 /* The ring only pays off when it is smaller than the two references. */
+static inline int t21_ref_ring_saves_ex(uint32_t mb_width,
+                                        uint32_t mb_height, int exact)
+{
+    return t21_ref_ring_bytes_ex(mb_width, mb_height, exact) <
+           t21_ref_pair_bytes(mb_width, mb_height);
+}
+
 static inline int t21_ref_ring_saves(uint32_t mb_width, uint32_t mb_height)
 {
-    return t21_ref_ring_bytes(mb_width, mb_height) <
-           t21_ref_pair_bytes(mb_width, mb_height);
+    return t21_ref_ring_saves_ex(mb_width, mb_height, 0);
 }
 
 /* OPENIMP_REF_SHARE_GAP=0 drops the chroma gap (experiment). */
@@ -96,11 +118,12 @@ static inline uint32_t t21_ref_ring_gap(void)
     return env && env[0] == '0' ? 0u : T21_REF_RING_CHROMA_GAP;
 }
 
-static inline void t21_ref_ring_init(T21RefRing *r, uint32_t base,
-                                     uint32_t mb_width, uint32_t mb_height)
+static inline void t21_ref_ring_init_ex(T21RefRing *r, uint32_t base,
+                                        uint32_t mb_width, uint32_t mb_height,
+                                        int exact)
 {
     uint32_t stride = mb_width * 16u;
-    uint32_t lines = t21_ref_ring_lines(mb_height);
+    uint32_t lines = t21_ref_ring_lines_ex(mb_height, exact);
 
     r->ring_y = (lines + T21_REF_RING_EXTRA_LINES) * stride;
     r->ring_c = (lines / 2u + T21_REF_RING_EXTRA_LINES / 2u) * stride;
@@ -109,6 +132,12 @@ static inline void t21_ref_ring_init(T21RefRing *r, uint32_t base,
     r->stride = stride;
     r->base_y = base;
     r->base_c = base + r->ring_y + t21_ref_ring_gap();
+}
+
+static inline void t21_ref_ring_init(T21RefRing *r, uint32_t base,
+                                     uint32_t mb_width, uint32_t mb_height)
+{
+    t21_ref_ring_init_ex(r, base, mb_width, mb_height, 0);
 }
 
 /* Address of picture n (n >= 0) in the plane described by base/ring/step. */

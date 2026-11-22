@@ -685,22 +685,42 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
-/* EMC scratch layout choice (#774): the T21-derived layout everywhere.
- * The vendor 1.3.0 layout (OPENIMP_T23_EMC=vendor, research only) broke
- * the bitstream on a real T23N with OpenIMP's command list (Tapo C500,
- * 2026-11-22: decode errors from the first pictures, VPU hangs with a
- * canary past its tail), so it is not used by default, also not in the
- * IVDC direct mode. */
+/* Vendor-sized EMC scratch and reference ring by default in the IVDC
+ * direct mode (#799 step 4, #774): with the command list made equal to
+ * the vendor 1.3.0 one (QEMU A12 diff, audit issue799 FINDINGS step 4.1:
+ * 0x50000 wrap bits, 0x10010, 0x800fc, 0x801cc, 0x801c0, 0x80198) the
+ * stock layout and the unrounded ring are used as the vendor does, so
+ * main + sub + JPEG fit the vendor rmem budget.  Normal capture keeps the
+ * T21 layout and the 64-line ring.  A/B switches: OPENIMP_T23_EMC=vendor|
+ * t21|t23 and OPENIMP_T23_RING=vendor|64. */
+static int t23_vendor_sizing_default(void)
+{
+    return OpenIMP_T23_IvdcMode() != 0;
+}
+
 static int t23_emc_vendor_layout(void)
 {
     const char *env = getenv("OPENIMP_T23_EMC");
 
-    return env && !strcmp(env, "vendor");
+    if (env && env[0])
+        return !strcmp(env, "vendor");
+    return t23_vendor_sizing_default();
 }
 
-/* EMC scratch layout of a T23 channel (#799 step 1a): T23_EMC_DEFAULT,
- * OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88) bytes per
- * macroblock layout, =vendor the stock 1.3.0 one (research, #774). */
+/* reference ring of picture + 256 lines without the 64-line rounding */
+static int t23_ring_exact(void)
+{
+    const char *env = getenv("OPENIMP_T23_RING");
+
+    if (env && env[0])
+        return !strcmp(env, "vendor");
+    return t23_vendor_sizing_default();
+}
+
+/* EMC scratch layout of a T23 channel: the stock 1.3.0 one in direct mode
+ * or with OPENIMP_T23_EMC=vendor, else T23_EMC_DEFAULT (T21 layout, also
+ * OPENIMP_T23_EMC=t21); OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88)
+ * bytes per macroblock layout. */
 static uint32_t t23_emc_layout(uint32_t mbw, uint32_t mbh,
                                uint32_t offsets[4])
 {
@@ -3362,6 +3382,11 @@ static int t30_ref_share_alloc(T30HelixEncoder *encoder, const char *tag)
     uint32_t mbw = encoder->sps.i_mb_width ? (uint32_t)encoder->sps.i_mb_width
                                            : (encoder->params.width + 15u) / 16u;
     uint32_t mbh = (encoder->params.height + 15u) / 16u;
+#if defined(PLATFORM_T23)
+    int exact = t23_ring_exact();
+#else
+    int exact = 0;
+#endif
 
     if (env && env[0] == '0')
         return 0;
@@ -3370,17 +3395,17 @@ static int t30_ref_share_alloc(T30HelixEncoder *encoder, const char *tag)
                      "1920x1088 (as the vendor)");
         return 0;
     }
-    if (!t21_ref_ring_saves(mbw, mbh)) {
+    if (!t21_ref_ring_saves_ex(mbw, mbh, exact)) {
         /* the 256 extra lines cost more than the second picture saves */
         IMP_LOG_INFO("Encoder", "Helix: reference sharing skipped, picture "
                      "too small");
         return 0;
     }
     if (t30_dma_allocate(&encoder->reference[0].dma,
-                         t21_ref_ring_bytes(mbw, mbh), tag) != 0)
+                         t21_ref_ring_bytes_ex(mbw, mbh, exact), tag) != 0)
         return -1;
-    t21_ref_ring_init(&encoder->ring, encoder->reference[0].dma.phys_addr,
-                      mbw, mbh);
+    t21_ref_ring_init_ex(&encoder->ring, encoder->reference[0].dma.phys_addr,
+                         mbw, mbh, exact);
     encoder->reference[0].y = encoder->ring.base_y;
     encoder->reference[0].c = encoder->ring.base_c;
     encoder->ref_share = 1;

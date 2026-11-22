@@ -39,7 +39,7 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 | T10 | Runs the open stack from a flashed image (H.264, hardware JPEG/MJPEG, second stream, OSD, motion detection, day/night, image controls, AE/AWB); RC3 gate: all 228 streamer-used function cells work, OEM rate controller and `SetChnRcTrigLevel` checked against the vendor library. |
 | T20 | Fully open from a flashed image; RC3 gate (228/228 streamer-used function cells work); OEM rate controller default with macroblock rate control, A/B against the vendor stack measured. |
 | T21 | Fully open from a flashed image; RC3 gate (252/252 streamer-used function cells work); vendor-identical rate controller, reference-buffer sharing on. |
-| T23 | Fully open, native Helix H.264 encoder, no vendor helper (2 h 34 min soak). Frequent Helix frame drops fixed (residual interrupt 0x100, kernel patch merged upstream); the rare single Helix encode error (errno 5) has not recurred since the kernel fix (0 errors in 6 days, provisionally closed); software rotation 90/270 up to 1280x720 (beyond vendor); no real WDR yet. RC3 gate. |
+| T23 | Fully open, native Helix H.264 encoder, no vendor helper (2 h 34 min soak); optional IVDC direct mode (`direct_mode=1`) like the vendor 1.3.0. Frequent Helix frame drops fixed (residual interrupt 0x100, kernel patch merged upstream); the rare single Helix encode error (errno 5) has not recurred since the kernel fix (0 errors in 6 days, provisionally closed); software rotation 90/270 up to 1280x720 (beyond vendor); no real WDR yet. RC3 gate. |
 | T30 | Runs the open stack on the T30X lab camera (since 2026-11-03, gate SoC for RC3): H.264 at 2048x1536/1080p/720p + sub-stream, H.265 on the Radix encoder with vendor-equal CBR and live rate-control changes, OEM picture rate controller (bit-exact), calm first stream window, software rotation, ISP bypass graph (RAW). Device tests per issue (#208, #209, #216, #218, #228). |
 | T31 | Reference SoC. H.264, HEVC, hardware JPEG, OSD, rotation, AEC; RC3 gate; optional ISP bypass graph (default off). |
 | T40 | Runs the open stack (open-tx-isp driver + OpenIMP) from a flashed image on the T40XP test camera (sc830ai): H.264/H.265, day/night, AE/AWB and the tuning API with device tests. Vendor-equal picture in a fair light-box comparison against the vendor stack (2026-11-07, #84): same brightness and white balance at the same exposure, luma and chroma noise vendor-equal, AE target and metering from the hardware statistics like the OEM (`ae_compensation` 40..200: Y 94..137 vs vendor 92..142, #232), night floor per tuning bank; streamer CPU 0.34 % vs 2.26 % on the vendor stack. Only the sc830ai board is device-tested. |
@@ -47,7 +47,7 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-21, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-22, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
@@ -59,10 +59,10 @@ Vendor IMP/SU functions per SoC on 2026-11-21, `next` after RC3 `v2026.11.07-rc3
 | T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
-| T32 | 610 | 4 | 542 | 62 | 2 | in development |
-| T33 | 571 | 393 | 66 | 74 | 38 | in development |
+| T32 | 610 | 4 | 549 | 55 | 2 | in development |
+| T33 | 571 | 468 | 69 | 34 | 0 | in development |
 
-T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 288 "works" cells are device-tested (first full device API test on the module 2026-11-17: 227 cells, plus the tuning calls with picture effect of the device checks 2026-11-15 / 2026-11-16) or vendor no-ops; the module is on the bench, not in the light box.
+T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 468 "works" cells are device-tested (first full device API test on the module 2026-11-17, plus the later device checks up to 2026-11-22; 63 of them API round trips only) or vendor no-ops; the module is on the bench, not in the light box.
 
 The counts follow `next` and are refreshed by hand after each merge round (the generated source is the FEATURE_MATRIX). Release notes (index: [docs/releases/](docs/releases/README.md)): [docs/releases/RC3.md](docs/releases/RC3.md) (RC3), [docs/RELEASE_NOTES_RC2.md](docs/RELEASE_NOTES_RC2.md) (RC2), [docs/RELEASE-v2026.10.11-rc1.md](docs/RELEASE-v2026.10.11-rc1.md) (RC1).
 

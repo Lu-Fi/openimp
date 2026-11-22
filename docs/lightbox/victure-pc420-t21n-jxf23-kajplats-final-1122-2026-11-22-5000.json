@@ -1,0 +1,511 @@
+{
+ "alias": "victure-pc420-t21n-jxf23",
+ "counts": {
+  "beyond": 0,
+  "fail": 8,
+  "fail_by_handling": {
+   "invalid": 4,
+   "issue": 2,
+   "vendor": 2
+  },
+  "flaky": 0,
+  "info": 131,
+  "invalid": 16,
+  "n/a": 3,
+  "not_run": 6,
+  "not_run_planned": 6,
+  "not_run_preflight": 0,
+  "pass": 66,
+  "reference": 0,
+  "warn": 1
+ },
+ "date": "2026-11-22",
+ "encoder": {
+  "h264_cbr1000": {
+   "open": {
+    "I_mean_B": 52380.56,
+    "P_mean_B": 3288.4392,
+    "P_over_I": 0.0628,
+    "kbps": 1065.1761,
+    "psnr_mean": 46.2482,
+    "psnr_min": 45.7462,
+    "ssim_mean": 0.9928
+   },
+   "vendor": {
+    "I_mean_B": 56827.56,
+    "P_mean_B": 2991.9583,
+    "P_over_I": 0.0526,
+    "kbps": 1046.1444,
+    "psnr_mean": 31.661,
+    "psnr_min": 31.638,
+    "ssim_mean": 0.9398
+   }
+  },
+  "h264_cbr2000": {
+   "open": {
+    "I_mean_B": 61388.48,
+    "P_mean_B": 8083.8663,
+    "P_over_I": 0.1317,
+    "kbps": 2058.6095,
+    "psnr_mean": 46.1278,
+    "psnr_min": 45.888,
+    "ssim_mean": 0.9927
+   },
+   "vendor": {
+    "I_mean_B": 82058.32,
+    "P_mean_B": 7224.3889,
+    "P_over_I": 0.088,
+    "kbps": 2067.4562,
+    "psnr_mean": 31.623,
+    "psnr_min": 31.5988,
+    "ssim_mean": 0.9375
+   }
+  },
+  "h264_fixqp25": {
+   "open": {
+    "I_mean_B": 49457.1429,
+    "P_mean_B": 1578.6667,
+    "P_over_I": 0.0319,
+    "kbps": 718.3309,
+    "psnr_mean": 45.9832,
+    "psnr_min": 45.5427,
+    "ssim_mean": 0.9927
+   },
+   "vendor": {
+    "I_mean_B": 94832.4762,
+    "P_mean_B": 6035.7896,
+    "P_over_I": 0.0636,
+    "kbps": 1954.8846,
+    "psnr_mean": 31.6252,
+    "psnr_min": 31.6132,
+    "ssim_mean": 0.9375
+   }
+  },
+  "h264_fixqp35": {
+   "open": {
+    "I_mean_B": 19139.0476,
+    "P_mean_B": 95.1875,
+    "P_over_I": 0.005,
+    "kbps": 178.9819,
+    "psnr_mean": 43.0891,
+    "psnr_min": 42.9579,
+    "ssim_mean": 0.988
+   },
+   "vendor": {
+    "I_mean_B": 25144.9524,
+    "P_mean_B": 137.9646,
+    "P_over_I": 0.0055,
+    "kbps": 237.6006,
+    "psnr_mean": 31.8548,
+    "psnr_min": 31.8358,
+    "ssim_mean": 0.9445
+   }
+  }
+ },
+ "generated": "2026-11-22 21:30",
+ "generator": "lightbox_report.py",
+ "image": {
+  "BUILD_ID": null,
+  "build": "t21b24+e68a66a, 2026-11-21 23:08:15 UTC",
+  "commits": {
+   "open-tx-isp": null,
+   "openimp": null
+  },
+  "name": "victure_pc420_t21n_jxf23_eth+rtl8188ftv"
+ },
+ "lamp_ct": 5000.0,
+ "metrics": {
+  "ae_step.off.overshoot_pct": {
+   "better": "lower",
+   "open": 5.2291,
+   "unit": "%",
+   "vendor": 0.1614
+  },
+  "ae_step.off.settle_s": {
+   "better": "lower",
+   "open": 17.4381,
+   "unit": "s",
+   "vendor": 1.6362
+  },
+  "ae_step.on.overshoot_pct": {
+   "better": "lower",
+   "open": 0.0221,
+   "unit": "%",
+   "vendor": 0.0244
+  },
+  "ae_step.on.settle_s": {
+   "better": "lower",
+   "open": 3.6402,
+   "unit": "s",
+   "vendor": 3.6815
+  },
+  "colour.chroma_ratio": {
+   "better": "one",
+   "open": 0.841,
+   "unit": "chroma / chart (1 = chart)",
+   "vendor": 0.8092
+  },
+  "colour.dE00_grey_normalised": {
+   "better": "lower",
+   "open": 6.4587,
+   "unit": "dE00",
+   "vendor": 6.6449
+  },
+  "colour.dE00_mean": {
+   "better": "lower",
+   "open": 10.8807,
+   "unit": "dE00",
+   "vendor": 11.1943
+  },
+  "colour.dE00_mean_unclipped": {
+   "better": "lower",
+   "open": 8.1966,
+   "unit": "dE00",
+   "vendor": 8.4185
+  },
+  "colour.dE00_open_vs_vendor": {
+   "better": "lower",
+   "unit": "dE00",
+   "value": 0.5412
+  },
+  "colour.saturation_open_over_vendor": {
+   "better": "one",
+   "unit": "ratio (1 = vendor)",
+   "value": 1.0393
+  },
+  "cpu.kernel_threads": {
+   "better": "lower",
+   "open": 5.97,
+   "unit": "%",
+   "vendor": 7.0
+  },
+  "cpu.streamer": {
+   "better": "lower",
+   "open": 2.03,
+   "unit": "% of all CPU",
+   "vendor": 6.49
+  },
+  "cpu.system_busy": {
+   "better": "lower",
+   "open": 4.0,
+   "unit": "%",
+   "vendor": 9.0
+  },
+  "enc.h264_cbr1000.psnr_mean": {
+   "better": "higher",
+   "open": 46.2482,
+   "unit": "dB",
+   "vendor": 31.661
+  },
+  "enc.h264_cbr1000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9928,
+   "unit": "SSIM",
+   "vendor": 0.9398
+  },
+  "enc.h264_cbr2000.psnr_mean": {
+   "better": "higher",
+   "open": 46.1278,
+   "unit": "dB",
+   "vendor": 31.623
+  },
+  "enc.h264_cbr2000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9927,
+   "unit": "SSIM",
+   "vendor": 0.9375
+  },
+  "enc.h264_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 49457.1429,
+   "unit": "bytes",
+   "vendor": 94832.4762
+  },
+  "enc.h264_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 1578.6667,
+   "unit": "bytes",
+   "vendor": 6035.7896
+  },
+  "enc.h264_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.0319,
+   "unit": "ratio",
+   "vendor": 0.0636
+  },
+  "enc.h264_fixqp25.psnr_mean": {
+   "better": "higher",
+   "open": 45.9832,
+   "unit": "dB",
+   "vendor": 31.6252
+  },
+  "enc.h264_fixqp25.ssim_mean": {
+   "better": "higher",
+   "open": 0.9927,
+   "unit": "SSIM",
+   "vendor": 0.9375
+  },
+  "enc.h264_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 19139.0476,
+   "unit": "bytes",
+   "vendor": 25144.9524
+  },
+  "enc.h264_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 95.1875,
+   "unit": "bytes",
+   "vendor": 137.9646
+  },
+  "enc.h264_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.005,
+   "unit": "ratio",
+   "vendor": 0.0055
+  },
+  "enc.h264_fixqp35.psnr_mean": {
+   "better": "higher",
+   "open": 43.0891,
+   "unit": "dB",
+   "vendor": 31.8548
+  },
+  "enc.h264_fixqp35.ssim_mean": {
+   "better": "higher",
+   "open": 0.988,
+   "unit": "SSIM",
+   "vendor": 0.9445
+  },
+  "noise_gain.1.Yrel_pct": {
+   "better": "lower",
+   "open": 0.7485,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.7433
+  },
+  "noise_gain.1.Ytemporal": {
+   "better": "lower",
+   "open": 0.916,
+   "unit": "temporal std",
+   "vendor": 0.912
+  },
+  "noise_gain.16.Yrel_pct": {
+   "better": "lower",
+   "open": 5.0403,
+   "unit": "temporal std / mean Y %",
+   "vendor": 5.4331
+  },
+  "noise_gain.16.Ytemporal": {
+   "better": "lower",
+   "open": 5.627,
+   "unit": "temporal std",
+   "vendor": 6.072
+  },
+  "noise_gain.2.Yrel_pct": {
+   "better": "lower",
+   "open": 1.0892,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.1556
+  },
+  "noise_gain.2.Ytemporal": {
+   "better": "lower",
+   "open": 1.273,
+   "unit": "temporal std",
+   "vendor": 1.346
+  },
+  "noise_gain.4.Yrel_pct": {
+   "better": "lower",
+   "open": 2.5878,
+   "unit": "temporal std / mean Y %",
+   "vendor": 2.7531
+  },
+  "noise_gain.4.Ytemporal": {
+   "better": "lower",
+   "open": 2.925,
+   "unit": "temporal std",
+   "vendor": 3.108
+  },
+  "noise_gain.8.Yrel_pct": {
+   "better": "lower",
+   "open": 3.576,
+   "unit": "temporal std / mean Y %",
+   "vendor": 3.7787
+  },
+  "noise_gain.8.Ytemporal": {
+   "better": "lower",
+   "open": 4.018,
+   "unit": "temporal std",
+   "vendor": 4.214
+  },
+  "noise_gain.max.Yrel_pct": {
+   "better": "lower",
+   "open": 4.4009,
+   "unit": "temporal std / mean Y %",
+   "vendor": 4.6768
+  },
+  "noise_gain.max.Ytemporal": {
+   "better": "lower",
+   "open": 4.914,
+   "unit": "temporal std",
+   "vendor": 5.202
+  },
+  "p1.day.luma": {
+   "better": "",
+   "open": 128.0,
+   "unit": "Y 0..255",
+   "vendor": 129.8
+  },
+  "p1.night.luma": {
+   "better": "",
+   "open": 94.3,
+   "unit": "Y 0..255",
+   "vendor": 94.1
+  },
+  "reload.ok_cycles": {
+   "better": "higher",
+   "open": 10,
+   "unit": "of 10 cycles",
+   "vendor": null
+  },
+  "sharpness.mtf50": {
+   "better": "higher",
+   "open": 0.1654,
+   "unit": "cycles/pixel",
+   "vendor": 0.1511
+  },
+  "sharpness.rise_10_90": {
+   "better": "lower",
+   "open": 3.4713,
+   "unit": "px",
+   "vendor": 4.1212
+  },
+  "startup.first_rtsp_s": {
+   "better": "lower",
+   "open": 4.1,
+   "unit": "s",
+   "vendor": 4.67
+  },
+  "startup.first_snapshot_s": {
+   "better": "lower",
+   "open": 2.18,
+   "unit": "s",
+   "vendor": 2.3
+  }
+ },
+ "noise_curve": {
+  "open": [
+   {
+    "Yrel_pct": 0.7485,
+    "Ytemporal": 0.916,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 1.0892,
+    "Ytemporal": 1.273,
+    "gain_req": "2",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 2.5878,
+    "Ytemporal": 2.925,
+    "gain_req": "4",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 3.576,
+    "Ytemporal": 4.018,
+    "gain_req": "8",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 5.0403,
+    "Ytemporal": 5.627,
+    "gain_req": "16",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 4.4009,
+    "Ytemporal": 4.914,
+    "gain_req": "max",
+    "gain_x": 8.0
+   }
+  ],
+  "vendor": [
+   {
+    "Yrel_pct": 0.7433,
+    "Ytemporal": 0.912,
+    "gain_req": "1",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 1.1556,
+    "Ytemporal": 1.346,
+    "gain_req": "2",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 2.7531,
+    "Ytemporal": 3.108,
+    "gain_req": "4",
+    "gain_x": 1.0
+   },
+   {
+    "Yrel_pct": 3.7787,
+    "Ytemporal": 4.214,
+    "gain_req": "8",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 5.4331,
+    "Ytemporal": 6.072,
+    "gain_req": "16",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 4.6768,
+    "Ytemporal": 5.202,
+    "gain_req": "max",
+    "gain_x": 8.0
+   }
+  ]
+ },
+ "reload": {
+  "open": {
+   "i2c_released": {
+    "n": 10,
+    "of": 10
+   },
+   "ok_cycles": {
+    "n": 10,
+    "of": 10
+   },
+   "oops_cycles": 0.0
+  }
+ },
+ "runs": [
+  "run-t21-1122-kaj-5000"
+ ],
+ "schema": 1,
+ "sensor": "jxf23",
+ "soc": "T21",
+ "stack": {
+  "open": {
+   "desc": "FINAL 1122 T21: open-tx-isp tx_isp_t21 origin/next 518bcd0d1 (= flashed t21b24 module, insmod from /tmp, isp_clk=100000000 as flashed) + OpenIMP libimp origin/next 989db341 (= flashed, LD_LIBRARY_PATH /tmp/olib) + streamer 1b2fef1 (origin/main) under LD_PRELOAD fair_preload_t21.so",
+   "ko": "tx_isp_t21 md5=4184abcc libimp=652e95dc",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=9099f849 version=websocket version 13 required",
+   "streamer": "lb-t21-1b2fef1"
+  },
+  "vendor": {
+   "desc": "ingenic-sdk tx-isp-t21.ko (vendor ISP blob H20200509a, kernel 3.10.14 build) + sensor_jxf23_t21.ko (SDK source, rebuilt without SENSOR_PROC_OWNED_BY_ISP) + vendor libimp 1.0.33 (9e1792f2) + streamer 1b2fef1 USE_OPENIMP=0; ends with a reboot",
+   "ko": "tx_isp_t21 md5=29047ab1 libimp=dd0383fa",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=f890178a version=v1.13.0",
+   "streamer": "v1.13.0"
+  }
+ },
+ "stacks": [
+  "open",
+  "vendor"
+ ],
+ "time": "04:27"
+}
