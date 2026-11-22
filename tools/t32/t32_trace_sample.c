@@ -86,6 +86,10 @@
 #include "t23/openimp_t23_osd_abi.h"
 
 int IMP_OSD_SetPoolSize(int size);
+int IMP_Encoder_SetJpegMultiSectionMode(int mode, int size, int cnt);   /* T33 2.0.2.1 (#784): not all in imp_encoder.h */
+int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt);
+int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize);
+int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize);
 int IMP_OSD_CreateGroup(int grpNum);
 int IMP_OSD_DestroyGroup(int grpNum);
 IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *prAttr);
@@ -706,6 +710,19 @@ int main(int argc, char **argv)
         STEP(IMP_OSD_SetPoolSize(512 * 1024));
     if (isposd)
         STEP(IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024));
+    if (getenv("T32_ENC_MS")) {         /* #784 group 3: "ms=M:S,jms=M:S,ivpu=N,jbs=N" before IMP_System_Init */
+        const char *ms = getenv("T32_ENC_MS"), *q;
+        int m, sz;
+
+        if ((q = strstr(ms, "jms=")) && sscanf(q + 4, "%d:%d", &m, &sz) == 2)
+            STEP(IMP_Encoder_SetJpegMultiSectionMode(m, sz, 2));
+        if ((q = strstr(ms, "ms=")) && (q == ms || q[-1] == ',') && sscanf(q + 3, "%d:%d", &m, &sz) == 2)
+            STEP(IMP_Encoder_SetMultiSectionMode(m, sz, 2));
+        if ((q = strstr(ms, "ivpu=")))
+            STEP(IMP_Encoder_SetIvpuBsSize((uint32_t)atoi(q + 5)));
+        if ((q = strstr(ms, "jbs=")))
+            STEP(IMP_Encoder_SetJpegBsSize((uint32_t)atoi(q + 4)));
+    }
     MUST(IMP_System_Init());
     if (bin_test) {                     /* #289: day/night bin switch */
         IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;

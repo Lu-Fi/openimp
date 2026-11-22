@@ -320,6 +320,11 @@ size_t t33_hera_h264_list(const T33HeraH264Pic *t, uint32_t *list)
 
         if (!(e->when & want))
             continue;
+        /* SetMultiSectionMode(0) (#784 group 3, QEMU vms0 / v5ms0 vs vendor
+         * 2.0.2.1): no stop at a full section, so no second half address and
+         * no BSFULL enable / size */
+        if (!p->section_kb && (e->reg == EMC_BS1 || e->reg == EMC_BSFULL_EN || e->reg == EMC_BSFULL_SIZE))
+            continue;
         /* SetRdBufShare(0): the vendor writes no reference look-up (#736) */
         if (t->noshare && (e->reg == MCE_RLUT_Y || e->reg == MCE_RLUT_C))
             continue;
