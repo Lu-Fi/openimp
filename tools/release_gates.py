@@ -11,7 +11,7 @@ Release 1  per gate SoC: stable days of the release image (best camera of the So
 
 Used by gen_api_coverage.update_md (Markdown) and gen_feature_matrix_html (HTML); not run on its own.
 """
-import html
+import re, html
 import json
 import os
 import sys
@@ -238,7 +238,7 @@ class Gates:
         for s in self.socs:
             v = self.r1[s]
             o.append("| %s | %s | %s | %.1f/%d | `%s` | %d | %d |" % (
-                s, ("🟢 [report](%s)" % v["box"]) if v["box_ok"] else "🔴 none", " ".join(c["camera"] for c in v["cams"]) or "–", v["best"], self.min_days,
+                s, ("🟢 [report](%s)" % re.sub(r"^docs/", "", v["box"])) if v["box_ok"] else "🔴 none", " ".join(c["camera"] for c in v["cams"]) or "–", v["best"], self.min_days,
                 bar(min(v["best"], self.min_days), self.min_days), sum(c["unplanned_reboots"] for c in v["cams"]),
                 sum(c["oops"] for c in v["cams"])))
         o.append("")
@@ -324,7 +324,7 @@ class Gates:
         for s in self.socs:
             v = self.r1[s]
             rows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td class='c'>%.1f/%d</td><td>%s</td><td class='c'>%d</td><td class='c'>%d</td></tr>" % (
-                s, ("&#x1F7E2; <a href='%s'>report</a>" % esc(v["box"])) if v["box_ok"] else "&#x1F534; none", " ".join(c["camera"] for c in v["cams"]) or "&ndash;", v["best"], self.min_days,
+                s, ("&#x1F7E2; <a href='%s'>report</a>" % esc(re.sub(r"^docs/", "", v["box"]))) if v["box_ok"] else "&#x1F534; none", " ".join(c["camera"] for c in v["cams"]) or "&ndash;", v["best"], self.min_days,
                 self._pb(min(v["best"], self.min_days) and int(round(min(v["best"], self.min_days) * 100)), self.min_days * 100),
                 sum(c["unplanned_reboots"] for c in v["cams"]), sum(c["oops"] for c in v["cams"])))
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>light-box run</th><th>cameras</th><th>stable days</th><th>progress</th><th>unplanned reboots</th><th>oops</th></tr></thead>'
