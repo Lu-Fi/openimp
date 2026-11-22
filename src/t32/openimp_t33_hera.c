@@ -77,6 +77,7 @@ typedef struct {
 /* VMAU (v1.6 at 0x40400) and its tail */
 #define VMAU_FRM_SIZE   0x4040cu
 #define VMAU_MD_CFG0    0x40410u
+#define VMAU_MD_CFG5    0x40424u        /* bits 31:24 chroma QP offset (#784) */
 #define VMAU_MD_CFG7    0x4042cu
 #define VMAU_CTX        0x40448u
 #define DBLK_FRM_SIZE   0x50000u        /* width << 16 | height */
@@ -121,7 +122,7 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
     if (sl) {
         switch (reg) {
         case EFE_FRM_QP:                /* QP (s+0x153), MB QP min s+0x155, max s+0x154 */
-            return (sl[0x18] & 0x1fu) | qp << 8 | (uint32_t)sl[0x155] << 16 | (uint32_t)sl[0x154] << 24;
+            return ((sl[0x18] | (uint32_t)p->chroma_qp_offset) & 0x1fu) | qp << 8 | (uint32_t)sl[0x155] << 16 | (uint32_t)sl[0x154] << 24;
         case EFE_MBQP_CFG:
             return (sl[0x52a] & 1u) << 22 | (sl[0x76f] & 0x3fu) << 16 | (sl[0x76e] & 0x3fu) << 10 |
                    (sl[0x76d] & 1u) << 9 | (sl[0x112] & 1u) << 8 | (sl[0x113] & 0xfu) << 4 |
@@ -177,8 +178,12 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
         return p->src_c;
     case EFE_RAW_STRD:
         return p->src_stride << 16 | p->src_stride;
-    case EFE_FRM_QP:                    /* base QP, min 1, max 51 on I and P */
-        return qp << 8 | 1u << 16 | 51u << 24;
+    case EFE_FRM_QP:                    /* base QP, min 1, max 51 on I and P; chroma QP offset 4:0 */
+        return ((uint32_t)p->chroma_qp_offset & 0x1fu) | qp << 8 | 1u << 16 | 51u << 24;
+    case VMAU_MD_CFG5:
+        /* vendor 2.0.2.1 with SetH264TransCfg 3 (QEMU t33-cache vfx job 6): 0x03000000 and
+         * EFE_FRM_QP 4:0 = 3 from the IDR on */
+        return (uint32_t)(uint8_t)p->chroma_qp_offset << 24;
     case EFE_CPLX_QP0:
         return t32_hera_cplx_qp(qp, 0);
     case EFE_CPLX_QP1:

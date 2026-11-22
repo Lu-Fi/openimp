@@ -28,6 +28,8 @@ typedef struct {
     uint32_t rc_mode;                   /* 0 FIXQP: no bit rate in the level */
     uint32_t bitrate;                   /* kbit/s */
     T32Vui vui;                         /* openimp_t32_h264.h */
+    uint8_t crop;                       /* IMP_Encoder_SetChnCrop (#784): 1 conformance window, 2 a zero one */
+    uint32_t crop_x, crop_y, crop_w, crop_h;
 } T32H265Seq;
 
 typedef struct {

@@ -8,8 +8,10 @@
  *     IDR's SPS, byte for byte as the vendor writes them; the getters show the new values from that IDR on
  *   - InsertUserData: SEI user_data_unregistered NAL with the vendor's UUID before the slice of the next
  *     pictures, one per picture, at most maxUserDataCnt queued of at most maxUserDataSize bytes
+ *   - T33 (#784): Crop as SPS frame cropping / H.265 conformance window and H264TransCfg as PPS + HERA chroma
+ *     QP offset from the next IDR, as vendor 2.0.2.1 (OpenIMP_T32_E1Hdr; the T32 build keeps them stored)
  * Stored and read back like the vendor (deferred to the next IDR where the vendor defers), NOT applied to
- * the HERA engine (no command-list oracle for them yet): TransCfg (chroma QP offsets), SuperFrameCfg, Crop,
+ * the HERA engine (the vendor applies them, #784 lists where): H265TransCfg, SuperFrameCfg, Crop on T32,
  * Denoise, HSkip, ROI / MapRoi, MbRC, QpgMode, Srd, ChangeRef, Color2Grey, GDR, Pskip, RcTrigLevel,
  * MotionQuality, QpgAI, pad frames.
  * Built with the vendor 2.x headers (their types); the channel table is openimp_t32_encoder.c's
@@ -153,6 +155,23 @@ int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui)
     memcpy(x->roi, x->roi_pend, sizeof(x->roi));
     pthread_mutex_unlock(&e1_lock);
     return v;
+}
+
+void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h)
+{
+    memset(h, 0, sizeof(*h));
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return;
+    pthread_mutex_lock(&e1_lock);
+    h->chroma264 = E1.trans264;
+    h->crop = E1.crop.enable ? 1 : 0;
+    if (h->crop) {
+        h->crop_x = E1.crop.x;
+        h->crop_y = E1.crop.y;
+        h->crop_w = E1.crop.w;
+        h->crop_h = E1.crop.h;
+    }
+    pthread_mutex_unlock(&e1_lock);
 }
 
 /* the next queued user-data SEI NAL (start code included, escaped) at @out: bytes, 0 = none */
@@ -307,7 +326,7 @@ int IMP_Encoder_GetH265Vui(int encChn, IMPEncoderH265Vui *v)
     return rc;
 }
 
-/* ---- chroma QP offsets: stored, taken at the next IDR (not in the PPS / HERA yet) ------------- */
+/* ---- chroma QP offsets: taken at the next IDR (T33 H.264: PPS + HERA, #784; H.265 / T32: stored) - */
 
 int IMP_Encoder_SetH264TransCfg(int encChn, const IMPEncoderH264TransCfg *t)
 {

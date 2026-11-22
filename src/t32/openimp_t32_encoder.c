@@ -353,14 +353,53 @@ static void e1_at_idr(struct t32_enc_chn *e)
     struct t32_h264 *a = &e->avc;
     T32Vui v;
     int n = chn_no(e);
+    int vui = OpenIMP_T32_E1AtIdr(n, &v), chg = vui;
+#ifdef PLATFORM_T33
+    T32E1Hdr hd;
 
-    if (!OpenIMP_T32_E1AtIdr(n, &v))
+    /* #784: SetChnCrop (SPS frame cropping / conformance window) and SetH264TransCfg (PPS + HERA
+     * chroma QP offset) from this IDR on, as vendor 2.0.2.1 (QEMU t33-cache runs vfx / v265).
+     * T32 2.2.0: not verified against its vendor library, kept stored only. */
+    OpenIMP_T32_E1Hdr(n, &hd);
+    if (e->hevc) {
+        /* the vendor keeps conformance_window_flag 1 with a zero window once a crop was switched
+         * off again (apitest t33e1: SPS ..0169fe5a..); decoders show the full picture either way */
+        if (!hd.crop && a->seq5.crop)
+            hd.crop = 2;
+        if (a->seq5.crop != hd.crop || a->seq5.crop_x != hd.crop_x || a->seq5.crop_y != hd.crop_y ||
+            a->seq5.crop_w != hd.crop_w || a->seq5.crop_h != hd.crop_h) {
+            a->seq5.crop = hd.crop;
+            a->seq5.crop_x = hd.crop_x;
+            a->seq5.crop_y = hd.crop_y;
+            a->seq5.crop_w = hd.crop_w;
+            a->seq5.crop_h = hd.crop_h;
+            chg = 1;
+        }
+    } else {
+        if (a->seq.crop != hd.crop || a->seq.crop_x != hd.crop_x || a->seq.crop_y != hd.crop_y ||
+            a->seq.crop_w != hd.crop_w || a->seq.crop_h != hd.crop_h) {
+            a->seq.crop = hd.crop;
+            a->seq.crop_x = hd.crop_x;
+            a->seq.crop_y = hd.crop_y;
+            a->seq.crop_w = hd.crop_w;
+            a->seq.crop_h = hd.crop_h;
+            chg = 1;
+        }
+        if (a->seq.chroma_qp_offset != hd.chroma264) {
+            a->seq.chroma_qp_offset = hd.chroma264;
+            a->pps_len = t32_h264_pps(&a->seq, a->pps);
+        }
+    }
+#endif
+    if (!chg)
         return;
     if (e->hevc) {
-        a->seq5.vui = v;
+        if (vui)
+            a->seq5.vui = v;
         a->sps_len = t32_h265_sps(&a->seq5, a->sps);
     } else {
-        a->seq.vui = v;
+        if (vui)
+            a->seq.vui = v;
         a->sps_len = t32_h264_sps(&a->seq, a->sps);
     }
 }
@@ -973,10 +1012,13 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     T32HeraH264Pic p;
     T32H264Slice sl;
 
+    if (idr)
+        e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
     p.no8x8 = e->yuv;                   /* stand-alone: Main (#752) */
     p.width = w;
     p.height = h;
+    p.chroma_qp_offset = a->seq.chroma_qp_offset;
     p.p_frame = !idr;
     p.qp = rc_picture_qp(e, idr);
     enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
@@ -1035,7 +1077,6 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     /* headers first: the engine's slice data follows them */
     s->npacks = 0;
     if (idr) {
-        e1_at_idr(e);
         memcpy(out, a->sps, a->sps_len);
         h264_pack(s, 0, (uint32_t)a->sps_len, IMP_H264_NAL_SPS, f->timeStamp);
         memcpy(out + a->sps_len, a->pps, a->pps_len);

@@ -166,8 +166,17 @@ size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
     put_ue(&b, h16 / 16u - 1u);
     put(&b, 1, 1);                      /* frame_mbs_only */
     put(&b, 1, 1);                      /* direct_8x8_inference */
-    put(&b, 1, (uint32_t)crop);
-    if (crop) {
+    if (s->crop) {
+        /* SetChnCrop (#784): vendor 2.0.2.1 writes the window as frame cropping of the coded
+         * picture, in chroma units (QEMU t33-cache: 16,8 320x180 of 640x368 -> 8, 152, 4, 90) */
+        put(&b, 1, 1);
+        put_ue(&b, s->crop_x / 2u);
+        put_ue(&b, (w16 - s->crop_x - s->crop_w) / 2u);
+        put_ue(&b, s->crop_y / 2u);
+        put_ue(&b, (h16 - s->crop_y - s->crop_h) / 2u);
+    } else
+        put(&b, 1, (uint32_t)crop);
+    if (crop && !s->crop) {
         put_ue(&b, 0);
         put_ue(&b, (w16 - s->width) / 2u);
         put_ue(&b, 0);
@@ -218,7 +227,7 @@ size_t t32_h264_pps(const T32H264Seq *s, uint8_t *out)
     put(&b, 3, 0);                      /* no weighted prediction */
     put_se(&b, s->init_qp - 26);
     put_se(&b, 0);
-    put_se(&b, 0);                      /* chroma QP offset */
+    put_se(&b, s->chroma_qp_offset);    /* chroma QP offset (SetH264TransCfg, #784) */
     put(&b, 1, 1);                      /* deblocking control present */
     put(&b, 2, 0);
     if (!s->main_profile) {             /* Main: the PPS ends here */
@@ -232,7 +241,7 @@ size_t t32_h264_pps(const T32H264Seq *s, uint8_t *out)
                 put_se(&b, -16);        /* next scale 0: the rest repeats 16 */
             }
         }
-        put_se(&b, 0);                  /* second chroma QP offset */
+        put_se(&b, s->chroma_qp_offset);    /* second chroma QP offset: the same value (#784) */
     }
     trailing(&b);
     return nal(out, 3, 8, &b, NULL);
