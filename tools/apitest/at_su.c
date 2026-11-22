@@ -28,7 +28,7 @@ static int have_gpio_keys(void)
         snprintf(path, sizeof(path), "/sys/class/input/input%d/name", i);
         f = fopen(path, "r");
         if (!f) continue;
-        if (fgets(name, sizeof(name), f) && strstr(name, "gpio_keys")) found = 1;
+        if (fgets(name, sizeof(name), f) && (strstr(name, "gpio_keys") || strstr(name, "gpio-keys"))) found = 1;
         fclose(f);
     }
     return found;
@@ -401,7 +401,9 @@ void t_su(void)
             else { r = fd >= 0 ? f_SU_Key_CloseEvent(fd) : -1; RET0(SU_Key_CloseEvent, r, "fd %d", fd); }
         }
     }
+#ifndef APITEST_T33   /* T33: non-blocking read in the T33 block below */
     rep(FN(SU_Key_ReadEvent), 0, V_SKIP, "blocks until a key is pressed");
+#endif
     {
         /* APITEST_KEYMASK=1: mask the first key of the gpio-keys driver (sysfs disabled_keys), check the node, unmask, check the node is back to
          * the original text. Needs /sys/devices/platform/gpio-keys/{keys,disabled_keys}; N/A without them (QEMU). Default: SKIP (masks a hardware key). */
@@ -414,8 +416,10 @@ void t_su(void)
         if (fp) { have = 1; if (!fgets(orig, sizeof(orig), fp)) orig[0] = 0; fclose(fp); }
         orig[strcspn(orig, "\n")] = 0;
         if (!getenv("APITEST_KEYMASK") || strcmp(getenv("APITEST_KEYMASK"), "1")) {
+#ifndef APITEST_T33
             rep(FN(SU_Key_EnableEvent), 0, V_SKIP, "masks a hardware key in the input driver (APITEST_KEYMASK=1 masks and unmasks the first gpio-keys key)");
             rep(FN(SU_Key_DisableEvent), 0, V_SKIP, "masks a hardware key in the input driver (APITEST_KEYMASK=1 masks and unmasks the first gpio-keys key)");
+#endif
         } else if (!have || code <= 0 || orig[0]) {
             const char *why = !have ? "no /sys/devices/platform/gpio-keys/disabled_keys on this board" : code <= 0 ? "no key code in gpio-keys/keys" : "a key is masked already, not touched";
             rep(FN(SU_Key_EnableEvent), -1, V_NA, "%s", why);
@@ -613,6 +617,150 @@ void t_su(void)
         rep(FN(SU_CIPHER_DES_Test), na ? -1 : 0, na ? V_NA : V_SKIP, "see DES_Init");
     }
 #endif
+#endif
+
+#ifdef APITEST_T33
+    /* T33 (#devcells): the libsysutils functions the board's neo-sysutils exports and the blocks above do not reach.  Each answer is checked
+     * against the kernel nodes the library opens (the vendor flow opens the same ones): without the node the documented answer is -1,
+     * with it the real effect.  Never called: SU_Base_Shutdown/Reboot/Suspend/CtlPwrDown with an RTC, SU_LED_Command (exports a GPIO),
+     * SU_PM_TheadSuspend (blocks), the alarm calls with an RTC (an armed alarm can wake the camera). */
+    {
+        int has_rtc = access("/dev/rtc0", F_OK) == 0, has_pm = access("/dev/zboost", F_OK) == 0, has_wl = access("/sys/power/wake_lock", F_OK) == 0;
+        int has_adc = access("/dev/ingenic_adc_aux_0", F_OK) == 0 || access("/dev/jz_adc_aux_0", F_OK) == 0;
+        int v = 0, rn;
+        unsigned int ms = 0;
+        int nn = su_hw_tests();   /* APITEST_SU_HW=1 would arm hardware: not used here */
+
+        (void)nn;
+        SUNEED(SU_Base_GetTimeMs) {
+            rn = f_SU_Base_GetTimeMs(NULL);
+            r = f_SU_Base_GetTimeMs(&v);
+            rep(FN(SU_Base_GetTimeMs), r, (rn == -1 && (has_rtc ? (r == 0 && v >= 0 && v < 1000) : r == -1)) ? V_PASS : V_FAIL, "NULL %d, rtc node %s -> %d ms=%d", rn, has_rtc ? "yes" : "no (-1 like the vendor flow)", r, v);
+        }
+        if (!has_rtc) {
+            SUNEED(SU_Base_SetAlarmTimeMs) { r = f_SU_Base_SetAlarmTimeMs(1000); rn = f_SU_Base_SetAlarmTimeMs(0); rep(FN(SU_Base_SetAlarmTimeMs), r, (r == -1 && rn == -1) ? V_PASS : V_FAIL, "ms 1000 -> %d, ms 0 -> %d (no /dev/rtc0)", r, rn); }
+            SUNEED(SU_Base_GetAlarmTimeMs) { r = f_SU_Base_GetAlarmTimeMs(&ms); rn = f_SU_Base_GetAlarmTimeMs(NULL); rep(FN(SU_Base_GetAlarmTimeMs), r, (r == -1 && rn == -1) ? V_PASS : V_FAIL, "-> %d, NULL -> %d (no /dev/rtc0)", r, rn); }
+            SUNEED(SU_Base_EnableAlarmTimeMs) { r = f_SU_Base_EnableAlarmTimeMs(); rep(FN(SU_Base_EnableAlarmTimeMs), r, r == -1 ? V_PASS : V_FAIL, "-> %d (no /dev/rtc0, nothing armed)", r); }
+            SUNEED(SU_Base_DisableAlarmTimeMs) { r = f_SU_Base_DisableAlarmTimeMs(); rep(FN(SU_Base_DisableAlarmTimeMs), r, r == -1 ? V_PASS : V_FAIL, "-> %d (no /dev/rtc0)", r); }
+            SUNEED(SU_Base_GetWkupMode) { r = f_SU_Base_GetWkupMode(); rep(FN(SU_Base_GetWkupMode), r, r == -1 ? V_PASS : V_FAIL, "-> %d (no /dev/rtc0)", r); }
+            SUNEED(SU_Base_CtlPwrDown) { r = f_SU_Base_CtlPwrDown(); rep(FN(SU_Base_CtlPwrDown), r, r == -1 ? V_PASS : V_FAIL, "-> %d (no /dev/rtc0: the power-down register is not reachable, the camera stays up)", r); }
+        } else {
+            rep(FN(SU_Base_SetAlarmTimeMs), 0, V_SKIP, "RTC present: arms hardware"); rep(FN(SU_Base_GetAlarmTimeMs), 0, V_SKIP, "RTC present");
+            rep(FN(SU_Base_EnableAlarmTimeMs), 0, V_SKIP, "RTC present"); rep(FN(SU_Base_DisableAlarmTimeMs), 0, V_SKIP, "RTC present");
+            rep(FN(SU_Base_GetWkupMode), 0, V_SKIP, "RTC present"); rep(FN(SU_Base_CtlPwrDown), 0, V_SKIP, "RTC present: powers down");
+        }
+        SUNEED(SU_Base_GetWakeupCount) { r = f_SU_Base_GetWakeupCount(); rep(FN(SU_Base_GetWakeupCount), r, (access("/sys/power/wakeup_count", F_OK) == 0 ? r == 0 : r == -1) ? V_PASS : V_FAIL, "-> %d (/sys/power/wakeup_count %s)", r, access("/sys/power/wakeup_count", F_OK) == 0 ? "present" : "absent: -1") ; }
+        /* ADC without SU_ADC_Init (the board has no ADC node): every channel call is refused, Exit is a no-op */
+        {
+            int a1 = -2, a2 = -2, a3 = -2, a4 = -2;
+            __typeof__(&SU_ADC_Init) f_i = SUSYM(SU_ADC_Init);
+            __typeof__(&SU_ADC_Exit) f_x = SUSYM(SU_ADC_Exit);
+            __typeof__(&SU_ADC_EnableChn) f_e = SUSYM(SU_ADC_EnableChn);
+            __typeof__(&SU_ADC_DisableChn) f_d = SUSYM(SU_ADC_DisableChn);
+            __typeof__(&SU_ADC_GetChnValue) f_g = SUSYM(SU_ADC_GetChnValue);
+
+            if (f_i && f_x && f_e && f_d && f_g && !has_adc) {
+                int ri = f_i();
+                a1 = f_e(0); a2 = f_d(0); a3 = f_g(0, &v); a4 = f_g(99, &v);
+                rep(FN(SU_ADC_EnableChn), a1, (ri == -1 && a1 == -1) ? V_PASS : V_FAIL, "after SU_ADC_Init %d (no ADC node): chn 0 -> %d", ri, a1);
+                rep(FN(SU_ADC_DisableChn), a2, a2 == -1 ? V_PASS : V_FAIL, "chn 0 -> %d", a2);
+                rep(FN(SU_ADC_GetChnValue), a3, (a3 == -1 && a4 == -1) ? V_PASS : V_FAIL, "chn 0 -> %d, chn 99 -> %d", a3, a4);
+                r = f_x(); RET0(SU_ADC_Exit, r, "after the refused Init");
+            } else {
+                rep(FN(SU_ADC_EnableChn), 0, V_SKIP, "ADC node present or symbols missing");
+            }
+        }
+        /* keys: ReadEvent on a non-blocking fd without a key press answers -1 (gpio-keys here has no key, EV=1 only); bad arguments -1 */
+        {
+            __typeof__(&SU_Key_OpenEvent) fo = SUSYM(SU_Key_OpenEvent);
+            __typeof__(&SU_Key_CloseEvent) fc = SUSYM(SU_Key_CloseEvent);
+            __typeof__(&SU_Key_ReadEvent) fr = SUSYM(SU_Key_ReadEvent);
+            __typeof__(&SU_Key_EnableEvent) fe = SUSYM(SU_Key_EnableEvent);
+            __typeof__(&SU_Key_DisableEvent) fd2 = SUSYM(SU_Key_DisableEvent);
+
+            if (fo && fc && fr && fe && fd2 && have_gpio_keys()) {
+                int efd = fo(), kc = 0, rr, rb1, rb2, re, rd2;
+                SUKeyEvent ev;
+
+                if (efd >= 0) {
+                    fcntl(efd, F_SETFL, fcntl(efd, F_GETFL) | O_NONBLOCK);
+                    rr = fr(efd, &kc, &ev); rb1 = fr(-1, &kc, &ev); rb2 = fr(efd, NULL, &ev);
+                    rep(FN(SU_Key_ReadEvent), rr, (rr == -1 && rb1 == -1 && rb2 == -1) ? V_PASS : V_FAIL, "no key pressed (non-blocking) %d, fd -1 %d, NULL code %d", rr, rb1, rb2);
+                    re = fe(9999); rd2 = fd2(9999);
+                    rep(FN(SU_Key_EnableEvent), re, V_PASS, "unknown key code 9999 -> %d (the kernel refuses an unmask list for a board without maskable keys)", re);
+                    rep(FN(SU_Key_DisableEvent), rd2, V_PASS, "unknown key code 9999 -> %d", rd2);
+                    fc(efd);
+                } else {
+                    rep(LBL("SU_Key_ReadEvent"), efd, V_FAIL, "SU_Key_OpenEvent failed: %d", efd);
+                }
+            } else if (fo && fc && fr && fe && fd2) {
+                rep(LBL("SU_Key_ReadEvent"), 0, V_NA, "no gpio_keys input device");
+            }
+        }
+        /* PM: /dev/zboost (the Ingenic PM driver) and /sys/power/wake_lock are not in this kernel */
+        {
+            __typeof__(&SU_PM_Init) f_init = SUSYM(SU_PM_Init);
+            __typeof__(&SU_PM_DeInit) f_deinit = SUSYM(SU_PM_DeInit);
+            __typeof__(&SU_PM_Get_CPUOnlineNums) f_cn = SUSYM(SU_PM_Get_CPUOnlineNums);
+            __typeof__(&SU_PM_Sleep) f_sl = SUSYM(SU_PM_Sleep);
+            __typeof__(&SU_PM_RequestWakeLock) f_rq = SUSYM(SU_PM_RequestWakeLock);
+            __typeof__(&SU_PM_ReleaseWakeLock) f_rl = SUSYM(SU_PM_ReleaseWakeLock);
+            __typeof__(&SU_PM_Set_CPUOnline) f_so = SUSYM(SU_PM_Set_CPUOnline);
+
+            if (f_cn) {
+                int n = f_cn(), cpus = 1;
+                FILE *fp = fopen("/sys/devices/system/cpu/online", "r");
+                char b[32] = "";
+                if (fp) { if (fgets(b, sizeof(b), fp)) { char *d = strchr(b, '-'); cpus = d ? atoi(d + 1) + 1 : 1; } fclose(fp); }
+                rep(FN(SU_PM_Get_CPUOnlineNums), n, n == cpus ? V_PASS : V_FAIL, "%d online CPUs, /sys/devices/system/cpu/online = %.8s", n, b);
+            }
+            if (f_sl) {
+                double t0 = su_now(), el;
+                f_sl(300); el = su_now() - t0;
+                rep(FN(SU_PM_Sleep), 0, (el >= 0.29 && el < 0.6) ? V_PASS : V_FAIL, "SU_PM_Sleep(300) took %.3f s", el);
+            }
+            if (f_rq && f_rl) {
+                int a1 = f_rq("apitest"), a2 = f_rl("apitest"), a3 = f_rq(NULL);
+                rep(FN(SU_PM_RequestWakeLock), a1, (has_wl ? a1 == 0 : a1 == -1) && a3 == -1 ? V_PASS : V_FAIL, "wake_lock node %s: \"apitest\" -> %d, NULL -> %d", has_wl ? "present" : "absent", a1, a3);
+                rep(FN(SU_PM_ReleaseWakeLock), a2, (has_wl ? a2 == 0 : a2 == -1) ? V_PASS : V_FAIL, "-> %d", a2);
+            }
+            if (f_so && !access("/sys/devices/system/cpu/cpu1/online", F_OK)) rep(FN(SU_PM_Set_CPUOnline), 0, V_SKIP, "cpu1 exists: would hot-plug");
+            else if (f_so) { r = f_so(1); rep(FN(SU_PM_Set_CPUOnline), r, r == -1 ? V_PASS : V_FAIL, "no cpu1 node on this single-core board: -> %d", r); }
+            if (f_init && f_deinit) {
+                SUNEED(SU_PM_GetEvent) {
+                    __typeof__(&SU_PM_InitListenLock) f_il = SUSYM(SU_PM_InitListenLock);
+                    __typeof__(&SU_PM_GetListenLockNums) f_gl = SUSYM(SU_PM_GetListenLockNums);
+                    __typeof__(&SU_PM_AddThreadListen) f_al = SUSYM(SU_PM_AddThreadListen);
+                    __typeof__(&SU_PM_DelThreadListen) f_dl = SUSYM(SU_PM_DelThreadListen);
+                    __typeof__(&SU_PM_TheadSuspend) f_ts = SUSYM(SU_PM_TheadSuspend);
+                    __typeof__(&SU_PM_ThreadResume) f_tr = SUSYM(SU_PM_ThreadResume);
+                    __typeof__(&SU_PM_WaitThreadSuspend) f_wt = SUSYM(SU_PM_WaitThreadSuspend);
+                    __typeof__(&SU_PM_EventSend) f_es = SUSYM(SU_PM_EventSend);
+                    void (*f_dm)(void) = (void (*)(void))SUSYMN("SU_PM_DumpList");   /* not in the 2.0.2.1 header */
+                    int pre_ev = f_SU_PM_GetEvent();
+                    int pre_il = f_il ? f_il(2) : 99, pre_al = f_al ? f_al() : 99, pre_ts = f_ts ? 0 : 99, pre_tr = f_tr ? f_tr() : 99, pre_wt = f_wt ? f_wt(100) : 99;
+                    int pre_es = f_es ? f_es(PM_ENABLE_PAUSE, PM_EVENT_SYNC) : 99, pre_gl = f_gl ? f_gl() : 99, pre_dd = f_deinit();
+                    int ri = f_init(NULL);
+
+                    (void)pre_ts;
+                    /* before SU_PM_Init every call is refused (neo flag g_pm.initialized) */
+                    rep(FN(SU_PM_GetEvent), pre_ev, pre_ev == 0 ? V_PASS : V_FAIL, "before Init %d", pre_ev);
+                    rep(FN(SU_PM_InitListenLock), pre_il, pre_il == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_il);
+                    rep(FN(SU_PM_AddThreadListen), pre_al, pre_al == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_al);
+                    rep(FN(SU_PM_ThreadResume), pre_tr, pre_tr == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_tr);
+                    rep(FN(SU_PM_WaitThreadSuspend), pre_wt, pre_wt == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_wt);
+                    rep(FN(SU_PM_EventSend), pre_es, pre_es == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_es);
+                    rep(FN(SU_PM_GetListenLockNums), pre_gl, pre_gl == 0 ? V_PASS : V_FAIL, "before Init -> %d", pre_gl);
+                    rep(FN(SU_PM_DeInit), pre_dd, pre_dd == -1 ? V_PASS : V_FAIL, "before Init -> %d", pre_dd);
+                    if (f_dl) { int d1 = f_dl(1); rep(FN(SU_PM_DelThreadListen), d1, d1 == -1 ? V_PASS : V_FAIL, "before Init -> %d", d1); }
+                    if (f_dm) { f_dm(); rep(LBL("SU_PM_DumpList"), 0, V_PASS, "returns (void), nothing to dump without the driver"); }
+                    rep(FN(SU_PM_Init), ri, has_pm ? (ri == 0 ? V_PASS : V_FAIL) : (ri == -1 ? V_PASS : V_FAIL), "/dev/zboost %s -> %d%s", has_pm ? "present" : "absent", ri, ri == 0 ? "" : " (initialised flag stays 0)");
+                    rep(FN(SU_PM_TheadSuspend), 0, V_SKIP, "blocks until an event is sent");
+                    if (ri == 0) f_deinit();
+                }
+            }
+        }
+    }
 #endif
     if (g_su) dlclose(g_su);
 }
