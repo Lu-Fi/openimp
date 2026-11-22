@@ -97,6 +97,7 @@ static pthread_mutex_t codec_crop_lock = PTHREAD_MUTEX_INITIALIZER;
 #include "t30/t30_helix_encoder.h"
 #if defined(PLATFORM_T23)
 #include "t23/t23_frameloss.h"
+#include "t30/t23_helix_bs.h"
 #endif
 #if defined(CODEC_T30_RADIX)
 #include "t30/radix/t30_radix_encoder.h"
@@ -8942,7 +8943,11 @@ struct AL_CodecEncode {
 #if defined(PLATFORM_T23)
     uint8_t helix_roi[8][7];       /* AL_Codec_Encode_SetRoi (codec_roi_lock) */
     T30HelixEncoder *t30_helix;    /* Native T21-family Helix encoder */
-    int t23_backend;               /* T23_BACKEND_*, chosen on first frame */
+    uint32_t t23_helix_w;          /* picture size t30_helix was made for */
+    uint32_t t23_helix_h;
+    int t23_bs_held;               /* OpenIMP_T23_HelixBs_Prepare called */
+    int t23_backend;               /* T23_BACKEND_*, chosen at CreateChn
+                                    * (#799) or on the first frame */
     /* IMP_Encoder_Setframelossthd (src/t23/t23_frameloss.h): the threshold
      * is written by the API thread (atomic), the state by the encoder */
     int32_t frameloss_threshold;
@@ -10869,6 +10874,78 @@ static void codec_t30_helix_precreate(AL_CodecEncode *enc)
 }
 #endif
 
+#if defined(PLATFORM_T23)
+/* Fills the defaults the T23 native encoder needs and creates it for
+ * width x height. */
+static int t23_native_create(AL_CodecEncode *enc, uint32_t width,
+                             uint32_t height)
+{
+    enc->hw_params.width = width;
+    enc->hw_params.height = height;
+    if (!enc->hw_params.fps_num)
+        enc->hw_params.fps_num = 25u;
+    if (!enc->hw_params.fps_den)
+        enc->hw_params.fps_den = 1u;
+    if (!enc->hw_params.gop_length)
+        enc->hw_params.gop_length = 25u;
+    if (!enc->hw_params.bitrate)
+        enc->hw_params.bitrate = 2000000u;
+    if (OpenIMP_T30_HelixCreate(&enc->t30_helix, &enc->hw_params) != 0) {
+        enc->t30_helix = NULL;
+        return -1;
+    }
+    enc->t23_helix_w = width;
+    enc->t23_helix_h = height;
+    return 0;
+}
+
+/* #799: the stock T23 encoder allocates a channel's buffer block
+ * (hwicodec_pf_h264e_init_bpool, libimp 1.3.0 @0x33e90) in
+ * IMP_Encoder_CreateChn, in channel order, after the vpuBs bitstream
+ * buffer.  Do the same for the native encoder instead of waiting for the
+ * first picture: which channel streams first then no longer decides
+ * whether the other one fits, and a channel that does not fit fails its
+ * CreateChn instead of looping "encoder dead" at runtime.  0 = created or
+ * left to the first picture (worker backend, OPENIMP_HELIX_LAZY_CREATE=1,
+ * no size known); -1 = CreateChn must fail. */
+static int t23_native_precreate(AL_CodecEncode *enc)
+{
+    const char *lazy = getenv("OPENIMP_HELIX_LAZY_CREATE");
+    size_t used = 0, total = 0, largest = 0;
+
+    if (codec_param_read_codec_type(enc->codec_param) != IMP_ENC_TYPE_AVC ||
+        (lazy && lazy[0] == '1') || getenv("OPENIMP_T23_SKIP_HELIX") ||
+        !enc->hw_params.width || !enc->hw_params.height ||
+        !t23_native_wanted())
+        return 0;
+    if (t23_native_create(enc, enc->hw_params.width,
+                          enc->hw_params.height) == 0) {
+        enc->t23_backend = T23_BACKEND_NATIVE;
+        enc->use_hardware = 3;
+        (void)DMA_RmemStats(&used, &total, &largest);
+        IMP_LOG_INFO("Encoder", "T23 Helix encoder for %ux%u created at "
+                     "channel creation (rmem used %zu of %zu, largest free "
+                     "%zu)", enc->hw_params.width, enc->hw_params.height,
+                     used, total, largest);
+        return 0;
+    }
+    (void)DMA_RmemStats(&used, &total, &largest);
+    if (t23_native_fallback_allowed() && OpenIMP_T23_HelixHelperAvailable()) {
+        enc->t23_backend = T23_BACKEND_WORKER;
+        IMP_LOG_ERR("Encoder", "T23 Helix encoder for %ux%u not created "
+                    "(rmem used %zu of %zu, largest free %zu), using the "
+                    "OEM worker", enc->hw_params.width,
+                    enc->hw_params.height, used, total, largest);
+        return 0;
+    }
+    IMP_LOG_ERR("Encoder", "T23 Helix encoder for %ux%u not created (rmem "
+                "used %zu of %zu, largest free %zu): channel creation fails",
+                enc->hw_params.width, enc->hw_params.height, used, total,
+                largest);
+    return -1;
+}
+#endif
+
 int AL_Codec_Encode_Create(void **codec, void *params) {
     CODEC_STARTUP_MARKER("openimp/codec marker A0 Create entry\n");
     codec_startup_trace("openimp/codec startup: Create entry codec=%p params=%p\n",
@@ -10989,6 +11066,15 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
             enc->hw_params.width, enc->hw_params.height,
             codec_param_read_bitrate_bps(enc->codec_param));
     }
+#if defined(PLATFORM_T23)
+    /* #799: the shared bitstream area (stock vpuBs) from the first
+     * channel on, H.264 or JPEG */
+    if (enc->hw_params.codec_type == IMP_ENC_TYPE_JPEG ||
+        codec_param_read_codec_type(enc->codec_param) == IMP_ENC_TYPE_AVC) {
+        enc->t23_bs_held = 1;
+        (void)OpenIMP_T23_HelixBs_Prepare();
+    }
+#endif
 #if defined(PLATFORM_T30) || defined(PLATFORM_T23)
     /* The stock encoder allocates a JPEG channel's bitstream buffer at
      * channel creation: take it from the start-up rmem budget too. */
@@ -11036,6 +11122,19 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
 #if defined(PLATFORM_T30)
     codec_t30_helix_precreate(enc);
 #endif
+#if defined(PLATFORM_T23)
+    if (t23_native_precreate(enc) != 0) {
+        OpenIMP_T23_HelixBs_Unprepare();
+        if (enc->event)
+            close((int)(uintptr_t)enc->event);
+        Fifo_Deinit(enc->fifo_frames);
+        Fifo_Deinit(enc->fifo_streams);
+        free(enc->fifo_frames);
+        free(enc->fifo_streams);
+        free(enc);
+        return -1;
+    }
+#endif
     CODEC_STARTUP_MARKER("openimp/codec marker A6 params complete\n");
     codec_startup_trace("openimp/codec startup: params done size=%ux%u bitrate=%u qp=%u/%u/%u\n",
                         (unsigned int)enc->hw_params.width,
@@ -11068,6 +11167,12 @@ int AL_Codec_Encode_Create(void **codec, void *params) {
     pthread_mutex_unlock(&g_codec_mutex);
 
     /* No free slots */
+#if defined(PLATFORM_T23)
+    OpenIMP_T30_HelixDestroy(enc->t30_helix);
+    enc->t30_helix = NULL;
+    if (enc->t23_bs_held)
+        OpenIMP_T23_HelixBs_Unprepare();
+#endif
 #if defined(PLATFORM_T30)
     OpenIMP_T30_HelixDestroy(enc->t30_helix);
     enc->t30_helix = NULL;
@@ -11132,6 +11237,13 @@ static int al_codec_encode_destroy_impl(void *codec) {
     /* pairs with OpenIMP_HelixJpeg_Reserve in AL_Codec_Encode_Create */
     if (enc->hw_params.codec_type == IMP_ENC_TYPE_JPEG)
         OpenIMP_HelixJpeg_Release();
+#endif
+#if defined(PLATFORM_T23)
+    /* pairs with OpenIMP_T23_HelixBs_Prepare in AL_Codec_Encode_Create */
+    if (enc->t23_bs_held) {
+        enc->t23_bs_held = 0;
+        OpenIMP_T23_HelixBs_Unprepare();
+    }
 #endif
 
     /* Deinitialize hardware encoder(s) - OEM parity: no separate deinit function */
@@ -12504,21 +12616,21 @@ static int al_codec_encode_process_impl(void *codec, void *frame,
             codec_set_error(enc, -1);
             return -1;
         }
+        if (enc->t23_backend == T23_BACKEND_NATIVE && enc->t30_helix &&
+            (enc->t23_helix_w != width || enc->t23_helix_h != height)) {
+            /* made at CreateChn for another size than the source sends */
+            IMP_LOG_INFO("Encoder", "channel %d: pictures are %ux%u, the "
+                         "encoder was made for %ux%u: re-creating it",
+                         enc->channel_id - 1, width, height,
+                         enc->t23_helix_w, enc->t23_helix_h);
+            OpenIMP_T30_HelixDestroy(enc->t30_helix);
+            enc->t30_helix = NULL;
+            enc->t23_backend = T23_BACKEND_UNSET;
+        }
         if (enc->t23_backend == T23_BACKEND_UNSET) {
             enc->t23_backend = T23_BACKEND_WORKER;
             if (t23_native_wanted()) {
-                enc->hw_params.width = width;
-                enc->hw_params.height = height;
-                if (!enc->hw_params.fps_num)
-                    enc->hw_params.fps_num = 25u;
-                if (!enc->hw_params.fps_den)
-                    enc->hw_params.fps_den = 1u;
-                if (!enc->hw_params.gop_length)
-                    enc->hw_params.gop_length = 25u;
-                if (!enc->hw_params.bitrate)
-                    enc->hw_params.bitrate = 2000000u;
-                if (OpenIMP_T30_HelixCreate(&enc->t30_helix,
-                                            &enc->hw_params) == 0) {
+                if (t23_native_create(enc, width, height) == 0) {
                     enc->t23_backend = T23_BACKEND_NATIVE;
                     enc->use_hardware = 3;
                 } else if (!t23_native_fallback_allowed() ||

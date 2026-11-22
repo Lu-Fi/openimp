@@ -194,7 +194,7 @@ the debug-level log messages in.
 | Variable | Values / default | Effect | SoC | Class |
 |---|---|---|---|---|
 | `OPENIMP_HELIX_EARLY_CREATE` | `1` | Create the Helix encoder early (bring-up). | Helix SoCs | internal |
-| `OPENIMP_HELIX_LAZY_CREATE` | `1` | Create the Helix encoder lazily (bring-up). | Helix SoCs | internal |
+| `OPENIMP_HELIX_LAZY_CREATE` | `1` | Create the Helix encoder at the first picture instead of at CreateChn (T21, T23 since #799; bring-up). | Helix SoCs | internal |
 | `OPENIMP_HELIX_SOC` | `t10` / `t20` | Override the SoC probe of the combined T10/T20 build. | T10, T20 | debug only |
 | `OPENIMP_T23_HELIX_TIMEOUT_MS` | 100..20000; default 20000 (OEM) | Shorter Helix wait, for testing the failure limit. | T23 | debug only |
 | `OPENIMP_T30_FSC` | hex word | Replaces the REG_MCE_FSC word of the P-picture command list (#236 debug). | T30 | internal |
@@ -255,6 +255,8 @@ the debug-level log messages in.
 | `OPENIMP_T23_NATIVE_FALLBACK` | `0` = off | Fallback to the native encoder. | T23 | internal |
 | `OPENIMP_T23_PACE_STATS` | seconds | Pacing statistics interval. | T23 | internal |
 | `OPENIMP_T23_SHARED_BS` | set | Attach the shared bitstream area. | T23 | internal |
+| `OPENIMP_T23_EMC` | `t23` / `vendor` | EMC scratch layout: default T21 layout (#799), `t23` the earlier 24/64/16/64 B/MB one, `vendor` the stock 1.3.0 one (research, #774). | T23 | internal |
+| `OPENIMP_T23_EMC_EXTENT` | `1` / `2` | Report per EMC buffer how far the VPU writes (scratch filled with 0x00 / 0xa5; #799 device check). | T23 | internal |
 | `OPENIMP_T23_SKIP_HELIX` | set | Skip the Helix encoder (bring-up). | T23 | internal |
 
 ## JPEG

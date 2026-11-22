@@ -10,8 +10,11 @@
  * hardware JPEG encoder, like the stock "vpuBs" that the T23 libimp shares
  * between its H.264 and JPEG jobs under bsbufsem.
  *
- * The first H.264 channel allocates it directly below its EMC scratch (the
- * arena is filled top-down): the Helix core runs past the window end when a
+ * The first encoder channel (H.264 or JPEG, #799) allocates it with a
+ * spill guard above it, sized as the EMC scratch of the largest channel,
+ * which the first H.264 channel then adopts as its own scratch; without
+ * that, the first H.264 channel allocates it directly below its EMC
+ * scratch (the arena is filled top-down): the Helix core runs past the window end when a
  * picture overflows, and the spill then lands in that scratch, never in a
  * reference picture.  The area is only used while that guard sits right
  * above it; when the guard's channel is destroyed first, this module keeps
@@ -30,8 +33,14 @@
  * area exists and holds size bytes; -1 without the lock otherwise. */
 int OpenIMP_T23_HelixBs_Lock(uint32_t size, IMPDMABufferInfo *dma);
 void OpenIMP_T23_HelixBs_Unlock(void);
-/* Size of the area, 0 when no H.264 channel holds it. */
+/* Size of the area, 0 when it does not exist. */
 uint32_t OpenIMP_T23_HelixBs_Size(void);
+/* #799: every IMP_Encoder_CreateChn (H.264 or JPEG) holds the area, made
+ * with its spill guard at the first one, like the stock vpuBs from
+ * EncoderInit; 0 = the area exists.  Each call pairs with one Unprepare
+ * (channel destroyed); the area goes with the last holder and user. */
+int OpenIMP_T23_HelixBs_Prepare(void);
+void OpenIMP_T23_HelixBs_Unprepare(void);
 /* Bitstream window of one H.264 channel of w x h (t30_helix_encoder.c):
  * one macroblock-aligned NV12 picture, 64 KiB steps, 256 KiB .. 2 MiB. */
 static inline uint32_t t23_bs_window_bytes(uint32_t w, uint32_t h)
