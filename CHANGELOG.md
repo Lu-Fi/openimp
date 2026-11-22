@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T33 last three streamer functions on the T33L module (claude/t33-last3)
+- `IMP_ISP_Set/GetDefaultBinPath` and `IMP_Encoder_SetChnQpBounds` device-tested on the T33L module (OpenIMP only, timps stopped and restored, snapshot 200): T33 cells `qemu` / `host` -> `dev`, T33 streamer functions 255/258 -> 258/258 (matrix, HTML, API coverage regenerated).
+- Bin path: Get empty before Set, Set(day) read back equal, and the library log shows the file AddSensor loaded (`VI 0 day bin <path>`). Fix: on T33 `IMP_ISP_SetDefaultBinPath` now returns the vendor 2.0.2.1 error codes (disassembly 0x109770: NULL 0xfffff009, VI >= 4 0xfffff00c, unusable bin file 0xfffff00a) instead of -1.
+- QP bounds: H.264 and H.265 channel, windows 30..34 and 38..40 read back, slice QP of the stream (ffmpeg trace_headers) inside the window (33..34 / 38..40, wide window 32..41), restore 20..45; channel 16 and min > max refused.
+- New apitest case `t33last3` (explicit only, `APITEST_L3_BIN` = bin copy to load).
+
 ## 2026-11-22: docs round 21 (T23 IVDC / rmem, T33 #784 / #805 / #803, T31 #604)
 - Matrix: cell texts of T23 rows 13 / 22 / 24 / 30 / 36, T31 row 26 and T33 rows 4 / 8 / 22 / 24 / 26 / 27 / 28 / 30 extended with the 2026-11-22 evidence; no symbol moved. API evidence as of 2026-11-22; API reference: T32 / T33 `YuvInit` / `InputJpege` / P-skip / multi-section notes, new `Encoder_SetChnQpgAI_Yuv` entry.
 - README completeness table (T32 / T33 counts), `OPENIMP_T23_EMC_CANARY` in docs/ai/env-vars.md, "user OK 2026-11-22" on the beyond-vendor rows #779 / #783 / #787, LAN address removed from section 6.14.

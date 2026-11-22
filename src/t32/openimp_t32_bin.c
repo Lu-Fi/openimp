@@ -374,6 +374,14 @@ int IMP_ISP_SetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr)
 {
     T32BinVi *v;
 
+#ifdef PLATFORM_T33
+    /* vendor 2.0.2.1 IMP_ISP_SetDefaultBinPath (0x109770): NULL attr -4087 (li s6,-4087 at 0x109d58), VI >= 4 -4084 (0x109bfc),
+     * a bin file the reader refuses -4086 (0x109ca8); not -1 */
+    if (!attr)
+        return (int)0xfffff009;
+    if ((unsigned)num >= T32_BIN_VI)
+        return (int)0xfffff00c;
+#endif
     if (!attr || !t32_bin_vi_ok(num) || (unsigned)attr->mode >= T32_BIN_MODES)
         return -1;
     v = &tb.vi[num];
@@ -383,7 +391,11 @@ int IMP_ISP_SetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr)
     }
     if (t32_bin_check(attr->bname)) {
         IMP_LOG_ERR(TAG, "SetDefaultBinPath: %.128s is not a usable bin", attr->bname);
+#ifdef PLATFORM_T33
+        return (int)0xfffff00a;
+#else
         return -1;
+#endif
     }
     memcpy(v->def_path[attr->mode], attr->bname, T32_BIN_PATH);
     v->def_path[attr->mode][T32_BIN_PATH - 1] = 0;
@@ -476,6 +488,14 @@ int IMP_ISP_Tuning_SwitchBin(IMPVI_NUM num, IMPISPBinAttr *attr)
 {
     T32BinVi *v;
 
+#ifdef PLATFORM_T33
+    /* vendor 2.0.2.1 IMP_ISP_SetDefaultBinPath (0x109770): NULL attr -4087 (li s6,-4087 at 0x109d58), VI >= 4 -4084 (0x109bfc),
+     * a bin file the reader refuses -4086 (0x109ca8); not -1 */
+    if (!attr)
+        return (int)0xfffff009;
+    if ((unsigned)num >= T32_BIN_VI)
+        return (int)0xfffff00c;
+#endif
     if (!attr || !t32_bin_vi_ok(num) || (unsigned)attr->mode >= T32_BIN_MODES)
         return -1;
     v = &tb.vi[num];
