@@ -26,6 +26,7 @@
 #include <imp/imp_encoder.h>
 
 #include "t32/openimp_t32_enc_e1.h"
+#include "t32/openimp_t32_pskip.h"
 
 #define T32_ENC_ERR_CHN     ((int)0x80040001)
 #define T32_ENC_ERR_PARAM   ((int)0x80040002)
@@ -623,6 +624,22 @@ void OpenIMP_T32_E1GdrTake(int encChn, T32E1Gdr *g)
     pthread_mutex_unlock(&e1_lock);
 }
 
+void OpenIMP_T32_E1PskipTake(int encChn, int rc_mode, uint32_t bitrate, T32E1Pskip *p)
+{
+    memset(p, 0, sizeof(*p));
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return;
+    pthread_mutex_lock(&e1_lock);
+    if (E1.pskip.enable) {
+        p->en = 1;
+        p->max_frames = (uint32_t)E1.pskip.pskipMaxFrames;
+        p->thr = t32_pskip_thr(E1.pskip.pskipThr, rc_mode, bitrate);
+    }
+    p->req = E1.pskip_req != 0;
+    E1.pskip_req = 0;
+    pthread_mutex_unlock(&e1_lock);
+}
+
 int IMP_Encoder_SetPskipCfg(int encChn, const IMPEncoderPskipCfg *p)
 {
     T32EncChnInfo ci;
@@ -635,9 +652,13 @@ int IMP_Encoder_SetPskipCfg(int encChn, const IMPEncoderPskipCfg *p)
     pthread_mutex_lock(&e1_lock);
     rc = e1_get(encChn, &ci);
     if (!rc) {
+        /* vendor 0x108a74: off keeps maxFrames / thr; maxFrames is stored
+         * before thr is checked */
         if (!p->enable)
             E1.pskip.enable = 0;
-        else if (p->pskipMaxFrames < 1 || p->pskipThr < 0)
+        else if (p->pskipMaxFrames < 1)
+            rc = T32_ENC_ERR_PARAM;
+        else if (E1.pskip.pskipMaxFrames = p->pskipMaxFrames, p->pskipThr < 0)
             rc = T32_ENC_ERR_PARAM;
         else
             E1.pskip = *p;

@@ -102,6 +102,9 @@ void t32_rc33_set_motion(T32Rc33 *c, uint8_t mode);
  * request frames, 0x158 frames, 0x15c cycle), taken by the next start */
 void t32_rc33_set_gdr(T32Rc33 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
                       uint32_t cycle);
+/* the picture's P-skip fields (i264e_update_fenc 0x6ff80: F+0x160 threshold,
+ * 0x165 enable, 0x166 request, 0x168 max frames), taken by the next start */
+void t32_rc33_set_pskip(T32Rc33 *c, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames);
 /* i264e_ratecontrol_start for the picture @since_idr pictures after the
  * last IDR (0: IDR): the picture QP, -1 when the controller's picture type
  * does not match (the vendor logs and keeps the last QP).  At an IDR with
@@ -261,6 +264,11 @@ int t32_rc65_init(T32Rc65 *c);
  * next rcStart */
 void t32_rc65_set_gdr(T32Rc65 *c, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
                       uint32_t cycle);
+/* the picture's P-skip fields (I265eFrame::recvPic 0x8b4c0..0x8b50c: frame
+ * +0xf8 threshold, +0xfe enable, +0xff request, +0x100 max frames = F+0x22e8 /
+ * 0x22ee / 0x22ef / 0x22f0), taken by the next rcStart (cur+0x3c8 / 0x3cd /
+ * 0x3ce / 0x3d0) */
+void t32_rc65_set_pskip(T32Rc65 *c, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames);
 int t32_rc65_start(T32Rc65 *c, int idr);
 /* the row words rcEnd reads: revision 6 after an I picture the coded size
  * of every 64-line row as for H.264 (T33_HERA_ROW_SEL / T33_HERA_ROW);

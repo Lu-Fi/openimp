@@ -1006,6 +1006,24 @@ static void t33_recon_addrs(struct t32_h264 *a, const T32HeraH264Pic *ring, int 
     *ref_c = a->recon_c ? a->recon_c : ring->ring_c;
 }
 #endif
+/* P-skip (#784): the encode loop's per-picture fields (0xde428 H.264,
+ * 0xdf4cc H.265); the threshold scales the channel's bit rate (the vendor
+ * chn+0x50 = rate attribute +8: outBitRate / maxBitRate in rcMode 1..5) */
+static void pskip_take(struct t32_enc_chn *e, T32Rc *rc)
+{
+    const IMPEncoderAttrRcMode *m = &e->attr.rcAttr.attrRcMode;
+    T32E1Pskip ps;
+    uint32_t br;
+    int mode;
+
+    pthread_mutex_lock(&enc_lock);
+    mode = (int)m->rcMode;
+    br = m->attrH264Cbr.outBitRate;     /* +8 in every rate mode (asserted in imp_encoder.h) */
+    pthread_mutex_unlock(&enc_lock);
+    OpenIMP_T32_E1PskipTake(chn_no(e), mode, br, &ps);
+    t32_rc_pskip(rc, ps.thr, ps.en, ps.req, ps.max_frames);
+}
+
 static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
@@ -1029,6 +1047,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         a->gdr_d = -1;
     }
     t32_rc_gdr(&a->rc, g.gate, g.req, g.en, g.req_frames, g.frames, g.cycle);
+    pskip_take(e, &a->rc);
     if (idr)
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
@@ -1298,6 +1317,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         a->gdr_d = -1;
     }
     t32_rc_gdr(&a->rc, g.gate, g.req, g.en, g.req_frames, g.frames, g.cycle);
+    pskip_take(e, &a->rc);
     if (idr)
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));

@@ -80,6 +80,8 @@ typedef struct {
 #define VMAU_MD_CFG5    0x40424u        /* bits 31:24 chroma QP offset (#784) */
 #define VMAU_MD_CFG7    0x4042cu
 #define VMAU_CTX        0x40448u
+#define VMAU_MD_CFG10   0x40438u        /* bit 0 off on a skipped picture (#784) */
+#define MCE_CFG48       0x30048u        /* P: bit 23 off on refresh pictures (#784) */
 #define DBLK_FRM_SIZE   0x50000u        /* width << 16 | height */
 #define TAIL_FRM_SIZE   0x7000cu
 /* SDE */
@@ -149,6 +151,13 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
         case RC_ROW_SHIFT:
             return (sl[0x769] & 0x7fu) << 7 | (sl[0x768] & 0x7fu) | (sl[0x76b] & 7u) << 14 |
                    (sl[0x76c] & 7u) << 17 | (sl[0x534] & 7u) << 20 | (uint32_t)(sl[0x770] & 0x7fu) << 23;
+        /* P-skip / intra refresh (#784, QEMU A/B vps2 and vgc vs vendor
+         * 2.0.2.1): the controller's skipped picture clears s+0x42c, a
+         * refresh or skipped picture s+0x2c4 */
+        case VMAU_MD_CFG10:
+            return (v & ~1u) | (sl[0x42c] & 1u);
+        case MCE_CFG48:
+            return rd32(sl + 0x2c4) ? v : v & ~(1u << 23);
         case RC_ROW_TGT:
             return rd32(sl + 0x54e);
         case RC_ROW_TGT + 0xc: case RC_ROW_TGT + 0x10: case RC_ROW_TGT + 0x14: case RC_ROW_TGT + 0x18:
@@ -313,6 +322,10 @@ size_t t33_hera_h264_list(const T33HeraH264Pic *t, uint32_t *list)
             continue;
         /* SetRdBufShare(0): the vendor writes no reference look-up (#736) */
         if (t->noshare && (e->reg == MCE_RLUT_Y || e->reg == MCE_RLUT_C))
+            continue;
+        /* a skipped picture (RequestPskip, #784): no MCE 0x30048 (the
+         * controller zeroes s+0x2c0 / 0x2c4 for it) */
+        if (e->reg == MCE_CFG48 && t33_rc_slice(p) && !rd32(p->rc_slice + 0x2c0))
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->reg == SDE_CTX_TBL ? e->reg + 4u * k : e->reg;
