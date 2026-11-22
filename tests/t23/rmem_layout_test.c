@@ -279,6 +279,10 @@ static void start(int sub_first_after_idle)
 
     rmem_arena_init(&arena, RMEM_SIZE);
     block_alloc(&isp, ISP_NCU);
+    /* #799: both encoders exist from IMP_Encoder_CreateChn on, in
+     * channel order, before the FrameSource pools (vendor order) */
+    encoder_create(&main_encoder, MAIN_W, MAIN_H);
+    encoder_create(&sub_encoder, SUB_W, SUB_H);
     pool_enable(&pool0, POOL0);
     if (!sub_first_after_idle)
         pool_enable(&pool1, POOL1);
@@ -374,11 +378,13 @@ int main(void)
     assert(legacy_log_order_fails());
 
     /* 1: the device log's order - main starts alone, chn0 idles, the sub
-     * channel starts while chn0 is idle, chn0 comes back */
+     * channel starts while chn0 is idle, chn0 comes back.  Since #799 the
+     * sub encoder already exists from its CreateChn on (start()); the
+     * lazy order (sub encoder made after its pool, OPENIMP_HELIX_LAZY_
+     * CREATE=1) is no longer the default. */
     start(1);
     block_free(&pool0);                     /* chn0 idle */
     pool_enable(&pool1, POOL1);             /* chn1 streaming */
-    encoder_create(&sub_encoder, SUB_W, SUB_H);
     note_free();
     pool_enable(&pool0, POOL0);             /* chn0 re-enable */
     note_free();
@@ -459,6 +465,78 @@ int main(void)
         printf("720p sensor: area %u KiB, sub 640x360 %u KiB, main "
                "1280x720 %u KiB\n", area >> 10, s720 >> 10, m720 >> 10);
         assert(area == (1408u << 10) + 4096u);
+        memset(fs_w, 0, sizeof(fs_w));
+        memset(fs_h, 0, sizeof(fs_h));
+    }
+    /* #799: O-KAM QC3 / A12 (T23DL, rmem=8M): 1280x720 main over IVDC,
+     * 640x360 sub, two JPEG channels.  Every encoder channel holds the
+     * shared area from its CreateChn on (stock vpuBs from EncoderInit),
+     * the H.264 buffers come at CreateChn in channel order, so neither the
+     * JPEG buffer nor the streaming order matters any more. */
+    {
+        static const unsigned int orders[2][2] = { { 0, 1 }, { 1, 0 } };
+        unsigned int o;
+
+        fs_w[0] = 1280u; fs_h[0] = 720u; fs_w[1] = 640u; fs_h[1] = 360u;
+        for (o = 0; o < 2u; o++) {
+            Block ncu = { 0 }, ivdc = { 0 }, vbm1 = { 0 }, osdb = { 0 };
+            T30HelixEncoder **enc[2] = { &main_encoder, &sub_encoder };
+            const uint32_t w[2] = { 1280u, 640u }, h[2] = { 720u, 360u };
+            unsigned int k, holders = 0;
+            size_t enc_bytes;
+
+            rmem_arena_init(&arena, 8u << 20);
+            block_alloc(&ncu, 1384448u);        /* ISP NCU */
+            for (k = 0; k < 2u; k++) {          /* H.264 CreateChn */
+                unsigned int c = orders[o][k];
+
+                assert(OpenIMP_T23_HelixBs_Prepare() == 0);
+                holders++;
+                encoder_create(enc[c], w[c], h[c]);
+            }
+            for (k = 0; k < 2u; k++) {          /* JPEG CreateChn */
+                assert(OpenIMP_T23_HelixBs_Prepare() == 0);
+                holders++;
+            }
+            /* JPEG 1280x720 needs 1056768 bytes: it fits the area */
+            assert(OpenIMP_T23_HelixBs_Size() >= 1056768u);
+            enc_bytes = arena.used - 1384448u;
+            block_alloc(&osdb, 350u << 10);     /* timps OSD, A12 run */
+            block_alloc(&ivdc, 576000u);        /* IVDC ring, 300 lines */
+            block_alloc(&vbm1, 706560u);        /* sub FrameSource pool */
+            printf("#799 A12 rmem=8M, H.264 CreateChn %s first: encoder "
+                   "%zu KiB (area %u KiB), free %zu KiB\n",
+                   orders[o][0] ? "sub" : "main", enc_bytes >> 10,
+                   OpenIMP_T23_HelixBs_Size() >> 10,
+                   (arena.size - arena.used) >> 10);
+            block_free(&vbm1);
+            block_free(&ivdc);
+            block_free(&osdb);
+            encoder_destroy(&main_encoder);
+            encoder_destroy(&sub_encoder);
+            assert(OpenIMP_T23_HelixBs_Size() != 0u);   /* JPEG holds it */
+            while (holders--)
+                OpenIMP_T23_HelixBs_Unprepare();
+            assert(OpenIMP_T23_HelixBs_Size() == 0u);
+            block_free(&ncu);
+            assert(arena.used == 0);
+        }
+        /* JPEG first: the area exists without an H.264 channel, the
+         * first H.264 channel adopts the spill guard as its scratch */
+        rmem_arena_init(&arena, 8u << 20);
+        assert(OpenIMP_T23_HelixBs_Prepare() == 0);
+        {
+            size_t before = arena.used;
+
+            assert(OpenIMP_T23_HelixBs_Prepare() == 0);
+            encoder_create(&main_encoder, 1280u, 720u);
+            /* adopted guard: no second EMC scratch */
+            assert(arena.used - before < (2u << 20));
+            encoder_destroy(&main_encoder);
+        }
+        OpenIMP_T23_HelixBs_Unprepare();
+        OpenIMP_T23_HelixBs_Unprepare();
+        assert(arena.used == 0);
         memset(fs_w, 0, sizeof(fs_w));
         memset(fs_h, 0, sizeof(fs_h));
     }

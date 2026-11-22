@@ -492,6 +492,11 @@ struct T30HelixEncoder {
      * bytes past the stock layout's tail, checked every 25 pictures */
     uint32_t emc_canary_off;
     uint32_t emc_canary_hits;
+    /* OPENIMP_T23_EMC_EXTENT=1|2 (#799 step 1a device check): how far the
+     * core writes into each of the five EMC buffers; 0 = off, else the
+     * fill byte + 1 */
+    uint32_t emc_extent_fill;
+    uint32_t emc_extent_max[5]; /* highest written byte + 1, per buffer */
     uint32_t canary_hits;       /* overflows that wrote past the window */
     int shared_bs;              /* bitstream in the shared area */
 #endif
@@ -666,6 +671,49 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
+/* #799 step 1a: the T21 EMC layout by default (24/64/16/20 bytes per
+ * macroblock and one page, 996 KiB at 1080p instead of 2 MiB, 468 KiB
+ * at 720p instead of 936 KiB).  Tapo C500 (T23N), 1080p + 360p, 500+
+ * pictures each, scratch filled with 0x00 and with 0xa5
+ * (OPENIMP_T23_EMC_EXTENT=1/2): the core changed no byte in any of the
+ * five buffers with OpenIMP's command list; streams in the T21 layout
+ * decode clean.  OPENIMP_T23_EMC=t23 restores the earlier layout. */
+#define T23_EMC_DEFAULT T21_HelixScratchLayout
+#define T23_EMC_OTHER T23_HelixScratchLayout
+#define T23_EMC_OTHER_NAME "t23"
+#endif
+
+#if defined(PLATFORM_T23)
+/* EMC scratch layout choice (#774): the T21-derived layout everywhere.
+ * The vendor 1.3.0 layout (OPENIMP_T23_EMC=vendor, research only) broke
+ * the bitstream on a real T23N with OpenIMP's command list (Tapo C500,
+ * 2026-11-22: decode errors from the first pictures, VPU hangs with a
+ * canary past its tail), so it is not used by default, also not in the
+ * IVDC direct mode. */
+static int t23_emc_vendor_layout(void)
+{
+    const char *env = getenv("OPENIMP_T23_EMC");
+
+    return env && !strcmp(env, "vendor");
+}
+
+/* EMC scratch layout of a T23 channel (#799 step 1a): T23_EMC_DEFAULT,
+ * OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88) bytes per
+ * macroblock layout, =vendor the stock 1.3.0 one (research, #774). */
+static uint32_t t23_emc_layout(uint32_t mbw, uint32_t mbh,
+                               uint32_t offsets[4])
+{
+    const char *env = getenv("OPENIMP_T23_EMC");
+
+    if (t23_emc_vendor_layout())
+        return T23_HelixScratchLayoutStock(mbw, mbh, offsets);
+    if (env && !strcmp(env, T23_EMC_OTHER_NAME))
+        return T23_EMC_OTHER(mbw, mbh, offsets);
+    return T23_EMC_DEFAULT(mbw, mbh, offsets);
+}
+#endif
+
+#if defined(PLATFORM_T23)
 /* The shared bitstream area, see t30/t23_helix_bs.h.  Size: the largest
  * channel window and its page of slack (t23_bs_area_size). */
 /* FrameSource channels the area size looks at (T23: 3 physical) */
@@ -681,6 +729,10 @@ static struct {
     IMPDMABufferInfo guard;    /* EMC scratch kept after its channel left */
     const IMPDMABufferInfo *guard_emc; /* live channel scratch above it */
     uint32_t users;            /* H.264 channels on the area */
+    int guard_planned;         /* guard made by Prepare for the largest
+                                * channel, not yet adopted */
+    uint32_t holders;          /* encoder channels of any type since
+                                * CreateChn (OpenIMP_T23_HelixBs_Prepare) */
 } t23_bs = { .lock = PTHREAD_MUTEX_INITIALIZER };
 
 /* The area holds the window of the largest FrameSource channel (#768: the
@@ -709,6 +761,18 @@ static uint32_t t23_bs_area_size(uint32_t need)
     return t23_bs_area_bytes(w, h, T23_BS_FS_CHANNELS, need);
 }
 
+/* Lock held: the area and a kept guard go when no H.264 channel uses the
+ * area and no encoder channel holds it any more. */
+static void t23_bs_free_unused(void)
+{
+    if (t23_bs.users || t23_bs.holders)
+        return;
+    t30_dma_release(&t23_bs.dma);
+    t30_dma_release(&t23_bs.guard);
+    t23_bs.guard_emc = NULL;
+    t23_bs.guard_planned = 0;
+}
+
 /* An H.264 channel that just allocated its EMC scratch takes the area for
  * its bitstream: a new area right below the scratch, or the existing one
  * when the window fits.  0 = on the area, -1 = the caller allocates a
@@ -723,6 +787,8 @@ static int t23_bs_attach(uint32_t size, const IMPDMABufferInfo *emc)
         return -1;
     pthread_mutex_lock(&t23_bs.lock);
     if (t23_bs.dma.phys_addr) {
+        /* made at the first CreateChn (OpenIMP_T23_HelixBs_Prepare) or by
+         * an earlier H.264 channel */
         if (t23_bs.dma.size >= size) {
             t23_bs.users++;
             ret = 0;
@@ -780,10 +846,16 @@ static int t23_bs_adopt_guard(IMPDMABufferInfo *emc, uint32_t scratch,
     int ret = -1;
 
     pthread_mutex_lock(&t23_bs.lock);
-    if (t23_bs.users && t23_bs.guard.phys_addr &&
-        t23_bs.guard.size >= scratch && t23_bs.dma.size >= window) {
+    /* a guard planned for the largest channel only goes to a channel of
+     * that scratch size: a smaller channel created first would leave the
+     * large one to allocate a second large scratch (#799) */
+    if (t23_bs.dma.phys_addr && t23_bs.guard.phys_addr &&
+        t23_bs.guard.size >= scratch && t23_bs.dma.size >= window &&
+        (!t23_bs.guard_planned ||
+         t23_bs.guard.size - scratch < 4096u)) {
         *emc = t23_bs.guard;
         memset(&t23_bs.guard, 0, sizeof(t23_bs.guard));
+        t23_bs.guard_planned = 0;
         t23_bs.guard_emc = emc;
         ret = 0;
     }
@@ -799,14 +871,115 @@ static void t23_bs_detach(IMPDMABufferInfo *emc)
     pthread_mutex_lock(&t23_bs.lock);
     if (t23_bs.guard_emc == emc) {
         t23_bs.guard = *emc;
+        t23_bs.guard_planned = 0;
         memset(emc, 0, sizeof(*emc));
         t23_bs.guard_emc = NULL;
     }
-    if (t23_bs.users && !--t23_bs.users) {
-        t30_dma_release(&t23_bs.dma);
-        t30_dma_release(&t23_bs.guard);
-        t23_bs.guard_emc = NULL;
+    if (t23_bs.users)
+        t23_bs.users--;
+    t23_bs_free_unused();
+    pthread_mutex_unlock(&t23_bs.lock);
+}
+
+/* EMC scratch bytes of one H.264 channel of w x h, in the layout
+ * OpenIMP_T30_HelixCreate uses */
+static uint32_t t23_bs_scratch_bytes(uint32_t w, uint32_t h)
+{
+    uint32_t offsets[4];
+    uint32_t mbw = (w + 15u) / 16u, mbh = (h + 15u) / 16u;
+
+    return t23_emc_layout(mbw, mbh, offsets);
+}
+
+/* Spill guard of an area made before any H.264 channel: the EMC scratch
+ * of the largest FrameSource channel (1080p with none known), so that
+ * channel adopts it as its own scratch (t23_bs_adopt_guard) and nothing
+ * is spent on the guard itself. */
+static uint32_t t23_bs_guard_bytes(void)
+{
+    uint32_t guard = 0;
+    unsigned int i;
+
+    for (i = 0; IMP_FrameSource_GetChnAttr && i < T23_BS_FS_CHANNELS; i++) {
+        IMPFSChnAttr attr;
+        uint32_t bytes;
+
+        memset(&attr, 0, sizeof(attr));
+        if (IMP_FrameSource_GetChnAttr((int)i, &attr) != 0 ||
+            attr.picWidth <= 0 || attr.picHeight <= 0)
+            continue;
+        bytes = t23_bs_scratch_bytes((uint32_t)attr.picWidth,
+                                     (uint32_t)attr.picHeight);
+        if (bytes > guard)
+            guard = bytes;
     }
+    if (!guard)
+        guard = t23_bs_scratch_bytes(1920u, 1080u);
+    return guard;
+}
+
+/* #799: like the stock vpuBs (allocated once in EncoderInit, before any
+ * channel buffer), the area exists from the first IMP_Encoder_CreateChn
+ * of any type on, so the JPEG encoder never needs a buffer of its own and
+ * the result does not depend on which channel streams first.  The area
+ * goes right below its spill guard (top-down arena).  Every call is
+ * paired with OpenIMP_T23_HelixBs_Unprepare.  0 = the area exists. */
+int OpenIMP_T23_HelixBs_Prepare(void)
+{
+    const char *env = getenv("OPENIMP_T23_SHARED_BS");
+    size_t used = 0, total = 0, largest = 0;
+    int ret = 0;
+
+    pthread_mutex_lock(&t23_bs.lock);
+    t23_bs.holders++;
+    if (!t23_bs.dma.phys_addr && !(env && env[0] == '0')) {
+        uint32_t guard = t23_bs_guard_bytes();
+        uint32_t area = t23_bs_area_size(0);
+
+        ret = -1;
+        if (!t23_bs.guard.phys_addr &&
+            t30_dma_allocate(&t23_bs.guard, guard, "t23-helix-emc") == 0 &&
+            t30_dma_allocate(&t23_bs.dma, area, "t23-helix-bs") == 0) {
+            if ((uint64_t)t23_bs.dma.phys_addr + t23_bs.dma.size ==
+                t23_bs.guard.phys_addr) {
+                t23_bs.guard_planned = 1;
+                ret = 0;
+            }
+            else
+                IMP_LOG_WARN("Encoder", "T23 Helix: shared bitstream area "
+                             "0x%08x/%u not below its guard 0x%08x",
+                             t23_bs.dma.phys_addr, t23_bs.dma.size,
+                             t23_bs.guard.phys_addr);
+        }
+        if (ret) {
+            t30_dma_release(&t23_bs.dma);
+            t30_dma_release(&t23_bs.guard);
+            IMP_LOG_WARN("Encoder", "T23 Helix: no shared bitstream area "
+                         "at channel creation (%u + %u-byte guard), the "
+                         "first H.264 channel makes it", area, guard);
+        } else {
+            (void)DMA_RmemStats(&used, &total, &largest);
+            IMP_LOG_INFO("Encoder", "T23 Helix: shared %u-byte bitstream "
+                         "area at 0x%08x, %u-byte spill guard above it "
+                         "(rmem used %zu of %zu, largest free %zu)",
+                         t23_bs.dma.size, t23_bs.dma.phys_addr,
+                         t23_bs.guard.size, used, total, largest);
+        }
+    } else if (!t23_bs.dma.phys_addr) {
+        ret = -1;
+    }
+    pthread_mutex_unlock(&t23_bs.lock);
+    if (ret == 0 && OpenIMP_HelixJpeg_AreaReady)
+        OpenIMP_HelixJpeg_AreaReady();
+    return ret;
+}
+
+void OpenIMP_T23_HelixBs_Unprepare(void)
+{
+    pthread_mutex_lock(&t23_bs.lock);
+    if (t23_bs.holders)
+        t23_bs.holders--;
+    t23_bs_free_unused();
     pthread_mutex_unlock(&t23_bs.lock);
 }
 
@@ -815,7 +988,7 @@ int OpenIMP_T23_HelixBs_Lock(uint32_t size, IMPDMABufferInfo *dma)
     if (!dma || !size)
         return -1;
     pthread_mutex_lock(&t23_bs.lock);
-    if (!t23_bs.users || !t23_bs.dma.phys_addr || t23_bs.dma.size < size) {
+    if (!t23_bs.dma.phys_addr || t23_bs.dma.size < size) {
         pthread_mutex_unlock(&t23_bs.lock);
         return -1;
     }
@@ -833,7 +1006,7 @@ uint32_t OpenIMP_T23_HelixBs_Size(void)
     uint32_t size;
 
     pthread_mutex_lock(&t23_bs.lock);
-    size = t23_bs.users ? t23_bs.dma.size : 0u;
+    size = t23_bs.dma.phys_addr ? t23_bs.dma.size : 0u;
     pthread_mutex_unlock(&t23_bs.lock);
     return size;
 }
@@ -1126,21 +1299,6 @@ static void helix_watermark(const T30HelixEncoder *encoder,
 }
 
 #if defined(PLATFORM_T23)
-/* EMC scratch layout choice (#774): the T21-derived layout everywhere.
- * The vendor 1.3.0 layout (OPENIMP_T23_EMC=vendor, research only) broke
- * the bitstream on a real T23N with OpenIMP's command list (Tapo C500,
- * 2026-11-22: decode errors from the first pictures, VPU hangs with a
- * canary past its tail), so it is not used by default, also not in the
- * IVDC direct mode. */
-static int t23_emc_vendor_layout(void)
-{
-    const char *env = getenv("OPENIMP_T23_EMC");
-
-    return env && !strcmp(env, "vendor");
-}
-#endif
-
-#if defined(PLATFORM_T23)
 #define T23_EMC_CANARY_BYTE 0xa5u
 /* #774 device check (vendor layout only, OPENIMP_T23_EMC=vendor and
  * OPENIMP_T23_EMC_CANARY=1): the stock 1.3.0 layout ends 0xa00 bytes
@@ -1196,6 +1354,91 @@ static void t23_emc_canary_check(T30HelixEncoder *encoder)
                        encoder->emc_canary_hits);
     if (bad)
         t23_emc_canary_arm(encoder);
+}
+#endif
+
+#if defined(PLATFORM_T23)
+/* #799 step 1a device check: OPENIMP_T23_EMC_EXTENT=1 reads back the
+ * zero-filled scratch (=2: filled with 0xa5 at creation, so writes of
+ * zero show too) and reports per EMC buffer (0x30018, 0x3004c, 0x30050,
+ * 0x30054, 0x30058) the highest byte the core changed, in bytes per
+ * macroblock, after pictures 1, 2, 3, 25, 100, 250 and every 500th.
+ * Research only; the T21 layout (24/64/16/20 bytes per macroblock and one
+ * page) is safe on a T23 when no buffer goes past it. */
+static void t23_emc_extent_arm(T30HelixEncoder *encoder)
+{
+    const char *env = getenv("OPENIMP_T23_EMC_EXTENT");
+
+    encoder->emc_extent_fill = 0;
+    if (!env || (env[0] != '1' && env[0] != '2') || !encoder->emc.virt_addr ||
+        !encoder->scratch_offset[3] || encoder->scratch_size > encoder->emc.size ||
+        t23_emc_vendor_layout())
+        return;
+    memset(encoder->emc_extent_max, 0, sizeof(encoder->emc_extent_max));
+    /* an adopted guard holds an earlier channel's data: always refill */
+    encoder->emc_extent_fill = env[0] == '2' ? 0xa5u + 1u : 1u;
+    memset((void *)(uintptr_t)encoder->emc.virt_addr,
+           (int)(encoder->emc_extent_fill - 1u), encoder->scratch_size);
+    (void)DMA_RmemFlushCache((void *)(uintptr_t)encoder->emc.virt_addr,
+                             encoder->scratch_size, 1);
+    IMP_LOG_NOTICE("Encoder", "T23 Helix: EMC extent probe %ux%u fill 0x%02x: "
+                   "buffers at +0/+0x%x/+0x%x/+0x%x/+0x%x of %u bytes",
+                   encoder->params.width, encoder->params.height,
+                   encoder->emc_extent_fill - 1u, encoder->scratch_offset[0],
+                   encoder->scratch_offset[1], encoder->scratch_offset[2],
+                   encoder->scratch_offset[3], encoder->scratch_size);
+}
+
+static void t23_emc_extent_check(T30HelixEncoder *encoder)
+{
+    static const uint16_t reg[5] = { 0x0018u, 0x004cu, 0x0050u, 0x0054u,
+                                     0x0058u };
+    const uint8_t *p = (const uint8_t *)(uintptr_t)encoder->emc.virt_addr;
+    uint32_t start[6], mbs, n = encoder->frame_number;
+    uint8_t fill;
+    char line[320];
+    int len = 0, grew = 0;
+    unsigned int b;
+
+    if (!encoder->emc_extent_fill ||
+        !(n == 1u || n == 2u || n == 3u || n == 25u || n == 100u ||
+          n == 250u || n % 500u == 0u))
+        return;
+    fill = (uint8_t)(encoder->emc_extent_fill - 1u);
+    mbs = ((encoder->params.width + 15u) / 16u) *
+          ((encoder->params.height + 15u) / 16u);
+    start[0] = 0;
+    for (b = 0; b < 4u; b++)
+        start[b + 1u] = encoder->scratch_offset[b];
+    start[5] = encoder->scratch_size;
+    (void)DMA_RmemFlushCache((void *)p, encoder->scratch_size, 2);
+    for (b = 0; b < 5u; b++) {
+        uint32_t i = start[b + 1u], hi = 0, changed = 0, k;
+
+        for (k = start[b]; k < start[b + 1u]; k++)
+            if (p[k] != fill)
+                changed++;
+        while (i > start[b])
+            if (p[--i] != fill) {
+                hi = i - start[b] + 1u;
+                break;
+            }
+        if (hi > encoder->emc_extent_max[b]) {
+            encoder->emc_extent_max[b] = hi;
+            grew = 1;
+        }
+        len += snprintf(line + len, sizeof(line) - (size_t)len,
+                        " 0x30%03x:%u/%u(%u.%02u B/MB,%u chg)", reg[b], hi,
+                        start[b + 1u] - start[b],
+                        mbs ? hi / mbs : 0u,
+                        mbs ? (hi % mbs) * 100u / mbs : 0u, changed);
+        if (len >= (int)sizeof(line))
+            break;
+    }
+    if (grew || n <= 3u || n % 500u == 0u)
+        IMP_LOG_NOTICE("Encoder", "T23 Helix: EMC extent %ux%u frame=%u:%s",
+                       encoder->params.width, encoder->params.height, n,
+                       line);
 }
 #endif
 
@@ -3298,16 +3541,11 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * all-I_PCM picture fits; at least 256 KiB, at most the 1 MiB of the
      * T21 layout). */
 #if defined(PLATFORM_T23)
-    /* T23: the T21-derived EMC layout; the vendor 1.3.0 one only on
+    /* T23: t23_emc_layout (#799 1a); the vendor 1.3.0 one only on
      * request (OPENIMP_T23_EMC=vendor, #774: corrupt on a real T23N) */
-    if (t23_emc_vendor_layout())
-        encoder->scratch_size = T23_HelixScratchLayoutStock(
-            (params->width + 15u) / 16u, (params->height + 15u) / 16u,
-            encoder->scratch_offset);
-    else
-        encoder->scratch_size = T23_HelixScratchLayout(
-            (params->width + 15u) / 16u, (params->height + 15u) / 16u,
-            encoder->scratch_offset);
+    encoder->scratch_size = t23_emc_layout(
+        (params->width + 15u) / 16u, (params->height + 15u) / 16u,
+        encoder->scratch_offset);
 #elif defined(PLATFORM_T20)
     /* T20 (and T10 through the T20 build) keeps the earlier layout: the
      * 1 MiB layout is only measured on a T21 (cam-D) */
@@ -3381,8 +3619,10 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * the EMC scratch goes between the references and the bitstream
      * buffer: a spill upwards runs into the scratch of the picture that
      * is being dropped anyway, not into the reference the next P picture
-     * predicts from (the scratch is 2 MiB at 1080p, larger than the
-     * spills seen).  The window starts at the 128-byte aligned slice
+     * predicts from (the scratch is 996 KiB at 1080p in the T21 layout,
+     * #799; the largest spill seen, 0.79 MB, was with the earlier 1 MiB
+     * window; with the 2 MiB window it is not measured).  The window
+     * starts at the 128-byte aligned slice
      * data; a page of slack keeps even a full window inside the
      * allocation.  Short of reserved memory: the 1 MiB T21 window. */
     if (t23_bs_adopt_guard(&encoder->emc, encoder->scratch_size,
@@ -3391,6 +3631,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
                          "t23-helix-emc") != 0)
         goto fail;
     t23_emc_canary_arm(encoder);
+    t23_emc_extent_arm(encoder);
     if (t23_bs_attach((encoder->bitstream_kib << 10) + 4096u,
                       &encoder->emc) == 0) {
         encoder->shared_bs = 1;
@@ -5088,6 +5329,7 @@ again:
     encoder->frame_number++;
 #if defined(PLATFORM_T23)
     t23_emc_canary_check(encoder);
+    t23_emc_extent_check(encoder);
 #endif
     if (encoder->rate_control_enabled
 #if defined(HELIX_HSKIP)
