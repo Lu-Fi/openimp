@@ -9,6 +9,9 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: docs: Release 1 release note draft with the T23 flip upgrade note (#795)
+- docs/releases/Release-1.md (new, in preparation): T23 H+V flip now flips both axes; cameras that had H+V set to get an upright picture must adjust their flip setting once.
+
 ## 2026-11-22: docs: beyond-vendor row for the T23 direct-mode flip split (#787)
 - docs/OPENIMP_BEYOND_VENDOR.md section 6: with direct_mode=1, HFLIP stays in the MSCA and VFLIP goes to the sensor (user OK 2026-11-22).
 
