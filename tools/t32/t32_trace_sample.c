@@ -86,6 +86,14 @@
 #include "t23/openimp_t23_osd_abi.h"
 
 int IMP_OSD_SetPoolSize(int size);
+int IMP_Encoder_SetJpegMultiSectionMode(int mode, int size, int cnt);   /* T33 2.0.2.1 (#784): not all in imp_encoder.h */
+int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt);
+int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize);
+int IMP_Encoder_SetJpegBsSize(uint32_t jpegBsSize);
+int IMP_Encoder_SetChnFrmUsedMode(int encChn, const IMPEncoderAttrFrmUsed *attr);
+int IMP_Encoder_GetChnFrmUsedMode(int encChn, IMPEncoderAttrFrmUsed *attr);
+int IMP_FrameSource_SetFrameDepthCopyType(int chnNum, int b_nocopy_depth);
+int IMP_FrameSource_SetYuvAlign(int chnNum, void *param);   /* T33: not in imp_framesource.h for T32 */
 int IMP_OSD_CreateGroup(int grpNum);
 int IMP_OSD_DestroyGroup(int grpNum);
 IMPRgnHandle IMP_OSD_CreateRgn(IMPOSDRgnAttr *prAttr);
@@ -706,6 +714,19 @@ int main(int argc, char **argv)
         STEP(IMP_OSD_SetPoolSize(512 * 1024));
     if (isposd)
         STEP(IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024));
+    if (getenv("T32_ENC_MS")) {         /* #784 group 3: "ms=M:S,jms=M:S,ivpu=N,jbs=N" before IMP_System_Init */
+        const char *ms = getenv("T32_ENC_MS"), *q;
+        int m, sz;
+
+        if ((q = strstr(ms, "jms=")) && sscanf(q + 4, "%d:%d", &m, &sz) == 2)
+            STEP(IMP_Encoder_SetJpegMultiSectionMode(m, sz, 2));
+        if ((q = strstr(ms, "ms=")) && (q == ms || q[-1] == ',') && sscanf(q + 3, "%d:%d", &m, &sz) == 2)
+            STEP(IMP_Encoder_SetMultiSectionMode(m, sz, 2));
+        if ((q = strstr(ms, "ivpu=")))
+            STEP(IMP_Encoder_SetIvpuBsSize((uint32_t)atoi(q + 5)));
+        if ((q = strstr(ms, "jbs=")))
+            STEP(IMP_Encoder_SetJpegBsSize((uint32_t)atoi(q + 4)));
+    }
     MUST(IMP_System_Init());
     if (bin_test) {                     /* #289: day/night bin switch */
         IMPISPRunningMode rm = IMPISP_RUNNING_MODE_NIGHT;
@@ -810,6 +831,18 @@ again:
     }
     MUST(IMP_FrameSource_CreateChn(0, &fs));
     MUST(IMP_FrameSource_SetChnAttr(0, &fs));
+    if (getenv("T32_FS_ALIGN")) {       /* #784 group 4: "E:W:H" SetYuvAlign before EnableChn (0/1/2 = 8/16/32 byte) */
+        struct { int32_t enable, w, h; } al;   /* IMPFrameAlign of the T33 2.0.2.1 header */
+        int e = 0, aw = 0, ah = 0;
+
+        sscanf(getenv("T32_FS_ALIGN"), "%d:%d:%d", &e, &aw, &ah);
+        al.enable = e;
+        al.w = aw;
+        al.h = ah;
+        STEP(IMP_FrameSource_SetYuvAlign(0, &al));
+    }
+    if (getenv("T32_FS_NOCOPY"))        /* #784 group 4: SetFrameDepthCopyType before SetFrameDepth */
+        STEP(IMP_FrameSource_SetFrameDepthCopyType(0, atoi(getenv("T32_FS_NOCOPY"))));
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
         MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, kbps));
@@ -865,6 +898,18 @@ again:
         }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
+        if (getenv("T32_ENC_FRMUSED")) {        /* #784: "E:M:T" SetChnFrmUsedMode after CreateChn */
+            IMPEncoderAttrFrmUsed fu = {0}, rb = {0};
+            int e = 0, m = 0, t = 0;
+
+            sscanf(getenv("T32_ENC_FRMUSED"), "%d:%d:%d", &e, &m, &t);
+            fu.enable = e != 0;
+            fu.frmUsedMode = (EncFrmUsedMode)m;
+            fu.frmUsedTimes = (uint32_t)t;
+            STEP(IMP_Encoder_SetChnFrmUsedMode(0, &fu));
+            STEP(IMP_Encoder_GetChnFrmUsedMode(0, &rb));
+            printf("T32S frmused %d %d %u\n", (int)rb.enable, (int)rb.frmUsedMode, rb.frmUsedTimes);
+        }
         if (osd) {
             MUST(osd_setup());
             MUST(IMP_System_Bind(&src, &ocell));

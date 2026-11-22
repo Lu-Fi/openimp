@@ -33,6 +33,7 @@
 #include "dma_alloc.h"
 #include "imp_log_int.h"
 #include "t32/openimp_t32_isp.h"
+#include "t32/openimp_t33_sections.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_fs_enc_ext.c is the PLATFORM_T32 build only"
@@ -222,12 +223,13 @@ static struct {
     int fisheye, rdbufshare_off, motion_quality, qpg_ai, resize;
     IMPEncoderAttrFrmUsed frm_used;
 } enc_ext[ENC_CHNS];
+/* vendor 2.0.2.1 module words +0x2fe0..0x3000 and their initial values: src/t32/openimp_t33_sections.h (#784) */
 static struct {
     uint32_t ivpu_bs_size;
     int ms_on, ms_size, ms_cnt;          /* SetMultiSectionMode */
-    int jms_on, jms_size, jms_set;       /* SetJpegMultiSectionMode */
+    int jms_on, jms_size, jms_cnt;       /* SetJpegMultiSectionMode */
     int qpg_ai_yuv, mq_yuv, mq_yuv_mode;
-} enc_glob;
+} enc_glob = { T33_BS_IVPU_DEFAULT, 1, T33_MS_KB_DEFAULT, T33_MS_CNT, 1, T33_MS_KB_DEFAULT, T33_MS_CNT, 0, 0, 0 };
 
 /* channel number check of the per-channel calls: >= 16 (or negative) 0x80040001 */
 #define ENC_CHN_OK(n) ((unsigned)(n) < ENC_CHNS)
@@ -375,6 +377,7 @@ int IMP_Encoder_SetIvpuBsSize(uint32_t ivpuBsSize)
 
 int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt)
 {
+    (void)cnt;                          /* the vendor stores 2 (0x2ff4); cnt < 2 is only logged */
     if (OpenIMP_T32_SystemInitDone())
         return E_ENC_STATE;
     if ((unsigned)mode >= 4)
@@ -382,7 +385,7 @@ int IMP_Encoder_SetMultiSectionMode(int mode, int size, int cnt)
     pthread_mutex_lock(&ext_lock);
     enc_glob.ms_on = mode != 0;
     enc_glob.ms_size = size;
-    enc_glob.ms_cnt = cnt < 2 ? 2 : cnt;        /* the vendor keeps at least two sections */
+    enc_glob.ms_cnt = T33_MS_CNT;
     pthread_mutex_unlock(&ext_lock);
     return 0;
 }
@@ -397,7 +400,7 @@ int IMP_Encoder_SetJpegMultiSectionMode(int mode, int size, int cnt)
     pthread_mutex_lock(&ext_lock);
     enc_glob.jms_on = mode != 0;
     enc_glob.jms_size = size;
-    enc_glob.jms_set = 1;
+    enc_glob.jms_cnt = T33_MS_CNT;
     pthread_mutex_unlock(&ext_lock);
     return 0;
 }
@@ -408,9 +411,21 @@ int OpenIMP_T32_EncJpegMultiSection(void)
     int on;
 
     pthread_mutex_lock(&ext_lock);
-    on = enc_glob.jms_set ? enc_glob.jms_on : 1;
+    on = enc_glob.jms_on;
     pthread_mutex_unlock(&ext_lock);
     return on;
+}
+
+/* #784 group 3: the BSFULL section size (0 = off) and pool of the HERA (@jpeg 0) or JPEG engine
+ * (vendor EncoderInit, src/t32/openimp_t33_sections.h); @jpeg_bs: SetJpegBsSize or its default */
+void OpenIMP_T32_EncSections(int jpeg, uint32_t jpeg_bs, uint32_t *section_kb, uint32_t *bytes)
+{
+    pthread_mutex_lock(&ext_lock);
+    if (jpeg)
+        t33_sections(enc_glob.jms_on, enc_glob.jms_size, jpeg_bs, section_kb, bytes);
+    else
+        t33_sections(enc_glob.ms_on, enc_glob.ms_size, enc_glob.ivpu_bs_size, section_kb, bytes);
+    pthread_mutex_unlock(&ext_lock);
 }
 
 /* the YUV (unbound) encoder flags: void / 0, stored only */
