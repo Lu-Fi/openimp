@@ -849,6 +849,15 @@ again:
         }
         if (getenv("T32_ENC_IVDC"))     /* #301: ISP -> encoder direct (IVDC) */
             ea.bEnableIvdc = atoi(getenv("T32_ENC_IVDC")) != 0;
+        if (getenv("T32_ENC_PRE")) {    /* #784: enables the vendor takes only before CreateChn ("mq,qpgai") */
+            int (*en)(int, int);
+            if (strstr(getenv("T32_ENC_PRE"), "mq") &&
+                (en = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetMotionQualityEnable")) != NULL)
+                printf("T32C pre SetMotionQualityEnable = %d\n", en(0, 1));
+            if (strstr(getenv("T32_ENC_PRE"), "qpgai") &&
+                (en = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetChnQpgAIEnable")) != NULL)
+                printf("T32C pre SetChnQpgAIEnable = %d\n", en(0, 1));
+        }
         if (getenv("T32_ENC_RDBS")) {   /* row 37: IMP_Encoder_SetRdBufShare before CreateChn */
             extern int IMP_Encoder_SetRdBufShare(int encChn, int enable);  /* exported, not in the T32 header */
             int rv = atoi(getenv("T32_ENC_RDBS"));
@@ -926,6 +935,10 @@ again:
                             { "crop", "IMP_Encoder_SetChnCrop", 1, { 1, 16, 8, 320, 180 } },
                             { "t264", "IMP_Encoder_SetH264TransCfg", 1, { 3 } },
                             { "t265", "IMP_Encoder_SetH265TransCfg", 1, { 3, -2 } },
+                            { "t265a", "IMP_Encoder_SetH265TransCfg", 1, { 13, 0 } },
+                            { "t265b", "IMP_Encoder_SetH265TransCfg", 1, { -2, 3 } },
+                            { "t265c", "IMP_Encoder_SetH265TransCfg", 1, { -5, -2 } },
+                            { "t265d", "IMP_Encoder_SetH265TransCfg", 1, { -3, -7 } },
                             { "grey", "IMP_Encoder_SetChnColor2Grey", 1, { 1 } },
                             { "dn", "IMP_Encoder_SetChnDenoise", 1, { 1, 1, 30, 30 } },
                             { "hskip", "IMP_Encoder_SetChnHSkip", 1, { 1, 0, 0, 1, 0, 0 } },  /* N2X */

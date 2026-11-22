@@ -29,6 +29,7 @@ int OpenIMP_T32_E1RoiTake(int encChn, uint8_t rec[16][9]);
  * conformance window) and the H.264 chroma QP offset (PPS, HERA) */
 typedef struct {
     int chroma264;
+    int chroma265;                      /* H.265: one offset for cb and cr (vendor) */
     uint8_t crop;
     uint32_t crop_x, crop_y, crop_w, crop_h;
 } T32E1Hdr;

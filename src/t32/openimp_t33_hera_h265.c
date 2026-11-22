@@ -233,6 +233,23 @@ static int t33_h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
     return 0;
 }
 
+/* SetH265TransCfg (#784): vendor 2.0.2.1 lists with chroma QP offset c (QEMU t33-cache v265t / v265n:
+ * c 3 -> 0x38004 0x0306...., 0x4001c ..03, 0x50004 0x03......; c -2 -> 0x7efc...., ..1e, 0x0e......) */
+static uint32_t t33_h265_cqp(int c, uint32_t reg, uint32_t v)
+{
+    if (!c)
+        return v;
+    switch (reg) {
+    case 0x38004u:
+        return v | ((uint32_t)c & 0x7fu) << 24 | ((uint32_t)(2 * c) & 0xffu) << 16;
+    case 0x4001cu:
+        return v | ((uint32_t)c & 0x1fu);
+    case 0x50004u:
+        return v | ((uint32_t)c & 0xfu) << 24;
+    }
+    return v;
+}
+
 static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v, const uint8_t *st,
                                unsigned idx)
 {
@@ -408,7 +425,7 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
-            uint32_t v = t33_h265_field(t, e->reg, def, st, k);
+            uint32_t v = t33_h265_cqp(t->pic.chroma_qp_offset, e->reg, t33_h265_field(t, e->reg, def, st, k));
 
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
                 return 0;
