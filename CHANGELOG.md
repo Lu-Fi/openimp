@@ -9,6 +9,14 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-22: T33 cache/err API cells against vendor 2.0.2.1 (#784, part 1)
+
+- **OSD_Get/SetRgnAttr_ISP, OSD_SetGroupCallback (T33: err -> dev)**: the 2026-11-17 failures were test faults: apitest `rgnisp` expected the T41 codes (vendor 2.0.2.1 accepts sensor < 5, its module returns mask_en 1) and read the luma of the IVDC-direct main channel; the group-callback FAIL was the stream stall of that image. QEMU vendor = OpenIMP, T33L: Get PASS, Set codes equal, callback 10 of 10 frames.
+- **Encoder_Get/SetChnCrop (T33: cache -> dev)**: the window goes into the headers like the vendor: H.264 SPS frame cropping, H.265 conformance window (a zero window after switching it off, as the vendor); the vendor does not change the HERA list. T33L streams byte-equal to the vendor QEMU headers.
+- **Encoder_Get/SetH264TransCfg (T33: cache -> dev)**: chroma QP offset from the next IDR in the PPS (both offsets) and in the HERA list (EFE_FRM_QP bits 4:0, VMAU 0x40424 bits 31:24), equal to the vendor list in QEMU and the vendor PPS on the T33L.
+- The other 47 T33 cache cells carry the vendor evidence (setter -> set_param / per-picture request / reader, Ghidra addresses): the vendor applies 46 of them (FrmUsedMode: no reader found yet), the ports stay open in #784; T32 cells unchanged (no T32 2.2.0 vendor run).
+- Tests: tests/t33/hdr784_test.c (headers and HERA fields vs vendor bytes); tools/t32/t32_trace_sample.c change `N:X<name>` (one cache setter per frame, for HERA A/B).
+
 ## 2026-11-22: T23 Helix EMC scratch in the vendor 1.3.0 layout (#774)
 
 - In the IVDC direct mode only (tx-isp-t23 `direct_mode=1`), the native T23 H.264 encoder lays out its EMC scratch as the vendor `h264_api_enc` (0x3004c at the base, 0x30050 after 1 byte per macroblock, 0x30054/0x30058 after 2 more, the vendor's 0xa00 gap, one spare page): 20 KiB at 1280x720 instead of 936 KiB, 12 KiB instead of ~260 KiB at 640x360; needed to fit main + sub + JPEG next to the IVDC ring at rmem=8M (QEMU A12). Every other T23 keeps the T21-derived layout unchanged; `OPENIMP_T23_EMC=vendor|t21` overrides. Device proof on a real T23 pending (#774).

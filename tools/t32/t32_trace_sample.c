@@ -913,6 +913,58 @@ again:
                         }
                     } else if (t == 'I') {
                         printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
+                    } else if (t == 'X') {
+                        /* #784: one stored-or-applied parameter call "N:X<name>" with a fixed test
+                         * value (looked up by name: the sysroot libimp may predate it), then IDR */
+                        char nm[16] = { 0 };
+                        int r = -999;
+                        void *fp;
+                        sscanf(ch + k, "%15[a-z0-9]", nm);
+#define XF(sym) ((fp = dlsym(RTLD_DEFAULT, sym)) != NULL)
+                        /* vendor 2.x layouts as int words (bool enable = byte 0 of word 0) */
+                        static const struct { const char *nm, *sym; int kind, w[6]; } xt[] = {
+                            { "crop", "IMP_Encoder_SetChnCrop", 1, { 1, 16, 8, 320, 180 } },
+                            { "t264", "IMP_Encoder_SetH264TransCfg", 1, { 3 } },
+                            { "t265", "IMP_Encoder_SetH265TransCfg", 1, { 3, -2 } },
+                            { "grey", "IMP_Encoder_SetChnColor2Grey", 1, { 1 } },
+                            { "dn", "IMP_Encoder_SetChnDenoise", 1, { 1, 1, 30, 30 } },
+                            { "hskip", "IMP_Encoder_SetChnHSkip", 1, { 1, 0, 0, 1, 0, 0 } },  /* N2X */
+                            { "gdr", "IMP_Encoder_SetGDRCfg", 1, { 1, 30, 5 } },
+                            { "rgdr", "IMP_Encoder_RequestGDR", 0, { 5 } },
+                            { "sf", "IMP_Encoder_SetSuperFrameCfg", 1, { 2, 20000, 10000, 10000, 1, 2 } },
+                            { "mbrc0", "IMP_Encoder_SetMbRC", 0, { 0 } },
+                            { "cref0", "IMP_Encoder_SetChangeRef", 0, { 0 } },
+                            { "cref1", "IMP_Encoder_SetChangeRef", 0, { 1 } },
+                            { "qpg", "IMP_Encoder_SetQpgMode", 1, { 9 } },
+                            { "trig", "IMP_Encoder_SetChnRcTrigLevel", 2, { 2, 1 } },
+                            { "pskip", "IMP_Encoder_SetPskipCfg", 1, { 1, 2, 120 } },
+                            { "rpskip", "IMP_Encoder_RequestPskip", 3, { 0 } },
+                            { "srd", "IMP_Encoder_SetSrdCfg", 1, { 0x201 } },              /* enable 1, level 2 */
+                            { "hsbe", "IMP_Encoder_SetChnHSkipBlackEnhance", 0, { 1 } },
+                            { "frmused", "IMP_Encoder_SetChnFrmUsedMode", 1, { 1, 1, 2 } },
+                            { "fisheye", "IMP_Encoder_SetFisheyeEnableStatus", 0, { 1 } },
+                            { "resize", "IMP_Encoder_SetChnResizeMode", 0, { 1 } },
+                            { "mqen", "IMP_Encoder_SetMotionQualityEnable", 0, { 1 } },
+                            { "mq", "IMP_Encoder_SetMotionQuality", 1, { 1, 2 } },
+                        };
+                        unsigned xi;
+                        for (xi = 0; xi < sizeof(xt) / sizeof(xt[0]); xi++) {
+                            int w[6];
+                            if (strcmp(nm, xt[xi].nm) || !XF(xt[xi].sym))
+                                continue;
+                            memcpy(w, xt[xi].w, sizeof(w));
+                            if (xt[xi].kind == 0)
+                                r = ((int (*)(int, int))fp)(0, w[0]);
+                            else if (xt[xi].kind == 1)
+                                r = ((int (*)(int, void *))fp)(0, w);
+                            else if (xt[xi].kind == 2)
+                                r = ((int (*)(int, uint32_t, int))fp)(0, (uint32_t)w[0], w[1]);
+                            else
+                                r = ((int (*)(int))fp)(0);
+                        }
+#undef XF
+                        printf("T32C %d X %s = %d (0x%x)\n", i, nm, r, (unsigned)r);
+                        printf("T32C %d RequestIDR = %d\n", i, IMP_Encoder_RequestIDR(0));
                     }
                 }
                 ch = strchr(ch, ',');

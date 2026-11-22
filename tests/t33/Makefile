@@ -18,9 +18,17 @@ OSD_SRC := osd_sw_test.c $(PROJECT_DIR)/src/t32/openimp_t33_osd_sw.c
 
 YUV_BIN := $(BUILD)/t33-yuv-stub-test
 
+# #784: crop window and H.264 chroma QP offset in headers and HERA list vs vendor 2.0.2.1
+HDR_BIN := $(BUILD)/t33-hdr784-test
+HDR_SRC := hdr784_test.c $(PROJECT_DIR)/src/t32/openimp_t32_h264.c $(PROJECT_DIR)/src/t32/openimp_t32_h265.c \
+	$(PROJECT_DIR)/src/t30/radix/t30_radix_hevc.c $(PROJECT_DIR)/src/t32/openimp_t33_hera.c \
+	$(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/radix/t30_radix_cabac.c \
+	$(PROJECT_DIR)/src/t30/h264enc/cabac.c $(PROJECT_DIR)/src/t30/h264enc/common.c
+
 .PHONY: check
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN)
 	$(YUV_BIN)
+	$(HDR_BIN)
 	gzip -dc vendor-2.0.2.1-hera-h264.txt.gz vendor-2.0.2.1-hera-h265.txt.gz > $(BUILD)/t33-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t33-hera-lists.txt
 	gzip -dc vendor-2.0.2.1-osd-sw.txt.gz > $(BUILD)/t33-osd-sw.txt
@@ -34,6 +42,11 @@ $(OSD_BIN): $(OSD_SRC) $(PROJECT_DIR)/src/t32/openimp_t33_osd_sw.h
 $(HERA_BIN): $(HERA_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(HERA_SRC) -lm
+
+$(HDR_BIN): $(HDR_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_h264.h $(PROJECT_DIR)/src/t32/openimp_t32_h265.h \
+	$(PROJECT_DIR)/src/t32/openimp_t32_hera.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ $(HDR_SRC) -lm
 
 # unbound YUV / JPEG encoder stage 1 (#752): vendor argument checks and return codes
 $(YUV_BIN): yuv_stub_test.c $(PROJECT_DIR)/src/t32/openimp_t32_yuvstub.h

@@ -33,6 +33,9 @@ typedef struct {
     uint32_t bitrate;                   /* bits/s (H.265 level only; the H.264 level has no bitrate check) */
     int init_qp;                        /* pic_init_qp: 26, FIXQP = the I QP (vendor i264e_pps_init) */
     T32Vui vui;
+    int chroma_qp_offset;               /* PPS chroma_qp_index_offset (both), IMP_Encoder_SetH264TransCfg (#784) */
+    uint8_t crop;                       /* IMP_Encoder_SetChnCrop (#784): SPS frame cropping to this window */
+    uint32_t crop_x, crop_y, crop_w, crop_h;
 } T32H264Seq;
 
 typedef struct {

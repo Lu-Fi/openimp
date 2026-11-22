@@ -25,4 +25,13 @@ int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui);
 size_t OpenIMP_T32_E1Sei(int encChn, int hevc, uint8_t *out, size_t cap);
 int OpenIMP_T32_E1RoiTake(int encChn, uint8_t rec[16][9]);
 
+/* what the next IDR's headers / pictures carry (#784): the crop window (SPS frame cropping /
+ * conformance window) and the H.264 chroma QP offset (PPS, HERA) */
+typedef struct {
+    int chroma264;
+    uint8_t crop;
+    uint32_t crop_x, crop_y, crop_w, crop_h;
+} T32E1Hdr;
+void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h);
+
 #endif

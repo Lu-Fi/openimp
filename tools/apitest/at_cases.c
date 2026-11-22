@@ -6017,6 +6017,9 @@ static void cs_rgnisp(void)
         double base = 0, on = 0, off = 0;
 
         if (!noeff) base = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
+        /* T33 (#784 d2): channel 0 runs over the IVDC (direct mode 1) and GetFrame refuses it, so region_y answers -1:
+         * the luma effect cannot be read there; the codes and read-backs are still checked */
+        if (!noeff && base < 0) { noeff = 1; printf("[T] rgnisp: no frame access on the main channel (IVDC direct?), effect not checked\n"); }
         memset(a, 0, sizeof(*a));
         a->type = OSD_REG_ISP_LINE_RECT;
         d->pinum = 0; d->type = IMP_ISP_DRAW_WIND; d->color_type = IMPISP_MASK_TYPE_YUV;
@@ -6040,13 +6043,24 @@ static void cs_rgnisp(void)
         memset(g, 0, sizeof(*g)); g->osdispdraw.stCoverAttr.chx = 0; g->osdispdraw.stCoverAttr.pinum = 0;
         r4 = IMP_OSD_GetRgnAttr_ISP(0, g, &shown); gchk(g);
         /* the stock kernel getter never writes mask_en (vendor tisp_g_mscaler_mask_block_attr leaves byte 2 alone, libimp does not fill it): it reads back 0 */
+#if defined(APITEST_T33)
+        /* T33 2.0.2.1 (vendor and OpenIMP, QEMU t33-cache v-rgn/o-rgn 2026-11-22): the T33 module's getter does return mask_en (1) */
+        g2 = g->osdispdraw.stCoverAttr.mask_en == 1 && g->osdispdraw.stCoverAttr.mask_width == 64 && g->osdispdraw.stCoverAttr.mask_height == 64 &&
+             g->osdispdraw.stCoverAttr.mask_pos_left == 64 && g->osdispdraw.stCoverAttr.mask_pos_top == 64;
+#else
         g2 = g->osdispdraw.stCoverAttr.mask_en == 0 && g->osdispdraw.stCoverAttr.mask_width == 64 && g->osdispdraw.stCoverAttr.mask_height == 64 &&
              g->osdispdraw.stCoverAttr.mask_pos_left == 64 && g->osdispdraw.stCoverAttr.mask_pos_top == 64;
+#endif
         m->mask_en = 0; IMP_OSD_SetRgnAttr_ISP(0, a, 1);
         a->type = OSD_REG_ISP_PIC; e1 = IMP_OSD_SetRgnAttr_ISP(0, a, 1);           /* pictures: IMP_OSD_SetRgnAttr_PicISP */
         e2 = IMP_OSD_SetRgnAttr_ISP(2, a, 1); e3 = IMP_OSD_SetRgnAttr_ISP(0, NULL, 1);
         e4 = IMP_OSD_GetRgnAttr_ISP(0, g, NULL);
+#if defined(APITEST_T33)
+        /* vendor 2.0.2.1 IMP_OSD_SetRgnAttr_ISP (0x185ea0): sensor < 5 passes, the draw block of the absent sensor 2 then fails: 0x80020040 */
+        ok = e1 == (int)0x80020040 && e2 == (int)0x80020040 && e3 == (int)0x80020010 && e4 == (int)0x80020010 && flow();
+#else
         ok = e1 == (int)0x80020040 && e2 == (int)0x80020001 && e3 == (int)0x80020010 && e4 == (int)0x80020010 && flow();
+#endif
         if (nodrv)
             rep(FN(IMP_OSD_SetRgnAttr_ISP), r1, V_NA, "line/rect: the ISP module has no handler for tuning control 0x80000a0 (EPERM); cover set %d, codes picture %#x sensor2 %#x NULL %#x",
                        r5, (unsigned)e1, (unsigned)e2, (unsigned)e3);

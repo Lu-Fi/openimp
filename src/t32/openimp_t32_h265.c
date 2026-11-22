@@ -43,6 +43,18 @@ static void params(const T32H265Seq *s, T30HevcVps *vps, T30HevcSps *sps, T30Hev
         sps->vui.sar_height = s->vui.sar_h;
     }
     sps->vui.bitstream_restriction = s->vui.restriction ? 1 : 0;
+    if (s->crop) {
+        /* SetChnCrop (#784): vendor 2.0.2.1 conformance window (QEMU t33-cache: 16,8 320x180 of
+         * 640x360 -> 8, 152, 4, 86 in chroma units) */
+        sps->conformance_window = 1;
+        sps->conf_left = sps->conf_right = sps->conf_top = sps->conf_bottom = 0;
+    }
+    if (s->crop == 1) {
+        sps->conf_left = s->crop_x;
+        sps->conf_right = s->width - s->crop_x - s->crop_w;
+        sps->conf_top = s->crop_y;
+        sps->conf_bottom = s->height - s->crop_y - s->crop_h;
+    }
     pps->cb_qp_offset = 0;
     pps->cr_qp_offset = 0;
 }
