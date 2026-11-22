@@ -488,6 +488,7 @@ struct T30HelixEncoder {
     uint32_t ivdc_threshold;
     uint64_t ivdc_time_ms;
     uint32_t ivdc_drops;
+    uint32_t ivdc_skips;     /* #807 kick gate: lost frames not kicked */
     /* OPENIMP_T23_EMC_CANARY=1 (#774 device check): pattern in the EMC
      * bytes past the stock layout's tail, checked every 25 pictures */
     uint32_t emc_canary_off;
@@ -4828,7 +4829,27 @@ again:
                 encoder->ivdc_on ? encoder->ivdc_threshold : 0u;
             encoder->channel.time =
                 encoder->ivdc_on ? encoder->ivdc_time_ms : 0u;
+            /* #807 kick gate (beyond vendor mode 1): never START the
+             * IVDC job in the lost-start window after the previous job */
+            if (encoder->ivdc_on) {
+                uint32_t gate_us = 0;
+                int gate = OpenIMP_T23_IvdcKickGate(&gate_us);
+
+                if (gate != IVDC_GATE_OFF)
+                    OpenIMP_T23_IvdcTrace("HG", encoder->frame_number, gate,
+                                          0, gate_us);
+                /* the frame is lost already: drop it like a soc_vpu
+                 * cancel (nothing coded, no IDR), keep the VPU free */
+                if (gate == IVDC_GATE_SKIP) {
+                    run_ret = 2;
+                    run_errno = -1;
+                    encoder->ivdc_skips++;
+                    break;
+                }
+            }
             (void)clock_gettime(CLOCK_MONOTONIC, &t0);
+            if (encoder->ivdc_on)
+                OpenIMP_T23_IvdcTrace("H0", encoder->frame_number, 0, 0, 0);
             errno = 0;
             run_ret = ioctl(encoder->fd, T30_CHANNEL_RUN, &encoder->channel);
             run_errno = errno;
@@ -4836,6 +4857,9 @@ again:
             run_ms = (uint32_t)((t1.tv_sec - t0.tv_sec) * 1000 +
                                 (t1.tv_nsec - t0.tv_nsec) / 1000000);
             status = encoder->channel.status;
+            if (encoder->ivdc_on)
+                OpenIMP_T23_IvdcTrace("H1", encoder->frame_number, run_ret,
+                                      status, run_ms);
             /* soc_vpu cancelled the IVDC job (2: ring overflow, frame too
              * old or the ISP too far ahead, helix vpu_start): the vendor
              * drops the picture, nothing was coded */
@@ -4886,9 +4910,12 @@ again:
         if (run_ret == 2 && encoder->ivdc_on) {
             encoder->ivdc_drops++;
             if (encoder->ivdc_drops <= 5u || encoder->ivdc_drops % 100u == 0u)
-                IMP_LOG_WARN("Encoder", "T23 Helix: IVDC frame %u cancelled "
-                             "by soc_vpu (%u drops)", encoder->frame_number,
-                             encoder->ivdc_drops);
+                IMP_LOG_WARN("Encoder", "T23 Helix: IVDC frame %u %s "
+                             "(%u drops, %u skipped by the kick gate)",
+                             encoder->frame_number,
+                             run_errno == -1 ? "lost, not kicked"
+                                             : "cancelled by soc_vpu",
+                             encoder->ivdc_drops, encoder->ivdc_skips);
             helix_eprc_drop(encoder);
             return -1;
         }

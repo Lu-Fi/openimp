@@ -531,6 +531,8 @@ set in production.
 | `OPENIMP_T31_AVC_LEGACY` | `1` restores the pre-fix T31 H.264 recovery path (A/B) | off | debug-only |
 | `OPENIMP_T31_COMPANION_STAGE` | `0` skips the AVPU JPEG companion core per H.264 frame (only relevant with software JPEG) | on | debug-only |
 | `OPENIMP_T31_HW_JPEG_SRC_COHERENT` | `1` puts the JPEG source in coherent memory (A/B) | off | debug-only |
+| `OPENIMP_T23_IVDC_GATE` | T23 IVDC direct mode 1 kick gate before the Helix RUN (#807, beyond the vendor's mode 1, user OK 2026-11-22): `1` status/line rule, `2` lead-window rule; `OPENIMP_T23_IVDC_GATE_US` max wait (3000), `_MIN` / `_MAX` lead window (12 / 240), `OPENIMP_T23_IVDC_SKIP=1` drops a lost frame without a kick; not proven on the device (CHANGELOG 2026-11-22) | off | experimental |
+| `OPENIMP_T23_IVDC_TRACE` | `1` prints one line per T23 IVDC job phase (ISP/VPU line, lead, 0x7c status, result) on stderr (#807) | off | debug-only |
 | `OPENIMP_RMEM_NO_REUSE` | `1` restores the old rmem behaviour (no reuse) | off | debug-only |
 | `OPENIMP_DEBUG_TRACE` | per-frame detail trace (very verbose); the traces exist only in a build with `OPENIMP_DEBUG=1` (see below), in a release build it only raises the log level to 7 | off | debug-only |
 | `OPENIMP_T31_IVS_STATS`, `OPENIMP_AEC_STATS`, `OPENIMP_SOURCE_STATS`, `OPENIMP_T31_FULL_FRAME_STATS`, `OPENIMP_T23_RC_STATS` | periodic statistics output | off | debug-only |

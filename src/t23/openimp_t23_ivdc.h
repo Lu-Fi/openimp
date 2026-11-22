@@ -53,8 +53,35 @@ int  OpenIMP_T23_IvdcPictureBroken(void);
  * skips the first 3 IVDC frames (vendor on_encoder_group_data_update
  * @0x5b750, one counter for all channels, reset when a channel passes). */
 int  OpenIMP_T23_IvdcSkipStart(uint64_t channel_pictures);
+void OpenIMP_T23_IvdcTrace(const char *tag, uint32_t frame, int ret,
+                           uint32_t status, uint32_t ms);
 
 /* host test hook: register read override (NULL = /dev/mem mapping) */
+/* #807 kick gate (beyond vendor mode 1): call right before the IVDC RUN.
+ * Returns how the wait ended (IVDC_GATE_*), *waited_us the time spent.
+ * OPENIMP_T23_IVDC_GATE=0/1/2 overrides the default (1: status/line rule,
+ * 2: lead window rule),
+ * OPENIMP_T23_IVDC_GATE_US the maximum wait (default 3000),
+ * OPENIMP_T23_IVDC_GATE_MIN / _MAX the ISP lead window (default 12 / 240). */
+#ifndef OPENIMP_T23_IVDC_GATE_DEFAULT
+#define OPENIMP_T23_IVDC_GATE_DEFAULT 0
+#endif
+enum {
+    IVDC_GATE_OFF = 0,      /* gate disabled or registers not readable */
+    IVDC_GATE_READY = 1,    /* ready at once, no wait */
+    IVDC_GATE_WAITED = 2,   /* ready after a wait */
+    IVDC_GATE_TIMEOUT = 4,  /* maximum wait reached, kicked anyway */
+    IVDC_GATE_SKIP = 5,     /* skip mode: the frame is lost, do not kick */
+};
+int  OpenIMP_T23_IvdcGateEnabled(void);
+void OpenIMP_T23_IvdcGateConfig(int on, unsigned int max_us,
+                                unsigned int lead_min, unsigned int lead_max);
+void OpenIMP_T23_IvdcGateSkip(int on);
+int  OpenIMP_T23_IvdcKickReady(uint32_t isp, uint32_t vpu, uint32_t st);
+int  OpenIMP_T23_IvdcKickGate(uint32_t *waited_us);
+void OpenIMP_T23_IvdcSetClock(uint64_t (*now_us)(void),
+                              void (*sleep_us)(unsigned int us));
+
 void OpenIMP_T23_IvdcSetRegReader(int (*fn)(uint32_t addr, uint32_t *val));
 /* lead of the ISP write line over the VPU read line, wrap corrected */
 uint32_t OpenIMP_T23_IvdcLead(uint32_t isp_line_reg, uint32_t vpu_line_reg,

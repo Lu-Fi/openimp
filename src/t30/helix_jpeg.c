@@ -1146,7 +1146,21 @@ static int helix_jpeg_job_locked(HelixJpegSlice *slice, uint32_t capacity,
 #endif
     helix_jpeg.active = buffer;
     errno = 0;
+#if defined(PLATFORM_T23)
+    if (helix_jpeg_ivdc) {
+        uint32_t gate_us = 0;
+        int gate = OpenIMP_T23_IvdcKickGate(&gate_us);
+
+        if (gate != IVDC_GATE_OFF)
+            OpenIMP_T23_IvdcTrace("JG", 0, gate, 0, gate_us);
+        OpenIMP_T23_IvdcTrace("J0", 0, 0, 0, 0);
+    }
+#endif
     ret = ioctl(helix_jpeg.fd, HELIX_CHANNEL_RUN, &helix_jpeg.channel);
+#if defined(PLATFORM_T23)
+    if (helix_jpeg_ivdc)
+        OpenIMP_T23_IvdcTrace("J1", 0, ret, helix_jpeg.channel.status, 0);
+#endif
     if (helix_jpeg.probe_limit)
         helix_probe_report();
     if (ret != 0)
