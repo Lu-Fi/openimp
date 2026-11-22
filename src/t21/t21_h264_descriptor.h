@@ -29,6 +29,11 @@ typedef struct {
     const uint8_t *cabac_state;
     uint32_t raw[3];
     uint32_t stride[2];
+    /* Source (raw) line stride when it differs from stride[] (0 = same):
+     * T23 IVDC frames are read at 0x1000 (0x40038/0xb0010) while the
+     * motion search keeps the picture stride (0x50064); vendor 1.3.0
+     * command lists on a T23N, openimp #767. */
+    uint32_t raw_stride;
     uint32_t reference_y;
     uint32_t reference_c;
     uint32_t output_y;

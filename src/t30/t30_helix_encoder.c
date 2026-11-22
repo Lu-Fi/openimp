@@ -488,6 +488,10 @@ struct T30HelixEncoder {
     uint32_t ivdc_threshold;
     uint64_t ivdc_time_ms;
     uint32_t ivdc_drops;
+    /* OPENIMP_T23_EMC_CANARY=1 (#774 device check): pattern in the EMC
+     * bytes past the stock layout's tail, checked every 25 pictures */
+    uint32_t emc_canary_off;
+    uint32_t emc_canary_hits;
     uint32_t canary_hits;       /* overflows that wrote past the window */
     int shared_bs;              /* bitstream in the shared area */
 #endif
@@ -1122,17 +1126,76 @@ static void helix_watermark(const T30HelixEncoder *encoder,
 }
 
 #if defined(PLATFORM_T23)
-/* EMC scratch layout choice (#774): the vendor 1.3.0 layout in the IVDC
- * direct mode, the T21-derived one otherwise; OPENIMP_T23_EMC=vendor|t21 */
+/* EMC scratch layout choice (#774): the T21-derived layout everywhere.
+ * The vendor 1.3.0 layout (OPENIMP_T23_EMC=vendor, research only) broke
+ * the bitstream on a real T23N with OpenIMP's command list (Tapo C500,
+ * 2026-11-22: decode errors from the first pictures, VPU hangs with a
+ * canary past its tail), so it is not used by default, also not in the
+ * IVDC direct mode. */
 static int t23_emc_vendor_layout(void)
 {
     const char *env = getenv("OPENIMP_T23_EMC");
 
-    if (env && !strcmp(env, "vendor"))
-        return 1;
-    if (env && !strcmp(env, "t21"))
-        return 0;
-    return OpenIMP_T23_IvdcMode() != 0;
+    return env && !strcmp(env, "vendor");
+}
+#endif
+
+#if defined(PLATFORM_T23)
+#define T23_EMC_CANARY_BYTE 0xa5u
+/* #774 device check (vendor layout only, OPENIMP_T23_EMC=vendor and
+ * OPENIMP_T23_EMC_CANARY=1): the stock 1.3.0 layout ends 0xa00 bytes
+ * after 0x30054; fill what lies beyond it in our allocation with a pattern
+ * and report any byte the core writes there.  In the T21 layout these
+ * bytes are live scratch, so nothing is armed then. */
+static void t23_emc_canary_arm(T30HelixEncoder *encoder)
+{
+    const char *env = getenv("OPENIMP_T23_EMC_CANARY");
+    uint32_t off;
+
+    encoder->emc_canary_off = 0;
+    if (!env || env[0] != '1' || !encoder->emc.virt_addr ||
+        !encoder->scratch_offset[1] || !t23_emc_vendor_layout())
+        return;
+    off = (encoder->scratch_offset[2] + 0xa00u + 0xffu) & ~0xffu;
+    if (off >= encoder->scratch_size || encoder->scratch_size > encoder->emc.size)
+        return;
+    memset((uint8_t *)(uintptr_t)encoder->emc.virt_addr + off,
+           T23_EMC_CANARY_BYTE, encoder->scratch_size - off);
+    (void)DMA_RmemFlushCache((uint8_t *)(uintptr_t)encoder->emc.virt_addr + off,
+                             encoder->scratch_size - off, 1);
+    encoder->emc_canary_off = off;
+    IMP_LOG_NOTICE("Encoder", "T23 Helix: EMC canary %ux%u: %u bytes at "
+                   "+0x%x of the %u-byte scratch", encoder->params.width,
+                   encoder->params.height, encoder->scratch_size - off, off,
+                   encoder->scratch_size);
+}
+
+static void t23_emc_canary_check(T30HelixEncoder *encoder)
+{
+    const uint8_t *p;
+    uint32_t i, n, bad = 0, first = 0;
+
+    if (!encoder->emc_canary_off || encoder->frame_number % 25u)
+        return;
+    p = (const uint8_t *)(uintptr_t)encoder->emc.virt_addr +
+        encoder->emc_canary_off;
+    n = encoder->scratch_size - encoder->emc_canary_off;
+    (void)DMA_RmemFlushCache((void *)p, n, 2);
+    for (i = 0; i < n; i++)
+        if (p[i] != T23_EMC_CANARY_BYTE && !bad++)
+            first = i;
+    if (bad)
+        encoder->emc_canary_hits++;
+    if (bad || encoder->frame_number == 25u ||
+        encoder->frame_number % 2500u == 0u)
+        IMP_LOG_NOTICE("Encoder", "T23 Helix: EMC canary %ux%u frame=%u: %s "
+                       "(%u bytes changed, first at +0x%x; %u hits so far)",
+                       encoder->params.width, encoder->params.height,
+                       encoder->frame_number, bad ? "OVERWRITTEN" : "intact",
+                       bad, bad ? encoder->emc_canary_off + first : 0u,
+                       encoder->emc_canary_hits);
+    if (bad)
+        t23_emc_canary_arm(encoder);
 }
 #endif
 
@@ -1221,10 +1284,14 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
 #if defined(PLATFORM_T23)
     /* IVDC frame: the source is the IVDC block, luma +0x20 (0x80000000)
      * and chroma +0x20 | 0x1000000 (vendor do_channel_process @0x5a040,
-     * channel +0x4a0/+0x4a4), the stride stays the picture's */
+     * channel +0x4a0/+0x4a4) */
+    slice->raw_stride = 0;
     if (OpenIMP_T23_IvdcFrame(frame)) {
         slice->raw[0] = frame->direct_phyAddr;
         slice->raw[1] = frame->direct_phyAddr | T23_IVDC_SRC_UV_BIT;
+        /* the IVDC lines sit 0x1000 apart (vendor: 0x40038 and 0xb0010
+         * = 0x10001000 for IVDC pictures, 0x50064 keeps the width) */
+        slice->raw_stride = 0x1000u;
     }
 #endif
 #if !defined(PLATFORM_T23)
@@ -3231,10 +3298,8 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * all-I_PCM picture fits; at least 256 KiB, at most the 1 MiB of the
      * T21 layout). */
 #if defined(PLATFORM_T23)
-    /* T23: the stock 1.3.0 EMC layout (h264_api_enc, 20 KiB at 720p
-     * instead of 936 KiB) only in the IVDC direct mode, where rmem is
-     * short (#774, device proof pending); every other T23 keeps the
-     * T21-derived layout.  OPENIMP_T23_EMC=vendor|t21 overrides. */
+    /* T23: the T21-derived EMC layout; the vendor 1.3.0 one only on
+     * request (OPENIMP_T23_EMC=vendor, #774: corrupt on a real T23N) */
     if (t23_emc_vendor_layout())
         encoder->scratch_size = T23_HelixScratchLayoutStock(
             (params->width + 15u) / 16u, (params->height + 15u) / 16u,
@@ -3325,6 +3390,7 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
         t30_dma_allocate(&encoder->emc, encoder->scratch_size,
                          "t23-helix-emc") != 0)
         goto fail;
+    t23_emc_canary_arm(encoder);
     if (t23_bs_attach((encoder->bitstream_kib << 10) + 4096u,
                       &encoder->emc) == 0) {
         encoder->shared_bs = 1;
@@ -5008,6 +5074,9 @@ again:
     encoder->have_reference = 1;
     encoder->gop_position++;
     encoder->frame_number++;
+#if defined(PLATFORM_T23)
+    t23_emc_canary_check(encoder);
+#endif
     if (encoder->rate_control_enabled
 #if defined(HELIX_HSKIP)
         && !bs_skip
