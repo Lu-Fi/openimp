@@ -949,6 +949,7 @@ again:
                             { "cref0", "IMP_Encoder_SetChangeRef", 0, { 0 } },
                             { "cref1", "IMP_Encoder_SetChangeRef", 0, { 1 } },
                             { "qpg", "IMP_Encoder_SetQpgMode", 1, { 9 } },
+                            { "qpg3", "IMP_Encoder_SetQpgMode", 1, { 3 } },          /* ENC_MBQP_ROWRC */
                             { "trig", "IMP_Encoder_SetChnRcTrigLevel", 2, { 2, 1 } },
                             { "pskip", "IMP_Encoder_SetPskipCfg", 1, { 1, 2, 120 } },
                             { "rpskip", "IMP_Encoder_RequestPskip", 3, { 0 } },

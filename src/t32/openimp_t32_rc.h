@@ -119,6 +119,15 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a);
  * sets (vendor: P+0xe0 / +0xe4 = max I / max P), 1 when there were any; the
  * pending changes are taken either way */
 int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p);
+/* #784 group 2: before a picture, the QpgMode word (P+0x194, vendor
+ * i264e_reconfig flag 0x8000); at an IDR with @flags 1 (RcTrigLevel: @trig ->
+ * P+0x140 / +0x144) or 2 (SuperFrameCfg: @sf -> P+0x19c..0x1b0) into the
+ * reconfiguration copy.  1: the controller must restart now (vendor
+ * i264e_idr_reconfig calls i264e_ratecontrol_init for these flags; H.265
+ * I265e the same for the super-frame flag). */
+int t32_rc_idr_params(T32Rc *rc, unsigned flags, const uint32_t trig[2], const uint32_t sf[6], uint32_t qpg);
+/* an H.264 parameter word: the running controller's, else the reconfiguration copy (tests) */
+uint32_t t32_rc_get_param(T32Rc *rc, uint32_t off);
 /* ROI regions (#726): 16 records of 9 bytes into the parameter block's ROI table */
 void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9]);
 /* the picture's intra-refresh (GDR) fields to the controller (#784; T33 H.265 too) */

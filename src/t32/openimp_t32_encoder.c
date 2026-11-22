@@ -848,12 +848,23 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
 #endif
             }
     }
+#ifdef PLATFORM_T33
+    /* #784 group 2: QpgMode before every picture, RcTrigLevel / SuperFrameCfg at the IDR
+     * (vendor 2.0.2.1 i264e_reconfig / i264e_idr_reconfig: controller restart) */
+    T32E1Rc rcp;
+    int rc_flags = OpenIMP_T32_E1RcTake(chn_no(e), idr, &rcp);
+    int rc_again = t32_rc_idr_params(&a->rc, (unsigned)rc_flags, rcp.trig, rcp.sf, rcp.qpg);
+#endif
     if (idr) {
         IMPEncoderAttrRcMode m;
         int restart;
 
         pthread_mutex_lock(&enc_lock);
         restart = a->rc_restart;
+#ifdef PLATFORM_T33
+        if (rc_again && a->rc.on)
+            restart = 1;
+#endif
         a->rc_restart = 0;
         a->rb_hold = 0;                 /* the setters are live from this IDR on */
         m = e->attr.rcAttr.attrRcMode;
