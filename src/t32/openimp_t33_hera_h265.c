@@ -233,6 +233,41 @@ static int t33_h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
     return 0;
 }
 
+/*
+ * The fields the controller's skipped picture (RequestPskip, #793) sets in
+ * the slice block (eprc_t33_h265.c slice info, pic+0x3c: s+0x422 / 0x4b0..
+ * 0x4b3 / 0xe0 / 0xe4 set, s+0x4b5 / 0x4c8.. / 0x513 / 0x535 / 0x536 off).
+ * Vendor 2.0.2.1 H265E_T32V_SliceInit 0x59298 (revision 7) packs them into
+ * these registers on every picture; QEMU v5pss (640x368, SetPskipCfg at 4,
+ * RequestPskip at 8): picture 8 0x20020 0x100c49 -> 0x7ff1049, 0x20304
+ * 0x5f58 -> 0x5ff8, 0x30000 +bit 16, 0x40020 0x7100 -> 0x7103, 0x40164
+ * 0x80000 -> 0, 0x40234 0xf7d965ef -> 0x17d965ef, 0x40240 0xc5145145 ->
+ * 0x45145145, 0x40284 0x6348b -> 0x2348a.  Only these bits are taken, the
+ * rest of each register stays the list's.
+ */
+static uint32_t t33_h265_skip_bits(const uint8_t *sl, uint32_t reg, uint32_t v)
+{
+    switch (reg) {
+    case 0x20020u:                      /* s+0xe0 (16 bits) << 16, s+0xe4 << 8 */
+        return (v & 0xffu) | rd16(sl + 0xe0) << 16 | (uint32_t)sl[0xe4] << 8;
+    case 0x20304u:                      /* s+0x4b0 << 7, s+0x4b3 (3 bits) << 4 */
+        return (v & ~0xf0u) | (sl[0x4b0] & 1u) << 7 | (sl[0x4b3] & 7u) << 4;
+    case 0x30000u:                      /* s+0x422 << 16 */
+        return (v & ~(1u << 16)) | (sl[0x422] & 1u) << 16;
+    case 0x40020u:                      /* s+0x4b1 << 1, s+0x4b2 */
+        return (v & ~3u) | (sl[0x4b1] & 1u) << 1 | (sl[0x4b2] & 1u);
+    case 0x40164u:                      /* s+0x4b5 << 19 */
+        return (v & ~(1u << 19)) | (sl[0x4b5] & 1u) << 19;
+    case 0x40234u:                      /* s+0x4c8 << 29, 0x4ca << 30, 0x4cc << 31 */
+        return (v & 0x1fffffffu) | (sl[0x4c8] & 1u) << 29 | (sl[0x4ca] & 1u) << 30 | (uint32_t)(sl[0x4cc] & 1u) << 31;
+    case 0x40240u:                      /* s+0x513 << 31 */
+        return (v & 0x7fffffffu) | (uint32_t)(sl[0x513] & 1u) << 31;
+    case 0x40284u:                      /* s+0x536 << 18, s+0x535 */
+        return (v & ~(1u << 18 | 1u)) | (sl[0x536] & 1u) << 18 | (sl[0x535] & 1u);
+    }
+    return v;
+}
+
 /* SetH265TransCfg (#784): vendor 2.0.2.1 lists with chroma QP offset c (QEMU t33-cache v265t / v265n:
  * c 3 -> 0x38004 0x0306...., 0x4001c ..03, 0x50004 0x03......; c -2 -> 0x7efc...., ..1e, 0x0e......) */
 static uint32_t t33_h265_cqp(int c, uint32_t reg, uint32_t v)
@@ -431,6 +466,9 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
             uint32_t v = t33_h265_cqp(t->pic.chroma_qp_offset, e->reg, t33_h265_field(t, e->reg, def, st, k));
+
+            if (t33_rc_slice5(t))
+                v = t33_h265_skip_bits(t33_rc_slice5(t), e->reg, v);
 
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
                 return 0;
