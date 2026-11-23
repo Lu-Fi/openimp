@@ -181,3 +181,21 @@ After the IMP-layer check and with the slice block in the list (2026-11-12, `run
 vendor 2.2.0, `SetDefaultParam` defaults, initial QP -1): picture QPs 45 42 39 36 33 30 29 .. 21, 23 (IDR), 20 .. 15,
 equal to the vendor's QEMU run and to the vendor controller under unicorn on OpenIMP's coded sizes; all 30 command
 lists (753 / 930 pairs, 27546 in all) equal the vendor's but for the buffer addresses; decode clean.
+
+## T33 request timing: RequestIDR / RequestGDR / RequestPskip on H.265 (#791)
+
+Vendor 2.0.2.1 `i265e_encode` (0x90d48 in Ghidra, file offset 0x80d48) takes the picture (`recvPic`), decides its
+type with the pending requests (`decTypeAndRef`) and only then waits for the previous picture's work
+(`waitList`, timeout 10000) before it hands the picture to the encode worker (`workReceive` 0xdf118) and returns.
+`i264e_encode` (0x8a71c) runs the picture to the end (`i264e_threadpool_run` / `_wait_all`) before it returns.
+So on H.265 the vendor decides picture N+1 as soon as its frame arrives, also while picture N is still being
+encoded; on H.264 only after picture N is done. OpenIMP decides each picture when the encoder thread starts it
+(after the previous one is done), for both codecs.
+
+The difference shows only when one picture takes longer than the frame interval. QEMU at 1920x1088 (HERA model,
+15 fps): a RequestIDR made after stream 9 gives the vendor IDR at stream 11, OpenIMP at stream 10 (v5g2 / o5g2);
+RequestGDR at 20 gives the vendor masks in pictures 21-25, OpenIMP 20-24; RequestPskip at 8 gives the vendor skipped
+picture 9. At 640x368 (one picture well inside the frame interval; on silicon a 1080p picture should also fit, not
+measured: no T33 camera at hand) the vendor acts on the same picture as OpenIMP: IDR at 10, masks 20-24 (QEMU v5s / o5s, `T32_ENC_W=640
+T32_ENC_H=368`), skipped picture 8 (v5pss). OpenIMP keeps the synchronous path: the request rule is the vendor's
+(the first picture whose type is decided after the call), only the overlap of two pictures is not modelled.
