@@ -12,9 +12,10 @@
 #define T21_RING_NO_WRAP     0x08u  /* wrap fields stay 0xff */
 #define T21_RING_VENDOR_ME   0x10u  /* T23 vendor MCE words: 0x50000 bits
                                      * 9/10 clear, 0x50040/48/4c */
-#define T21_RING_VENDOR_MISC 0x20u  /* T23 vendor 0x4010c = 0x03400000,
-                                     * 0x801c0 = 0x30000006 (not ring
-                                     * related as far as known) */
+#define T21_RING_VENDOR_MISC 0x20u  /* vendor 0x4010c = 0x03400000 (T23
+                                     * main; the sub has 0x04400000, rule
+                                     * not known) and on T21 0x801c0 =
+                                     * 0x30000006 (T23: always, #799) */
 
 typedef struct {
     uint8_t slice_type; /* 0: I/IDR, 1: P */

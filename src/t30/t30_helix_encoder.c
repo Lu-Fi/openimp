@@ -488,6 +488,7 @@ struct T30HelixEncoder {
     uint32_t ivdc_threshold;
     uint64_t ivdc_time_ms;
     uint32_t ivdc_drops;
+    uint32_t ivdc_skips;     /* #807 kick gate: lost frames not kicked */
     /* OPENIMP_T23_EMC_CANARY=1 (#774 device check): pattern in the EMC
      * bytes past the stock layout's tail, checked every 25 pictures */
     uint32_t emc_canary_off;
@@ -684,22 +685,42 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
-/* EMC scratch layout choice (#774): the T21-derived layout everywhere.
- * The vendor 1.3.0 layout (OPENIMP_T23_EMC=vendor, research only) broke
- * the bitstream on a real T23N with OpenIMP's command list (Tapo C500,
- * 2026-11-22: decode errors from the first pictures, VPU hangs with a
- * canary past its tail), so it is not used by default, also not in the
- * IVDC direct mode. */
+/* Vendor-sized EMC scratch and reference ring by default in the IVDC
+ * direct mode (#799 step 4, #774): with the command list made equal to
+ * the vendor 1.3.0 one (QEMU A12 diff, audit issue799 FINDINGS step 4.1:
+ * 0x50000 wrap bits, 0x10010, 0x800fc, 0x801cc, 0x801c0, 0x80198) the
+ * stock layout and the unrounded ring are used as the vendor does, so
+ * main + sub + JPEG fit the vendor rmem budget.  Normal capture keeps the
+ * T21 layout and the 64-line ring.  A/B switches: OPENIMP_T23_EMC=vendor|
+ * t21|t23 and OPENIMP_T23_RING=vendor|64. */
+static int t23_vendor_sizing_default(void)
+{
+    return OpenIMP_T23_IvdcMode() != 0;
+}
+
 static int t23_emc_vendor_layout(void)
 {
     const char *env = getenv("OPENIMP_T23_EMC");
 
-    return env && !strcmp(env, "vendor");
+    if (env && env[0])
+        return !strcmp(env, "vendor");
+    return t23_vendor_sizing_default();
 }
 
-/* EMC scratch layout of a T23 channel (#799 step 1a): T23_EMC_DEFAULT,
- * OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88) bytes per
- * macroblock layout, =vendor the stock 1.3.0 one (research, #774). */
+/* reference ring of picture + 256 lines without the 64-line rounding */
+static int t23_ring_exact(void)
+{
+    const char *env = getenv("OPENIMP_T23_RING");
+
+    if (env && env[0])
+        return !strcmp(env, "vendor");
+    return t23_vendor_sizing_default();
+}
+
+/* EMC scratch layout of a T23 channel: the stock 1.3.0 one in direct mode
+ * or with OPENIMP_T23_EMC=vendor, else T23_EMC_DEFAULT (T21 layout, also
+ * OPENIMP_T23_EMC=t21); OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88)
+ * bytes per macroblock layout. */
 static uint32_t t23_emc_layout(uint32_t mbw, uint32_t mbh,
                                uint32_t offsets[4])
 {
@@ -3361,6 +3382,11 @@ static int t30_ref_share_alloc(T30HelixEncoder *encoder, const char *tag)
     uint32_t mbw = encoder->sps.i_mb_width ? (uint32_t)encoder->sps.i_mb_width
                                            : (encoder->params.width + 15u) / 16u;
     uint32_t mbh = (encoder->params.height + 15u) / 16u;
+#if defined(PLATFORM_T23)
+    int exact = t23_ring_exact();
+#else
+    int exact = 0;
+#endif
 
     if (env && env[0] == '0')
         return 0;
@@ -3369,17 +3395,17 @@ static int t30_ref_share_alloc(T30HelixEncoder *encoder, const char *tag)
                      "1920x1088 (as the vendor)");
         return 0;
     }
-    if (!t21_ref_ring_saves(mbw, mbh)) {
+    if (!t21_ref_ring_saves_ex(mbw, mbh, exact)) {
         /* the 256 extra lines cost more than the second picture saves */
         IMP_LOG_INFO("Encoder", "Helix: reference sharing skipped, picture "
                      "too small");
         return 0;
     }
     if (t30_dma_allocate(&encoder->reference[0].dma,
-                         t21_ref_ring_bytes(mbw, mbh), tag) != 0)
+                         t21_ref_ring_bytes_ex(mbw, mbh, exact), tag) != 0)
         return -1;
-    t21_ref_ring_init(&encoder->ring, encoder->reference[0].dma.phys_addr,
-                      mbw, mbh);
+    t21_ref_ring_init_ex(&encoder->ring, encoder->reference[0].dma.phys_addr,
+                         mbw, mbh, exact);
     encoder->reference[0].y = encoder->ring.base_y;
     encoder->reference[0].c = encoder->ring.base_c;
     encoder->ref_share = 1;
@@ -4808,6 +4834,7 @@ again:
 
         int run_errno = 0;
         uint32_t run_ms = 0;
+        uint32_t ivdc_st = 0;      /* #807: 0x7c read once per job */
 
         for (attempt = 0; attempt < 2; attempt++) {
             uint32_t status;
@@ -4828,7 +4855,27 @@ again:
                 encoder->ivdc_on ? encoder->ivdc_threshold : 0u;
             encoder->channel.time =
                 encoder->ivdc_on ? encoder->ivdc_time_ms : 0u;
+            /* #807 kick gate (beyond vendor mode 1): never START the
+             * IVDC job in the lost-start window after the previous job */
+            if (encoder->ivdc_on) {
+                uint32_t gate_us = 0;
+                int gate = OpenIMP_T23_IvdcKickGate(&gate_us);
+
+                if (gate != IVDC_GATE_OFF)
+                    OpenIMP_T23_IvdcTrace("HG", encoder->frame_number, gate,
+                                          0, gate_us);
+                /* the frame is lost already: drop it like a soc_vpu
+                 * cancel (nothing coded, no IDR), keep the VPU free */
+                if (gate == IVDC_GATE_SKIP) {
+                    run_ret = 2;
+                    run_errno = -1;
+                    encoder->ivdc_skips++;
+                    break;
+                }
+            }
             (void)clock_gettime(CLOCK_MONOTONIC, &t0);
+            if (encoder->ivdc_on)
+                OpenIMP_T23_IvdcTrace("H0", encoder->frame_number, 0, 0, 0);
             errno = 0;
             run_ret = ioctl(encoder->fd, T30_CHANNEL_RUN, &encoder->channel);
             run_errno = errno;
@@ -4836,6 +4883,12 @@ again:
             run_ms = (uint32_t)((t1.tv_sec - t0.tv_sec) * 1000 +
                                 (t1.tv_nsec - t0.tv_nsec) / 1000000);
             status = encoder->channel.status;
+            /* #807: one 0x7c read per job, used by the trace and the drop */
+            if (encoder->ivdc_on) {
+                (void)OpenIMP_T23_IvdcStatusRead(&ivdc_st);
+                OpenIMP_T23_IvdcTraceSt("H1", encoder->frame_number, run_ret,
+                                        status, run_ms, ivdc_st);
+            }
             /* soc_vpu cancelled the IVDC job (2: ring overflow, frame too
              * old or the ISP too far ahead, helix vpu_start): the vendor
              * drops the picture, nothing was coded */
@@ -4877,7 +4930,7 @@ again:
         /* vendor: IVDC status bit 31 after the job -> no picture, the
          * stream restarts with an IDR */
         if (encoder->ivdc_on && run_ret == 0 && attempt < 2 && !overflow &&
-            OpenIMP_T23_IvdcPictureBroken()) {
+            OpenIMP_T23_IvdcPictureBrokenSt(ivdc_st)) {
             encoder->ivdc_drops++;
             encoder->force_idr = 1;
             helix_eprc_drop(encoder);
@@ -4886,9 +4939,12 @@ again:
         if (run_ret == 2 && encoder->ivdc_on) {
             encoder->ivdc_drops++;
             if (encoder->ivdc_drops <= 5u || encoder->ivdc_drops % 100u == 0u)
-                IMP_LOG_WARN("Encoder", "T23 Helix: IVDC frame %u cancelled "
-                             "by soc_vpu (%u drops)", encoder->frame_number,
-                             encoder->ivdc_drops);
+                IMP_LOG_WARN("Encoder", "T23 Helix: IVDC frame %u %s "
+                             "(%u drops, %u skipped by the kick gate)",
+                             encoder->frame_number,
+                             run_errno == -1 ? "lost, not kicked"
+                                             : "cancelled by soc_vpu",
+                             encoder->ivdc_drops, encoder->ivdc_skips);
             helix_eprc_drop(encoder);
             return -1;
         }

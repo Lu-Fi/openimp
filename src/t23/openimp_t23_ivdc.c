@@ -32,9 +32,12 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "dma_alloc.h"
@@ -48,6 +51,7 @@
 #define IVDC_ISP_LINE   0x208u
 #define IVDC_VPU_LINE   0x3a8u
 #define IVDC_STATUS     0x7cu
+#define IVDC_ST_READY   0xc0000000u
 
 typedef struct {
     int fd;              /* /dev/misc-ivdc, -1 = none */
@@ -317,18 +321,27 @@ int OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
         *threshold = 0;
     if (time_ms)
         *time_ms = 0;
-    /* The vendor checks and fills the node values only for the encoder
-     * channel's direct modes 2 and 3 (several sensors): "mode - 2 < 2" in
+    line = OpenIMP_T23_IvdcMemLine();
+    /* The vendor checks the frame only for the encoder channel's direct
+     * modes 2 and 3 (several sensors): "mode - 2 < 2" in
      * on_encoder_group_data_update @0x5b750 and do_channel_process
      * @0x5a040.  Mode 1 (one sensor) codes every IVDC frame with frame
-     * type 3 and zero node values (soc_vpu then checks the overflow count
-     * and the lead against its own data_threshold). */
-    if (__atomic_load_n(&ivdc_mode, __ATOMIC_RELAXED) - 2u >= 2u)
+     * type 3, but still hands soc_vpu the channel's ring size: the mode-1
+     * loop of on_encoder_group_data_update (libimp_all.c:34672-34677) sets
+     * overflow_cnt_vpu = 0, timestamp_ivdc_vpu = 0 and ivdc_mem_line_vpu =
+     * channel +0xa34 (the GET_MEM_LINE value, IMP_Encoder_CreateChn
+     * :36719-36726) for a type-3 frame; data_threshold_vpu is not written
+     * there (0).  helix vpu_start adds that mem_line to the lead when the
+     * ISP and VPU line counters are in different ring wrap phases; with 0
+     * a kick after the wrap got a negative lead and was cancelled (#807). */
+    if (__atomic_load_n(&ivdc_mode, __ATOMIC_RELAXED) - 2u >= 2u) {
+        if (mem_line)
+            *mem_line = line;
         return 0;
+    }
     memcpy(&frame_ovf, f + T23_FRAME_OVERFLOW, 4);
     memcpy(&frame_thr, f + T23_FRAME_THRESHOLD, 4);
     memcpy(&ts_us, f + 0x30, 8);
-    line = OpenIMP_T23_IvdcMemLine();
     if (ivdc_reg_read(IVDC_REG_BASE + IVDC_OVERFLOW, &ovf) == 0) {
         /* on_encoder_group_data_update: log 0x61b */
         if (ovf > frame_ovf) {
@@ -366,6 +379,28 @@ int OpenIMP_T23_IvdcCheck(const void *frame, uint32_t *overflow_cnt,
  * do_channel_process_jpege @0x59720 (:33258-33263): ivdc_regrw(0x1320007c)
  * after the job, negative (bit 31) -> the picture is not delivered (H.264:
  * bitstream released, the encoder restarts with an IDR) */
+/* #807: 0x7c is a live state (it changes within a job's end); read it
+ * once after the job and hand the same value to the trace and the drop
+ * decision (a read per user made the trace build deliver aborted and drop
+ * complete pictures). Returns 0 when read. */
+int OpenIMP_T23_IvdcStatusRead(uint32_t *v)
+{
+    *v = 0;
+    return ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, v);
+}
+
+int OpenIMP_T23_IvdcPictureBrokenSt(uint32_t v)
+{
+    static unsigned int logged;
+
+    if (!(v & 0x80000000u))
+        return 0;
+    if (logged++ < 5u || logged % 100u == 0u)
+        IMP_LOG_WARN("Encoder", "IVDC status 0x%08x: picture dropped (%u)",
+                     v, logged);
+    return 1;
+}
+
 int OpenIMP_T23_IvdcPictureBroken(void)
 {
     uint32_t v = 0;
@@ -399,4 +434,205 @@ int OpenIMP_T23_IvdcSkipStart(uint64_t channel_pictures)
     }
     pthread_mutex_unlock(&ivdc_lock);
     return skip;
+}
+
+/* #807 test trace (OPENIMP_T23_IVDC_TRACE=1): one line per IVDC job phase on
+ * stderr - monotonic ms, tag, frame, ISP line, VPU line, lead, status reg,
+ * job result, job ms */
+static void ivdc_trace(const char *tag, uint32_t frame, int ret,
+                       uint32_t status, uint32_t ms, const uint32_t *st_in)
+{
+    static int on = -1;
+    uint32_t isp = 0, vpu = 0, st = 0;
+    struct timespec t;
+
+    if (on < 0)
+        on = getenv("OPENIMP_T23_IVDC_TRACE") != NULL;
+    if (!on)
+        return;
+    (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_ISP_LINE, &isp);
+    (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_VPU_LINE, &vpu);
+    if (st_in)
+        st = *st_in;
+    else
+        (void)ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, &st);
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    fprintf(stderr, "IVT %lu.%03lu %s f=%u isp=%04x vpu=%04x lead=%d st=%08x ret=%d s=%08x ms=%u\n",
+            (unsigned long)t.tv_sec, (unsigned long)(t.tv_nsec / 1000000), tag, frame,
+            isp >> 16, vpu & 0xffffu,
+            (int)OpenIMP_T23_IvdcLead(isp, vpu, OpenIMP_T23_IvdcMemLine()), st, ret,
+            status, ms);
+}
+
+void OpenIMP_T23_IvdcTrace(const char *tag, uint32_t frame, int ret,
+                           uint32_t status, uint32_t ms)
+{
+    ivdc_trace(tag, frame, ret, status, ms, NULL);
+}
+
+/* the trace with the status the caller read (and decides with) */
+void OpenIMP_T23_IvdcTraceSt(const char *tag, uint32_t frame, int ret,
+                             uint32_t status, uint32_t ms, uint32_t st)
+{
+    ivdc_trace(tag, frame, ret, status, ms, &st);
+}
+
+/* #807 IVDC kick gate (beyond the vendor's mode 1, user OK 2026-11-22).
+ * The vendor libimp 1.3.0 kicks a mode-1 IVDC job without any wait
+ * (libimp_all.c:33796-33822 waits only in modes 2/3).  On the T23DL the
+ * per-job trace with the d3d68b79 node values (audit/issue807/ga1, 3100
+ * jobs) shows which kick states lose the picture (status 0x7c =
+ * 0xc0000000 after the job):
+ *   0x7c bits 31:30 set at the kick           46-92 % dropped
+ *   ISP lead 0-10 lines (frame end / start)    7-18 %
+ *   ISP lead 11-40 lines                        0-1 %
+ *   ISP lead 41-240 lines                       4-8 %
+ *   ISP lead > 280 lines (ring nearly full)    50 %
+ *   both line counters reset to 0 (frame lost)  3-6 %
+ * So the gate waits (poll every 100 us, at most OPENIMP_T23_IVDC_GATE_US,
+ * default 3000) until 0x7c bits 31:30 are clear and the lead is inside
+ * [OPENIMP_T23_IVDC_GATE_MIN, OPENIMP_T23_IVDC_GATE_MAX] (default 12, 240)
+ * or both counters are 0; after the maximum wait it kicks like the vendor. */
+static int ivdc_gate_on = -1;
+static unsigned int ivdc_gate_max_us = 3000u;
+static unsigned int ivdc_gate_lead_min = 12u, ivdc_gate_lead_max = 240u;
+static unsigned int ivdc_gate_skip;   /* OPENIMP_T23_IVDC_SKIP */
+static uint64_t (*ivdc_now_us)(void);
+static void (*ivdc_sleep_us)(unsigned int us);
+
+void OpenIMP_T23_IvdcSetClock(uint64_t (*now_us)(void),
+                              void (*sleep_us)(unsigned int us))
+{
+    ivdc_now_us = now_us;
+    ivdc_sleep_us = sleep_us;
+}
+
+static uint64_t ivdc_clock_us(void)
+{
+    struct timespec t;
+
+    if (ivdc_now_us)
+        return ivdc_now_us();
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (uint64_t)t.tv_sec * 1000000u + (uint64_t)t.tv_nsec / 1000u;
+}
+
+static void ivdc_pause_us(unsigned int us)
+{
+    struct timespec t = { 0, (long)us * 1000L };
+
+    if (ivdc_sleep_us) {
+        ivdc_sleep_us(us);
+        return;
+    }
+    while (nanosleep(&t, &t) != 0 && errno == EINTR)
+        ;
+}
+
+void OpenIMP_T23_IvdcGateSkip(int on)
+{
+    ivdc_gate_skip = on ? 1u : 0u;
+}
+
+void OpenIMP_T23_IvdcGateConfig(int on, unsigned int max_us,
+                                unsigned int lead_min, unsigned int lead_max)
+{
+    ivdc_gate_on = on;
+    ivdc_gate_max_us = max_us;
+    ivdc_gate_lead_min = lead_min;
+    ivdc_gate_lead_max = lead_max;
+}
+
+static void ivdc_env_uint(const char *name, unsigned int *val)
+{
+    const char *e = getenv(name);
+
+    if (e && *e)
+        *val = (unsigned int)strtoul(e, NULL, 0);
+}
+
+int OpenIMP_T23_IvdcGateEnabled(void)
+{
+    if (ivdc_gate_on < 0) {
+        const char *e = getenv("OPENIMP_T23_IVDC_GATE");
+
+        ivdc_env_uint("OPENIMP_T23_IVDC_GATE_US", &ivdc_gate_max_us);
+        ivdc_env_uint("OPENIMP_T23_IVDC_GATE_MIN", &ivdc_gate_lead_min);
+        ivdc_env_uint("OPENIMP_T23_IVDC_GATE_MAX", &ivdc_gate_lead_max);
+        ivdc_env_uint("OPENIMP_T23_IVDC_SKIP", &ivdc_gate_skip);
+        ivdc_gate_on = e ? atoi(e) : OPENIMP_T23_IVDC_GATE_DEFAULT;
+    }
+    return ivdc_gate_on;
+}
+
+int OpenIMP_T23_IvdcKickReady(uint32_t isp, uint32_t vpu, uint32_t st)
+{
+    uint32_t lead;
+
+    /* gate 1 (FINDINGS-fable.md rule, measured 286 -> 131 drops/min in
+     * audit/issue807/ga1): ready when 0x7c shows 0xc0000000 or the ISP
+     * line differs from the VPU line; gate 2: the lead window below */
+    if (ivdc_gate_on == 1)
+        return (st & IVDC_ST_READY) == IVDC_ST_READY ||
+               ((isp >> 16) & 0xffffu) != (vpu & 0xffffu);
+
+    if (st & IVDC_ST_READY)
+        return 0;
+    if ((isp >> 16) == 0 && vpu == 0)
+        return 1;
+    lead = OpenIMP_T23_IvdcLead(isp, vpu, OpenIMP_T23_IvdcMemLine());
+    return lead >= ivdc_gate_lead_min && lead <= ivdc_gate_lead_max;
+}
+
+static int ivdc_gate_regs(uint32_t *isp, uint32_t *vpu, uint32_t *st)
+{
+    return ivdc_reg_read(IVDC_REG_BASE + IVDC_ISP_LINE, isp) == 0 &&
+           ivdc_reg_read(IVDC_REG_BASE + IVDC_VPU_LINE, vpu) == 0 &&
+           ivdc_reg_read(IVDC_REG_BASE + IVDC_STATUS, st) == 0;
+}
+
+/* skip mode: the frame this token stands for is lost already (both line
+ * counters reset, or the ISP is past the lead window so the ring fills
+ * before the VPU catches up): do not occupy the VPU for it, the next frame
+ * start brings a new token */
+static int ivdc_gate_lost(uint32_t isp, uint32_t vpu, uint32_t st)
+{
+    if (st & IVDC_ST_READY)
+        return 0;
+    if ((isp >> 16) == 0 && vpu == 0)
+        return 1;
+    return OpenIMP_T23_IvdcLead(isp, vpu, OpenIMP_T23_IvdcMemLine()) >
+           ivdc_gate_lead_max;
+}
+
+int OpenIMP_T23_IvdcKickGate(uint32_t *waited_us)
+{
+    uint32_t isp, vpu, st;
+    uint64_t t0, now;
+    int polls = 0;
+
+    if (waited_us)
+        *waited_us = 0;
+    if (!OpenIMP_T23_IvdcGateEnabled() || !ivdc_gate_regs(&isp, &vpu, &st))
+        return IVDC_GATE_OFF;
+    if (ivdc_gate_skip && ivdc_gate_lost(isp, vpu, st))
+        return IVDC_GATE_SKIP;
+    if (OpenIMP_T23_IvdcKickReady(isp, vpu, st))
+        return IVDC_GATE_READY;
+    t0 = ivdc_clock_us();
+    for (;;) {
+        ivdc_pause_us(100u);
+        polls++;
+        now = ivdc_clock_us();
+        if (waited_us)
+            *waited_us = (uint32_t)(now - t0);
+        if (!ivdc_gate_regs(&isp, &vpu, &st))
+            return IVDC_GATE_OFF;
+        if (ivdc_gate_skip && ivdc_gate_lost(isp, vpu, st))
+            return IVDC_GATE_SKIP;
+        if (OpenIMP_T23_IvdcKickReady(isp, vpu, st))
+            return IVDC_GATE_WAITED;
+        if (now - t0 >= ivdc_gate_max_us || polls > 1000)
+            return IVDC_GATE_TIMEOUT;
+    }
 }

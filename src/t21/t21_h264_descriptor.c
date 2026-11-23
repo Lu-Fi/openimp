@@ -79,6 +79,7 @@ static const uint32_t t21_lps_range[64] = {
     0x09070608, 0x08070508, 0x07060508, 0x00000000
 };
 
+#if !defined(T21_HELIX_T23_DELTAS)
 static const uint32_t t21_vmau_interpolation[40] = {
     0x8888801f, 0x40011008, 0x00044444, 0x88888007,
     0x40011001, 0x0000c444, 0x8888803b, 0x40011008,
@@ -91,6 +92,26 @@ static const uint32_t t21_vmau_interpolation[40] = {
     0x41111100, 0x00000004, 0x41111100, 0x00000004,
     0x41111100, 0x00000004, 0x41111100, 0x00000004,
 };
+#endif
+
+#if defined(T21_HELIX_T23_DELTAS)
+/* T23 1.3.0: H264E_T21_SliceInit copies these 40 words from slice +0x1d0
+ * (decompile L12455-12462); identical in all eight QEMU A12 lists of the
+ * vendor library (720p and 360p, I and P, #799 step 4).  The T21 table
+ * above differs in 9 words. */
+static const uint32_t t23_vmau_interpolation[40] = {
+    0x88888000, 0x40011008, 0x00044444, 0x88888038,
+    0x40011008, 0x00044444, 0x8888801f, 0x40011008,
+    0x00044444, 0x88888020, 0x40031038, 0x00044444,
+    0x88888038, 0x40011008, 0x00044444, 0x88888800,
+    0x40011002, 0x00044444, 0x88888838, 0x4001100f,
+    0x00044444, 0x88888000, 0x40011008, 0x00044444,
+    0x41111100, 0x00000004, 0x41111100, 0x00000004,
+    0x41111100, 0x00000004, 0x41111100, 0x00000004,
+    0x41111100, 0x00000004, 0x41111100, 0x00000004,
+    0x41111100, 0x00000004, 0x41111100, 0x00000004,
+};
+#endif
 
 static const uint32_t t21_quant_matrix[96] = {
     0x000cc100, 0x0009d0b2, 0x000c30cc, 0x0009209d,
@@ -184,7 +205,10 @@ static int t21_emit_motion_estimation(T21DescriptorWriter *writer,
     /* bits 14..21: the ring wrap row of the reference (vendor T23 lists:
      * the 0xb0000 byte again; 0xff = none); bits 9/10: ctx[54]/ctx[52],
      * clear in the vendor T23 */
-    MOTION_EMIT(0x50000, (vendor_me ? 0x5440d9b1u : 0x5440dfb1u) |
+    /* vendor T23 0x544019b1: bits 14/15 belong to the wrap byte
+     * (H264E_T21_SliceInit L12327-12340, local_6e << 14); setting them
+     * turned a wrap byte with clear low bits into a wrong row (#799) */
+    MOTION_EMIT(0x50000, (vendor_me ? 0x544019b1u : 0x5440dfb1u) |
                          ((config->ref_share &&
                            !(config->ring_flags & T21_RING_NO_WRAP)
                                ? (uint32_t)config->ring_wrap_rows : 0xffu)
@@ -473,8 +497,17 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
                   config->width);
     EMIT(0x10008, 0);
     EMIT(0x1000c, 0);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* T23 1.3.0 h264_api_enc L95246-95247 (slice +0x3ac / +0x3a8):
+     * ((w + 63) / 64 * mb_height) << 16 | (w + 31) / 32 * mb_height;
+     * the T21 form below gives the same value only at 1920x1088 */
+    EMIT(0x10010, ((((uint32_t)config->width + 63u) >> 6) *
+                   config->mb_height << 16) |
+                  (((uint32_t)config->width + 31u) >> 5) * config->mb_height);
+#else
     EMIT(0x10010, ((uint32_t)config->mb_width * 17u << 16) |
                   ((uint32_t)config->mb_width * 34u));
+#endif
     /* ring: 0 for the IDR, the ring start for P (vendor T23 lists) */
     EMIT(0x10014, config->ref_share
                       ? (config->slice_type ? config->ring_start_y : 0u)
@@ -512,7 +545,13 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x8003c, 0);
     EMIT(0x800d8, 0);
     EMIT(0x800dc, 0);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* T23 1.3.0: 0x55004304 at 720p and 360p (SliceInit L12426-12429,
+     * slice +0x162 = 0x43, not the last row; equal to it only at 1080p) */
+    EMIT(0x800fc, 0x55004304u);
+#else
     EMIT(0x800fc, 0x55000004u | ((uint32_t)config->last_mby << 8));
+#endif
     EMIT(0x80114, ((uint32_t)config->qp * 2u << 16) | 0x11u);
     EMIT(0x80118, 0);
     EMIT(0x8011c, 0);
@@ -523,19 +562,34 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
 #endif
     EMIT(0x8007c, 0xffff8002u);
     for (i = 0; i < 40u; i++)
+#if defined(T21_HELIX_T23_DELTAS)
+        EMIT(0x80198, t23_vmau_interpolation[i]);
+#else
         EMIT(0x80198, t21_vmau_interpolation[i]);
+#endif
     for (i = 0; i < 42u; i++)
         EMIT(0x8002c,
              config->cabac_state[t21_vmau_context_index(config->slice_type,
                                                         i)]);
     for (i = 0; i < 225u; i++)
         EMIT(0x80174, config->cabac_state[t21_mau_context_index(i)]);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* T23 1.3.0: 0x30000006 in every list (SliceInit L12556) */
+    EMIT(0x801c0, 0x30000006u);
+#else
     EMIT(0x801c0, (config->ref_share &&
                    (config->ring_flags & T21_RING_VENDOR_MISC))
                       ? 0x30000006u : 0x70000006u);
+#endif
     EMIT(0x801c4, 0x44444444u);
     EMIT(0x801c8, 0);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* T23 1.3.0: 0x00430000 at 720p and 360p (SliceInit L12572-12576,
+     * nibbles slice +0x1af/+0x1b0; equal to last_mby << 16 only at 1080p) */
+    EMIT(0x801cc, 0x00430000u);
+#else
     EMIT(0x801cc, (uint32_t)config->last_mby << 16);
+#endif
     EMIT(0x801d0, 0);
     EMIT(0x801d4, 0);
     for (i = 0; i < 96u; i++)

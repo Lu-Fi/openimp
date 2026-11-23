@@ -27,6 +27,7 @@ HEVC_POLICY := $(BUILD)/t23-hevc-policy-test
 FRAMELOSS := $(BUILD)/t23-frameloss-test
 P2_MULTISECTION := $(BUILD)/t23-p2-multisection-test
 IVDC := $(BUILD)/t23-ivdc-test
+IVDC_PACE := $(BUILD)/t23-ivdc-pace-test
 HELIX_NATIVE_SOURCES := $(PROJECT_DIR)/src/t30/t30_helix_encoder.c \
 	$(PROJECT_DIR)/src/t21/t21_h264_descriptor.c \
 	$(PROJECT_DIR)/src/t30/h264enc/cabac.c \
@@ -51,7 +52,7 @@ HELIX_INCLUDES := -DPLATFORM_T23 '-D_Static_assert(c,m)=' -Wno-unused-result \
 check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(FAKE_HELIXD_BIN) $(IVS_DIGEST_T31) $(IVS_DIGEST_T23) \
 	$(IVS_FRAMEWORK) $(IVS_MOVE_V2) $(JPEG_QL) $(HELIX_DESCRIPTOR) $(HELIX_STREAM) \
-	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS) $(P2_MULTISECTION) $(IVDC)
+	$(RMEM_LAYOUT) $(OSD_PACK) $(AUDIO_ABI) $(P2_ROI) $(JPEGDEC_CLI) $(FRAMELOSS) $(P2_MULTISECTION) $(IVDC) $(IVDC_PACE)
 	$(P2_ROI)
 	$(P2_MULTISECTION)
 	$(FRAMELOSS) frameloss_vectors.txt
@@ -94,6 +95,7 @@ check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(IVS_MOVE_V2)
 	$(JPEG_QL)
 	$(IVDC)
+	$(IVDC_PACE)
 
 $(ISP_TUNING_TEST_BIN): isp_tuning_test.c \
 	$(PROJECT_DIR)/src/isp/isp_t23_tuning.c $(PROJECT_DIR)/src/isp/isp_mid_ref.c
@@ -177,6 +179,11 @@ $(HELIX_DESCRIPTOR): helix_descriptor_test.c \
 $(FRAMELOSS): frameloss_test.c $(PROJECT_DIR)/src/t23/t23_frameloss.h
 	mkdir -p "$(dir $@)"
 	$(CC) $(CFLAGS) -I$(PROJECT_DIR)/src frameloss_test.c -lm -o "$@"
+
+# IVDC kick pacing (openimp #807): vendor frame-count mask, input rate
+$(IVDC_PACE): ivdc_pace_test.c $(PROJECT_DIR)/src/t23/openimp_t23_ivdc_pace.h
+	mkdir -p "$(dir $@)"
+	$(CC) $(CFLAGS) ivdc_pace_test.c -o "$@"
 
 # IVDC direct mode (openimp #767): misc-ivdc sequence, ring, drop rule
 $(IVDC): ivdc_test.c $(PROJECT_DIR)/src/t23/openimp_t23_ivdc.c \

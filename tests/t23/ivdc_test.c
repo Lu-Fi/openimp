@@ -87,6 +87,35 @@ static int fake_reg(uint32_t addr, uint32_t *val)
     return -1;
 }
 
+/* fake clock for the #807 kick gate: each sleep advances the time and can
+ * change the registers after a given number of polls */
+static uint64_t fake_now;
+static int fake_polls, fake_flip_at;
+static uint32_t fake_flip_isp, fake_flip_status;
+static uint64_t fake_clock(void) { return fake_now; }
+static void fake_sleep(unsigned int us)
+{
+    fake_now += us;
+    if (++fake_polls == fake_flip_at) {
+        reg_isp = fake_flip_isp;
+        reg_status = fake_flip_status;
+    }
+}
+
+static int gate_case(uint32_t isp, uint32_t vpu, uint32_t st, int flip_at,
+                     uint32_t flip_isp, uint32_t flip_st, uint32_t *us)
+{
+    reg_isp = isp;
+    reg_vpu = vpu;
+    reg_status = st;
+    fake_now = 1000000u;
+    fake_polls = 0;
+    fake_flip_at = flip_at;
+    fake_flip_isp = flip_isp;
+    fake_flip_status = flip_st;
+    return OpenIMP_T23_IvdcKickGate(us);
+}
+
 static void make_frame(uint8_t *f, uint32_t ovf, uint32_t thr, int64_t ts)
 {
     uint32_t direct = T23_IVDC_SRC_Y;
@@ -148,11 +177,17 @@ int main(void)
     frame[T23_FRAME_TYPE] = 0;
     CHECK(!OpenIMP_T23_IvdcFrame(frame));
 
-    /* mode 1: no drop check, zero node values (vendor "mode - 2 < 2") */
+    /* mode 1: no drop check (vendor "mode - 2 < 2"); node values overflow
+     * 0, time 0, threshold 0, but the ring size (vendor mode-1 loop,
+     * libimp_all.c:34672-34677, #807) */
     make_frame(frame, 0, 300, 5000000);
     reg_ovf = 5; reg_isp = 400u << 16; reg_vpu = 0;
     CHECK(OpenIMP_T23_IvdcCheck(frame, &ovf, &line, &thr, &ms) == 0);
-    CHECK(ovf == 0 && line == 0 && thr == 0 && ms == 0);
+    CHECK(ovf == 0 && line == 300 && thr == 0 && ms == 0);
+    /* the helix vpu_start lead with that node: a kick after the ring wrap
+     * (ISP 0x8067, VPU 0x78, the #807 trace) is 283 lines, not negative */
+    CHECK(OpenIMP_T23_IvdcLead(0x8067u << 16, 0x78u, line) == 283u);
+    CHECK(OpenIMP_T23_IvdcLead(0x8067u << 16, 0x78u, 0u) > 500u);
     OpenIMP_T23_IvdcDestroyChn(0);
 
     /* mode 2: overflow and lead drop, else the node values */
@@ -186,6 +221,72 @@ int main(void)
     CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
     CHECK(OpenIMP_T23_IvdcSkipStart(0) == 0);
     CHECK(OpenIMP_T23_IvdcSkipStart(0) == 1);
+
+    /* #807 kick gate */
+    {
+        uint32_t us = 99;
+
+        OpenIMP_T23_IvdcSetClock(fake_clock, fake_sleep);
+        OpenIMP_T23_IvdcGateConfig(0, 3000u, 12u, 240u);
+        CHECK(gate_case(0x00780000u, 0x78u, 0, 0, 0, 0, &us) == IVDC_GATE_OFF);
+        CHECK(us == 0 && fake_polls == 0);
+        /* gate 1: status ready or any lead */
+        OpenIMP_T23_IvdcGateConfig(1, 3000u, 12u, 240u);
+        CHECK(OpenIMP_T23_IvdcKickReady(0x00780000u, 0x78u, 0xc0000000u));
+        CHECK(OpenIMP_T23_IvdcKickReady(0x007a0000u, 0x78u, 0));
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x00780000u, 0x78u, 0));
+        CHECK(!OpenIMP_T23_IvdcKickReady(0, 0, 0x80000000u));
+        /* gate 2: the lead window rule */
+        OpenIMP_T23_IvdcGateConfig(2, 3000u, 12u, 240u);
+        CHECK(OpenIMP_T23_IvdcKickReady(0x00a00000u, 0x78u, 0));      /* 40 */
+        CHECK(OpenIMP_T23_IvdcKickReady(0x00840000u, 0x78u, 0));      /* 12 */
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x00830000u, 0x78u, 0));     /* 11 */
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x00780000u, 0x78u, 0));     /* 0 */
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x00a00000u, 0x78u, 0xc0000000u));
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x00a00000u, 0x78u, 0x40000000u));
+        CHECK(OpenIMP_T23_IvdcKickReady(0, 0, 0));                    /* reset */
+        CHECK(!OpenIMP_T23_IvdcKickReady(0, 0, 0xc0000000u));
+        /* wrap: ISP 0x0075 behind VPU 0x80b4 = lead 237 / 0x007b = 243 */
+        CHECK(OpenIMP_T23_IvdcKickReady(0x00750000u, 0x80b4u, 0));
+        CHECK(!OpenIMP_T23_IvdcKickReady(0x007b0000u, 0x80b4u, 0));
+        /* ready at once: no wait */
+        CHECK(gate_case(0x00a00000u, 0x78u, 0, 0, 0, 0, &us) ==
+              IVDC_GATE_READY);
+        CHECK(us == 0 && fake_polls == 0);
+        /* back to back at the frame end: wait until the next frame has
+         * 12 lines */
+        CHECK(gate_case(0x803c0000u, 0x803cu, 0, 5, 0x80480000u, 0, &us) ==
+              IVDC_GATE_WAITED);
+        CHECK(us == 500u && fake_polls == 5);
+        /* status latched: wait until it clears */
+        CHECK(gate_case(0x00a00000u, 0x78u, 0xc0000000u, 3, 0x00a00000u, 0,
+                        &us) == IVDC_GATE_WAITED);
+        CHECK(us == 300u);
+        /* nothing changes: kick after the maximum wait */
+        CHECK(gate_case(0x00780000u, 0x78u, 0, 0, 0, 0, &us) ==
+              IVDC_GATE_TIMEOUT);
+        CHECK(us == 3000u && fake_polls == 30);
+        OpenIMP_T23_IvdcGateConfig(2, 500u, 12u, 240u);
+        CHECK(gate_case(0x00780000u, 0x78u, 0, 0, 0, 0, &us) ==
+              IVDC_GATE_TIMEOUT);
+        CHECK(us == 500u);
+        /* skip mode: a lost frame (counters reset, or past the lead
+         * window and nothing changes) is not kicked */
+        OpenIMP_T23_IvdcGateConfig(2, 3000u, 12u, 240u);
+        OpenIMP_T23_IvdcGateSkip(1);
+        CHECK(gate_case(0, 0, 0, 0, 0, 0, &us) == IVDC_GATE_SKIP);
+        CHECK(us == 0 && fake_polls == 0);
+        CHECK(gate_case(0x007b0000u, 0x80b4u, 0, 0, 0, 0, &us) ==
+              IVDC_GATE_SKIP);                                   /* 243 */
+        CHECK(gate_case(0x00a00000u, 0x78u, 0, 0, 0, 0, &us) ==
+              IVDC_GATE_READY);
+        /* status latched, then the counters reset: skip */
+        CHECK(gate_case(0x00a00000u, 0x78u, 0xc0000000u, 2, 0, 0, &us) ==
+              IVDC_GATE_SKIP);
+        CHECK(us == 200u);
+        OpenIMP_T23_IvdcGateSkip(0);
+        OpenIMP_T23_IvdcSetClock(NULL, NULL);
+    }
 
     if (fails) {
         fprintf(stderr, "t23 ivdc test: %d failures\n", fails);

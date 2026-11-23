@@ -1131,18 +1131,36 @@ static int helix_jpeg_job_locked(HelixJpegSlice *slice, uint32_t capacity,
     helix_jpeg.channel.output_len = 0;
 #if defined(PLATFORM_T23)
     /* vendor hwicodec_pf_jpege_t20_enc @0x3a948: a source address with bit
-     * 31 (IVDC) runs as frame type 3 with the IVDC node values, which the
-     * single-sensor mode 1 leaves 0 (see openimp_t23_ivdc.c) */
+     * 31 (IVDC) runs as frame type 3 with the IVDC node values
+     * (libimp_all.c:14466-14478: the same globals as H.264).  The
+     * single-sensor mode 1 sets them to overflow 0, time 0, threshold 0
+     * and the ring line count (libimp_all.c:34672-34677, #807; see
+     * OpenIMP_T23_IvdcCheck) */
     helix_jpeg.channel.frame_type = helix_jpeg_ivdc ? 3u : 0u;
     helix_jpeg.channel.overflow_cnt = 0;
-    helix_jpeg.channel.ivdc_mem_line = 0;
+    helix_jpeg.channel.ivdc_mem_line =
+        helix_jpeg_ivdc ? OpenIMP_T23_IvdcMemLine() : 0u;
     helix_jpeg.channel.data_threshold = 0;
     helix_jpeg.channel.max_bs_act = 0;
     helix_jpeg.channel.time = 0;
 #endif
     helix_jpeg.active = buffer;
     errno = 0;
+#if defined(PLATFORM_T23)
+    if (helix_jpeg_ivdc) {
+        uint32_t gate_us = 0;
+        int gate = OpenIMP_T23_IvdcKickGate(&gate_us);
+
+        if (gate != IVDC_GATE_OFF)
+            OpenIMP_T23_IvdcTrace("JG", 0, gate, 0, gate_us);
+        OpenIMP_T23_IvdcTrace("J0", 0, 0, 0, 0);
+    }
+#endif
     ret = ioctl(helix_jpeg.fd, HELIX_CHANNEL_RUN, &helix_jpeg.channel);
+#if defined(PLATFORM_T23)
+    if (helix_jpeg_ivdc)
+        OpenIMP_T23_IvdcTrace("J1", 0, ret, helix_jpeg.channel.status, 0);
+#endif
     if (helix_jpeg.probe_limit)
         helix_probe_report();
     if (ret != 0)
