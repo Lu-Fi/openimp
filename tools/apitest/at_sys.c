@@ -310,8 +310,9 @@ void t_fs(void)
 #endif
     /* GetFrame / ReleaseFrame: content, size, timestamps, rate */
     NEED(IMP_FrameSource_GetFrame) {
-        int64_t first = 0, last = 0, tprev = 0, tmeas = 0;
-        int n = 0, mono = 1, w = 0, h = 0, rr = 0;
+        int64_t first = 0, last = 0, tprev = 0, tmeas = 0, tsl[16];
+        int n = 0, mono = 1, w = 0, h = 0, rr = 0, small = 0;
+        unsigned szl = 0;
         unsigned luma = 0, luma0 = 0;
         IMPFrameInfo **pf = (IMPFrameInfo **)gnew(sizeof(IMPFrameInfo *));
         int64_t t0 = now_us(), t1;
@@ -322,10 +323,10 @@ void t_fs(void)
             gchk(pf);
             if (r < 0 || !*pf) break;
             if (n == 0) { first = (*pf)->timeStamp; w = (*pf)->width; h = (*pf)->height; luma0 = luma_mean(*pf);
-                          if (!((*pf)->virAddr && (*pf)->size >= nv12)) mono = 0; }
+                          szl = (*pf)->size; if (!((*pf)->virAddr && (*pf)->size >= nv12)) { mono = 0; small = 1; } }   /* #826: say why */
             { unsigned l = luma_mean(*pf); if (l > luma) luma = l; }   /* brightest of the 16: the first buffers can still be unwritten */
             if (n && (*pf)->timeStamp <= tprev) mono = 0;
-            tprev = last = (*pf)->timeStamp;
+            tprev = last = tsl[n] = (*pf)->timeStamp;
             if (n == 4) tmeas = last;   /* frames 0..3 can be the ring of the first buffers (older than the sleep before) */
             if (IMP_FrameSource_ReleaseFrame) {
                 rr = IMP_FrameSource_ReleaseFrame(1, *pf);
@@ -336,6 +337,11 @@ void t_fs(void)
         CHECK(IMP_FrameSource_GetFrame, r < 0 ? r : 0, n == 16 && w == SUB_W && h == SUB_H && mono && luma > 0,
               "%d frames %dx%d luma %u (first frame %u) ts monotonic %d, %.1f fps (wall), ts span %lld us", n, w, h, luma, luma0, mono,
               n > 1 ? (n - 1) * 1e6 / (double)(t1 - t0) : 0.0, (long long)(last - first));
+        if (!mono) {   /* #826: why not monotonic - a too small / unmapped first frame, or the timestamp steps (us, from frame 0) */
+            char b[400]; int k, o = 0;
+            for (k = 1; k < n && o < (int)sizeof(b) - 24; k++) o += snprintf(b + o, sizeof(b) - o, " %lld", (long long)(tsl[k] - tsl[k - 1]));
+            printf("[I] GetFrame ts detail: first frame size %u (need %u)%s, ts steps:%s\n", szl, (unsigned)nv12, small ? " TOO SMALL / no virAddr" : "", b);
+        }
         NEED(IMP_FrameSource_ReleaseFrame) rep(FN(IMP_FrameSource_ReleaseFrame), rr, rr == 0 ? V_PASS : V_FAIL, "last release");
         /* libimp hands out the channel at the sensor rate (outFrmRate is not a
          * FrameSource drop rate); apitest set the sensor to 15/1 as the vendor

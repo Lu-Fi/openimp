@@ -131,7 +131,10 @@ struct t32_fs_chn {
     uint32_t fps_word;
     uint64_t fps_acc;
     uint32_t seq;
-    /* GetFrame depth copies */
+    /* GetFrame depth copies; dseq = own delivery counter: the order of the copies (#826: the driver's
+     * sequence is not a usable order - under QEMU it repeats, so GetFrame took slots by index and
+     * handed out a 3 s old copy after a fresh one; it also starts over after a stream restart) */
+    uint32_t dseq;
     int depth;
     struct t32_fs_slot slot[T32_FS_MAX_DEPTH];
     pthread_cond_t ready;
@@ -750,7 +753,7 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
         if (c->i2d_on)
             fs_i2d_frame(c, &slot->dma, &slot->frame);
         slot->frame.timeStamp = b->frame.timeStamp;
-        slot->seq = c->seq;
+        slot->seq = ++c->dseq;          /* #826: oldest copy first = delivery order, not the driver sequence */
         slot->state = SLOT_READY;
         c->copied++;
         if (!c->enabled || (int)(slot - c->slot) >= c->depth)
