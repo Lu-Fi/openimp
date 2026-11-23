@@ -100,3 +100,29 @@ cast, grey b* +11.6), saturation goes from 0.79-0.91 to 0.93-0.99 of the referen
 neutral (|a*|, |b*| <= 1.9), noise in the grey patches and the AE gain stay unchanged. The remaining ~8.3 dE00 is mostly lightness
 of chart rows C/D (box light fall-off, see above; skin 14-15 is lightness) and the tone curve, not the matrix. Night/IR is
 monochrome and not affected. Fitted for one sensor and one camera; other sensors need their own fit (#102 stays open).
+
+## T21: box colour calibration at runtime (`tools/tisp_nl`, #102, beyond vendor, test tool, opt-in)
+
+The T21 has no CCM attribute in its IMP API (vendor 1.0.33 has no `IMP_ISP_Tuning_SetCCMAttr`), so the light-box calibration uses
+the tisp tuning netlink channel that the vendor tuning tool talks to and that both the vendor `tx-isp-t21.ko` and open-tx-isp
+`tx_isp_t21` serve (`tisp_param_operate_process`, protocol 23, replies to port 50; open-tx-isp `driver/t21/tx_isp_t21_recovered.c`
+`tisp_netlink_init` / `tisp_ccm_param_array_set`). [tools/tisp_nl/tisp_nl.c](../tools/tisp_nl/tisp_nl.c) is a small static client:
+
+| call | message | effect |
+|---|---|---|
+| `tisp_nl get 0x7d` / `0x7e` / `0x7f` | type 0 | A / T / D linear CCM, 9 x int32, 14-bit two's complement Q10 (1024 = 1.0, rows sum to 1024) |
+| `tisp_nl get 0x81` / `0x82` | type 0 | saturation list per EV (9, 256 = 1.0) / CT thresholds of the CCM choice (jxf23: 4500 3100) |
+| `tisp_nl set ID w0 ..` | type 1 | copies the array and recomputes the CCM (`force_update`, `jz_isp_ccm`) |
+| `tisp_nl wbget` / `wbset MODE R B` | type 3 / 2, id 5 | WB attr {mode, manual r/b, statis r/b, global r/b}; mode 1 = manual gains, 0 = auto |
+
+Changes last until the ISP reloads the bin tables (module reload; the day/night parameter switch reloads the CCM tables). jxf23
+(Victure PC420 T21) vendor tables: A 1.484 -0.367 -0.117 / -0.344 1.602 -0.256 / -0.359 -1.672 3.030 (bin row sum 1023),
+T 1.594 -0.451 -0.139 / -0.355 1.572 -0.219 / -0.210 -1.051 2.260, D 1.613 -0.651 0.039 / -0.427 1.781 -0.355 / -0.131 -0.980 2.113;
+saturation list 210 210 200 200 200 200 180 95 90 (the vendor desaturates to 0.82 x even in bright light: chroma ratio 0.78 in the box).
+
+QEMU (-M ingenic-t21, t21b24 image, 2026-11-23): get of all arrays = the bin values, set + read-back, manual WB, frames continue
+(snapshot 200 before / during / after), restore by writing the saved arrays back, no oops.  The light-box runner phase `boxcal`
+(runner `lb_boxcal.py`) fits the matrix and the WB gains on the chart per lamp CT, applies them through `tisp_nl`, captures the chart
+again and restores the vendor tables; the report shows vendor / open / open + calibration as "info: beyond vendor" next to the gate
+rows (the gate compares vendor and open without the calibration). Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
+(thingino T21 toolchain). Only one netlink tuning client at a time (fixed port 50).
