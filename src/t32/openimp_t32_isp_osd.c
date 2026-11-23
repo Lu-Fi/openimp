@@ -56,6 +56,7 @@ int IMP_OSD_GetRgnAttr_ISPPic(int chn, int handle, IMPIspOsdAttrAsm *pIspOsdAttr
 int IMP_OSD_ShowRgn_ISP(int chn, int handle, int showFlag);
 int IMP_OSD_DestroyRgn_ISP(int chn, int handle);
 void IMP_OSD_Exit_ISP(void);
+void OpenIMP_T32_IspOsdModule(int up);
 int IMP_OSD_UpdateRgnAttrData_ISP(int chn, int handle, IMPIspOsdAttrAsm *attr);
 
 #include "dma_alloc.h"
@@ -104,6 +105,10 @@ typedef struct {
 static pthread_mutex_t isp_osd_lock = PTHREAD_MUTEX_INITIALIZER;
 static int isp_osd_pool_size = 1;               /* vendor default; samples set 512 KiB */
 static int isp_osd_ready;
+/* #818: vendor 2.0.2.1 IMP_OSD_SetRgnAttr_ISP (0x185ea0) / GetRgnAttr_ISP gate the line/rect/cover regions on the OSD
+ * module context that OSDInit (IMP_System_Init) sets and OSDExit (IMP_System_Exit) clears (libimp .bss 0x238160), not on
+ * the ISP OSD pool: they keep working after IMP_OSD_Exit_ISP */
+static int isp_osd_module;
 static int isp_osd_show;                        /* IMP_OSD_SetRgnAttr_ISP's flag */
 static int isp_osd_npics;
 static IspOsdSlot isp_osd_slot[ISPOSD_CHNS][ISPOSD_PICS];
@@ -309,6 +314,16 @@ int IMP_OSD_Init_ISP(void)
     isp_osd_ready = 1;
     pthread_mutex_unlock(&isp_osd_lock);
     return 0;
+}
+
+/* IMP_System_Init / IMP_System_Exit: the vendor OSDInit / OSDExit state (see isp_osd_module) */
+void OpenIMP_T32_IspOsdModule(int up)
+{
+    pthread_mutex_lock(&isp_osd_lock);
+    isp_osd_module = up != 0;
+    if (!up)
+        isp_osd_show = 0;
+    pthread_mutex_unlock(&isp_osd_lock);
 }
 
 void IMP_OSD_Exit_ISP(void)
@@ -556,7 +571,7 @@ int IMP_OSD_SetRgnAttr_ISP(int sensornum, IMPOSDRgnAttr *prAttr, int bosdshow)
         IMP_LOG_ERR(TAG, "SetRgnAttr_ISP: type %d is not an ISP region", (int)prAttr->type);
         return E_PARAM;
     }
-    if (!isp_osd_ready)
+    if (!isp_osd_module)
         return E_NOINIT;
     pthread_mutex_lock(&isp_osd_lock);
     isp_osd_show = bosdshow != 0;
@@ -579,7 +594,7 @@ int IMP_OSD_GetRgnAttr_ISP(int sensornum, IMPOSDRgnAttr *prAttr, int *pbosdshow)
         return E_SENSOR;
     if (!prAttr || !pbosdshow)
         return E_NULL;
-    if (!isp_osd_ready)
+    if (!isp_osd_module)
         return E_NOINIT;
     *pbosdshow = isp_osd_show;
     if (IMP_ISP_Tuning_GetDrawBlock((IMPVI_NUM)sensornum, &prAttr->osdispdraw.stDrawAttr) < 0)

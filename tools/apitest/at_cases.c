@@ -3075,6 +3075,9 @@ static void cs_isposdapi(void)
 
         if (!pic || !a || !b || !c || cx1 <= cx0 + 2 || cy1 <= cy0 + 2) { rep(FN(IMP_OSD_CreateRgn_ISP), 0, V_SKIP, "no memory or sensor too small"); goto out; }
         base = region_y(cx0, cy0, cx1, cy1);
+        /* guard (#818 e1, T33L direct_mode=1): channel 0 runs over the IVDC and GetFrame refuses it, region_y answers -1;
+         * the effect cannot be read there (4 false FAILs), codes and read-backs are still checked */
+        if (!noeff && base < 0) { noeff = 1; printf("[T] isposdapi: no frame access on the main channel (IVDC direct?), effect not checked\n"); }
         dark = base < 140;
         for (k = 0; k < OPW * OPH; k++) { uint8_t v = dark ? 255 : 0; pic[k * 4] = v; pic[k * 4 + 1] = v; pic[k * 4 + 2] = v; pic[k * 4 + 3] = 255; }
         jenc = getenv("APITEST_ISPOSD_NOCONS") ? 0 : isposd_cons_up();
@@ -3108,7 +3111,7 @@ static void cs_isposdapi(void)
         rg3 = IMP_ISP_Tuning_GetOsdRgnAttr(0, h, c);
         c_ok = rg3 == 0 && isposd_geom(c, x0, y0) && c->stsinglepicAttr.pic.osd_enable == (show ? 1 : 0);
         appears = !show || noeff || (dark ? shown > base + 40 : shown < base - 40);
-        rep(FN(IMP_OSD_SetRgnAttr_PicISP), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d picture at (%d,%d) through IMP_OSD_*_ISP: %s", dark ? "white" : "black", OPW, OPH, x0, y0, show ? (appears ? "visible after Show" : "NOT VISIBLE after Show") : "stored (rt: not shown, see APITEST_T40_ISPOSD_CTL)");
+        rep(FN(IMP_OSD_SetRgnAttr_PicISP), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d picture at (%d,%d) through IMP_OSD_*_ISP: %s", dark ? "white" : "black", OPW, OPH, x0, y0, show ? (noeff ? "shown, effect not checked" : appears ? "visible after Show" : "NOT VISIBLE after Show") : "stored (rt: not shown, see APITEST_T40_ISPOSD_CTL)");
         rep(FN(IMP_OSD_GetRgnAttr_ISPPic), rg, g_ok ? V_PASS : V_FAIL, "stored attr: type %d, %ux%u at (%u,%u) stride %u", (int)b->type, b->stsinglepicAttr.pic.osd_width, b->stsinglepicAttr.pic.osd_height, b->stsinglepicAttr.pic.osd_left, b->stsinglepicAttr.pic.osd_top, b->stsinglepicAttr.pic.osd_stride);
         rep(FN(IMP_ISP_Tuning_GetOsdRgnAttr), rg3, c_ok ? V_PASS : V_FAIL, "%s: geometry %s, osd_enable %d (expected %d)", show ? "after Show" : "stored", isposd_geom(c, x0, y0) ? "as set" : "DIFFERENT", (int)c->stsinglepicAttr.pic.osd_enable, show ? 1 : 0);
 # ifdef APITEST_T40
@@ -3171,6 +3174,36 @@ static void cs_isposdapi(void)
             free(oa); free(ob); free(ba); free(bb);
         }
 # endif
+#ifdef APITEST_T33
+        {
+            /* IMP_OSD_UpdateRgnAttrData_ISP (T33, not in the 2.0.2.1 header; vendor 0x17b964, #818): the new bytes of a region's picture,
+             * same size (stride * height of the stored region) or -1, then IMP_ISP_Tuning_SetOSDAttr again with the window's physical
+             * address.  sensor > 4 -1, handle out of range 0 (a log line), NULL -1, size other than the region's -1. */
+            int (*upd)(int, int, IMPIspOsdAttrAsm *) = (int (*)(int, int, IMPIspOsdAttrAsm *))dsym("IMP_OSD_UpdateRgnAttrData_ISP");
+            uint8_t *inv = (uint8_t *)malloc(OPW * OPH * 4);
+            IMPIspOsdAttrAsm *u = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*u));
+
+            if (!upd || !inv || !u) rep(LBL("IMP_OSD_UpdateRgnAttrData_ISP"), -1, V_SKIP, upd ? "no memory" : "libimp has no IMP_OSD_UpdateRgnAttrData_ISP");
+            else {
+                int ru, rsz, rnul, rch, rhd, rback;
+                double updy, backy;
+
+                for (k = 0; k < OPW * OPH; k++) { uint8_t v = dark ? 0 : 255; inv[k * 4] = v; inv[k * 4 + 1] = v; inv[k * 4 + 2] = v; inv[k * 4 + 3] = 255; }
+                *u = *a; u->stsinglepicAttr.pic.osd_image = (char *)inv;
+                ru = upd(0, h, u);
+                updy = show ? region_y(cx0, cy0, cx1, cy1) : base;
+                u->stsinglepicAttr.pic.osd_height = OPH / 2; rsz = upd(0, h, u); u->stsinglepicAttr.pic.osd_height = OPH;
+                rnul = upd(0, h, NULL); rch = upd(5, h, u); rhd = upd(0, 99, u);
+                rback = upd(0, h, a);                       /* the first picture again for the checks below */
+                backy = show ? region_y(cx0, cy0, cx1, cy1) : base;
+                rep(LBL("IMP_OSD_UpdateRgnAttrData_ISP"), ru, (ru == 0 && rback == 0 && rsz == -1 && rnul == -1 && rch == -1 && rhd == 0 &&
+                    (!show || noeff || (dark ? (updy < shown - 40 && backy > base + 40) : (updy > shown + 40 && backy < base - 40))) && flow()) ? V_PASS : V_FAIL,
+                    "handle %d %s -> %s bytes: region luma %.1f -> %.1f, first bytes again %.1f (ret %d)%s; half height %d, NULL %d, sensor 5 %d, handle 99 %d; frames flow",
+                    h, dark ? "white" : "black", dark ? "black" : "white", shown, updy, backy, rback, (show && !noeff) ? "" : " (effect not checked)", rsz, rnul, rch, rhd);
+            }
+            free(inv); free(u);
+        }
+#endif
         rhide = show ? IMP_OSD_ShowRgn_ISP(0, h, 0) : 0;
         hidden = show ? region_y(cx0, cy0, cx1, cy1) : base;
         gone = noeff || dabs(hidden - base) < 20;
