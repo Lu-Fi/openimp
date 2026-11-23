@@ -45,20 +45,27 @@ static void types(void)
     CHECK(t32_gdr_slice_type(&pos, &d, 15, 1, 0) == 0 && pos == 14, "request at the boundary");
 }
 
-static void maps(int hevc)
+static void maps(int hevc, int fixqp)
 {
     IMPEncoderAttrRcMode m;
     T32Rc rc;
     uint32_t pos = 0, len, st[64] = { 0 };
     int32_t d = -1;
-    int i, idr;
+    int i, idr, qp;
     static const int band[5][2] = { { 0, 12 }, { 13, 25 }, { 26, 39 }, { 40, 53 }, { 54, 67 } };
 
     memset(&m, 0, sizeof(m));
     memset(&rc, 0, sizeof(rc));
     m.rcMode = IMP_ENC_RC_MODE_CBR;
     t32_rc_default_attr(&m, hevc ? PT_H265 : PT_H264, 30, 2000);
-    CHECK(t32_rc_init(&rc, &m, 1920, 1088, 0, 15, 15, 1, hevc) == 0 && rc.on, "rc init %d", hevc);
+    if (fixqp) {
+        /* #790: vendor i264e_encode runs i264e_ratecontrol_start in FIXQP too
+         * (QEMU vfqm, FIXQP QP 30: the same bands in pictures 26..30) */
+        m.rcMode = IMP_ENC_RC_MODE_FIXQP;
+        m.attrH264FixQp.IQp = 30;
+        m.attrH264FixQp.PQp = 30;
+    }
+    CHECK(t32_rc_init(&rc, &m, 1920, 1088, 0, 15, 15, 1, hevc) == 0 && rc.on, "rc init %d fixqp %d", hevc, fixqp);
     if (!rc.on)
         return;
     for (i = 0; i < 50; i++) {
@@ -69,7 +76,8 @@ static void maps(int hevc)
             pos = 0, d = -1;
         CHECK(idr == (i == 0), "%s picture %d idr %d", hevc ? "H.265" : "H.264", i, idr);
         t32_rc_gdr(&rc, 1, (uint8_t)req, (uint8_t)en, 5, en ? 5 : 0, en ? 30 : 0);
-        (void)t32_rc_start(&rc, idr, pos);
+        qp = t32_rc_start(&rc, idr, pos);
+        CHECK(!fixqp || qp == 30, "FIXQP picture %d: QP %d", i, qp);
         if (!hevc) {
             const uint8_t *mp = t32_rc_map(&rc, T33_MAP_MB, &len);
             int r, c, bad = 0, set = 0;
@@ -93,8 +101,9 @@ static void maps(int hevc)
 int main(void)
 {
     types();
-    maps(0);
-    maps(1);
+    maps(0, 0);
+    maps(1, 0);
+    maps(0, 1);
     if (fails)
         return 1;
     printf("t33 gdr784: ok\n");

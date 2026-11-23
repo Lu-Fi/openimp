@@ -770,11 +770,16 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32
         rc->have_stash = 1;
         rc->width = width;
         rc->height = height;
+#ifndef PLATFORM_T33
         if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
             t32_rc33_close(c);
             free(c);
             return 0;
         }
+#endif
+        /* T33 (#790): vendor 2.0.2.1 i264e_encode calls i264e_ratecontrol_start
+         * in every mode, FIXQP too (0x7a924, no mode test): the controller picks
+         * the fixed QPs and draws the intra-refresh bands */
         t32_rc33_init(c);
         if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) == 0)
             rc->params = p;     /* for the log line only */
@@ -835,10 +840,12 @@ int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, ui
     rc->height = height;
     rc->mode = (int)m->rcMode;
     rc->i_min = rc->i_max = -1;
+#ifndef PLATFORM_T33
     if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
         rc->pend = pend;        /* the fixed QPs of a per-picture bound: t32_rc_fixqp_take */
         return 0;
     }
+#endif
     c = calloc(1, sizeof(*c));
     if (!c || t32_rc33_open(c, width, height) != 0) {
         free(c);
