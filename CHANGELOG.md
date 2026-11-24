@@ -14,6 +14,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - #860: the vendor T32 libimp `IMP_ISP_Tuning_SetFaceAe` (0x114610) checks only sensor / NULL / state and tx-isp-t32.ko `tisp_ae_face_set` (0xb21f4) returns 0, so the empty face window is accepted as on the T33; `cs_faceae` takes the T33 branch on T32.
 - #861: the vendor T32 libimp `IMP_OSD_SetRgnAttr_ISP` checks sensor < 5 (0x154388) like the T33, and tx-isp-t32.ko `tisp_msca_api_get_mask_out_cfg` writes the cover enable byte (0x855cc..0x855d0); `cs_rgnisp` takes the T33 expectations on T32.
 - Device (PRJ007 gc4653, image claude/t32-openimp+d06a913 + open-tx-isp #859 test ko): modctl, aestats, faceae, rgnisp: 8 of 8 PASS.
+## 2026-11-24: T32 Encoder_SetMaxStreamCnt / GetMaxStreamCnt like the vendor T32 (#856)
+
+- `src/t32/openimp_t32_encoder.c`: the T32 build now uses the vendor return codes, read from the PRJ007 vendor libimp (afe092fb, `IMP_Encoder_SetMaxStreamCnt` 0xdb4d8 / `GetMaxStreamCnt` 0xdb684). A created channel refuses Set with 0x80040080 and keeps its count. A channel >= 16 is 0x80040001. On a channel that is not created, Set returns 0 and stores nothing (the vendor's only stores there are stack stores). Get on a channel that is not created is 0x80040008. Before, the T32 build freed and re-allocated the stream buffers of an idle created channel and returned -1 otherwise. The T33 build is unchanged (it stores the count for CreateChn, as vendor 2.0.2.1).
+- `tools/apitest/at_enc.c`: the T33 SetMaxStreamCnt checks now also run in the T32 build. The default count (2) is checked on the T33 only. QEMU -M ingenic-t32: SetMaxStreamCnt FAIL -> PASS on H.264 and H.265, and the "not created" case PASSes.
 
 ## 2026-11-24: T32 apitest follows the shared T32/T33 behaviour for InsertUserData and Raw2SUTime (#99)
 

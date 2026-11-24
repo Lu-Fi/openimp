@@ -1339,11 +1339,17 @@ static void live_misc(int chn, int codec)
             r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
             rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == -1 && r == 0 && *g == was) ? V_PASS : V_FAIL,
                 "refused on a created channel (before CreateChn only): ret %d, count stays %d (was %d)", r2, *g, was);
-#elif defined(APITEST_T33)
-            /* vendor 2.0.2.1: a created channel refuses the call (0x80040080) and keeps its count; default 2 (H.264/H.265) */
+#elif defined(APITEST_T32)
+            /* vendor T33 2.0.2.1 and T32 (#856): a created channel refuses the call (0x80040080) and keeps its count; T33 default 2
+             * (H.264/H.265; the T32 default is not checked) */
             r2 = IMP_Encoder_SetMaxStreamCnt(chn, was > 3 ? 3 : was + 1);
             r = IMP_Encoder_GetMaxStreamCnt(chn, g); gchk(g);
-            rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == (int)0x80040080 && r == 0 && *g == was && (codec == CODEC_JPEG || was == 2)) ? V_PASS : V_FAIL,
+#  ifdef APITEST_T33
+#   define AT_MSC_DEF_OK (codec == CODEC_JPEG || was == 2)
+#  else
+#   define AT_MSC_DEF_OK 1
+#  endif
+            rep(FN(IMP_Encoder_SetMaxStreamCnt), r2, (r2 == (int)0x80040080 && r == 0 && *g == was && AT_MSC_DEF_OK) ? V_PASS : V_FAIL,
                 "refused on a created channel (before CreateChn only): ret 0x%x, count stays %d (was %d, vendor default 2 video / 1 JPEG)", (unsigned)r2, *g, was);
             {   /* channel 15 was never created: Set stores (0), Get stays 0x80040008; channel 16: 0x80040001 */
                 int a1 = IMP_Encoder_SetMaxStreamCnt(15, 4), a2 = IMP_Encoder_GetMaxStreamCnt(15, g);

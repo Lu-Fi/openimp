@@ -2595,10 +2595,10 @@ int IMP_Encoder_GetGOPSize(int encChn, IMPEncoderGOPSizeCfg *gop)
     return e && e->created ? 0 : T32_ENC_ERR_NOCHN;
 }
 
-#ifdef PLATFORM_T33
-/* Vendor 2.0.2.1 (libimp 0xe7a14 / 0xe7bc4): Set stores the count in the channel table when the channel is not created
- * (no range check) and returns 0; a created channel is refused with 0x80040080 and keeps its count; a channel >= 16 is
- * 0x80040001.  Get of a channel that is not created is 0x80040008, else the count. */
+/* Vendor T33 2.0.2.1 (libimp 0xe7a14 / 0xe7bc4) and T32 (PRJ007 vendor libimp afe092fb, 0xdb4d8 / 0xdb684, #856): a created
+ * channel refuses Set with 0x80040080 and keeps its count; a channel >= 16 is 0x80040001.  A channel that is not created: the
+ * T33 stores the count in the channel table (taken by CreateChn) and returns 0; the T32 only logs and returns 0 (no store, all
+ * of its stores in that function are stack stores).  Get of a channel that is not created is 0x80040008, else the count. */
 int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
 {
     int rc = 0;
@@ -2608,8 +2608,12 @@ int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
     pthread_mutex_lock(&enc_lock);
     if (chn_get(encChn))
         rc = T32_ENC_ERR_MODE;
+#ifdef PLATFORM_T33
     else
         t33_streams[encChn] = cnt;
+#else
+    (void)cnt;
+#endif
     pthread_mutex_unlock(&enc_lock);
     return rc;
 }
@@ -2632,42 +2636,6 @@ int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt)
     pthread_mutex_unlock(&enc_lock);
     return rc;
 }
-#else
-int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
-{
-    struct t32_enc_chn *e;
-    int rc = -1;
-
-    if (cnt < 1 || cnt > T32_ENC_MAX_STREAMS)
-        return -1;
-    pthread_mutex_lock(&enc_lock);
-    e = chn_get(encChn);
-    if (e && !e->recv && !e->busy && !e->pending && !e->q.rcount) {
-        if (!t32_encq_busy(&e->q)) {
-            chn_free_bufs(e);
-            e->max_streams = cnt;
-            rc = chn_alloc_bufs(e, cnt);
-        }
-    }
-    pthread_mutex_unlock(&enc_lock);
-    return rc;
-}
-
-int IMP_Encoder_GetMaxStreamCnt(int encChn, int *cnt)
-{
-    struct t32_enc_chn *e;
-
-    if (!cnt)
-        return -1;
-    pthread_mutex_lock(&enc_lock);
-    e = chn_get(encChn);
-    if (e)
-        *cnt = e->nslots;
-    pthread_mutex_unlock(&enc_lock);
-    return e ? 0 : -1;
-}
-
-#endif
 
 /* ---- registration and receiving ---------------------------------------------- */
 int IMP_Encoder_RegisterChn(int encGroup, int encChn)
