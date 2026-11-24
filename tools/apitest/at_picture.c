@@ -1155,7 +1155,19 @@ static int c_gamma(int ph, int arg, char *info, size_t n)
     int k, r;
 
     if (!HAVE(IMP_ISP_Tuning_SetGammaAttr)) return CASE_NA;
-    if (ph) { IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, &old); return 0; }
+    if (ph) {
+        /* #864: with the bin's gamma section +0x58/+0x59 = 1 (PRJ007 gc4653 bins) the vendor tisp_gamma_strength_transform copies
+         * a user curve into the tuned table (stLutInfo + 0x20) that tisp_gamma_update_curve reads, so Curve_type DEFAULT alone
+         * keeps the last user curve.  Write the curve read before (in DEFAULT mode the effective tuned curve) as USER first,
+         * then go back to the old type. */
+        if (old.Curve_type == IMP_ISP_GAMMA_CURVE_DEFAULT) {
+            IMPISPGammaAttr u = old;
+            u.Curve_type = IMP_ISP_GAMMA_CURVE_USER;
+            IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, &u);
+        }
+        IMP_ISP_Tuning_SetGammaAttr(IMPVI_MAIN, &old);
+        return 0;
+    }
     memset(&old, 0, sizeof(old)); IMP_ISP_Tuning_GetGammaAttr(IMPVI_MAIN, &old);
     memset(&g, 0, sizeof(g));
     g.Curve_type = IMP_ISP_GAMMA_CURVE_USER;
@@ -1943,6 +1955,14 @@ int picture_main(int argc, char **argv)
             hook(c->name);
             r = snap(path, 0);
             say("[R] %s set=0 get=%s %s\n", c->name, r ? "NO PICTURE" : "picture", g_st);
+            if (!r) {   /* guard (#864): a case that does not restore its setting drifts every later row; flag a base-end far from base */
+                static double by = -1;
+                double y = -1;
+                sscanf(g_st, "ST Y=%lf", &y);
+                if (!strcmp(c->name, "base")) by = y;
+                else if (!strcmp(c->name, "base-end") && by > 0 && y >= 0 && (y - by > 12 || by - y > 12))
+                    say("[W] base-end Y %.1f vs base Y %.1f: a case left a setting behind (bisect with IMGFX_FILTER)\n", y, by);
+            }
             if (r) say("[I] GetFrame(%d) last ret %d\n", g_chn, g_gf_ret);
             if (r) rc = 1;
             ran++;

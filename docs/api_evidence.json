@@ -452,7 +452,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -547,7 +547,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -627,7 +627,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -707,7 +707,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -787,7 +787,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -867,7 +867,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -947,7 +947,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -981,7 +981,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "dev",
-        "T32": "qemu",
+        "T32": "dev",
         "T33": "dev",
         "T40": "rt",
         "T41": "dev"
@@ -1010,7 +1010,7 @@
       "ref": {
         "T41": "apitest issue-116 2026-10-26 .34: SetDefaultBinPath ret=0 before AddSensor, AddSensor 0, EnableSensor 0; QEMU T41: the set file is the one tisp_init loads",
         "T40": "apitest agg47 stock 2026-10-27 .184 (API round trip, no visible effect expected)",
-        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33last3 2026-11-22 .122 T33L (OpenIMP only): Get empty before Set; bad file 0xfffff00a, NULL 0xfffff009, VI 4 0xfffff00c as vendor 2.0.2.1 (0x109770); Set(day) read back equal and the library log 'VI 0 day bin <path>' at AddSensor shows the loaded file; audit t33-last3 dev/r3; QEMU o33a/o33b 2026-11-13"
       }
     },
@@ -1111,7 +1111,7 @@
         "T23": "rt",
         "T30": "rt",
         "T31": "dev",
-        "T32": "qemu",
+        "T32": "rt",
         "T33": "dev",
         "T40": "rt",
         "T41": "dev"
@@ -1157,7 +1157,7 @@
         "T31": "apitest issue-113 2026-10-26 .26 (open-tx-isp 3e9a5d2c + OpenIMP 662b0d8c): chip id 0xcb3a read, same-value write round trip PASS; QEMU T31 equal",
         "T40": "apitest agg47-cases 2026-10-26 .184 (API round trip, no visible effect expected)",
         "T30": "apitest t30b28 2026-11-05 .231 (API round trip, no visible effect expected)",
-        "T32": "apitest t3233gaps o32c 2026-11-13 QEMU (no camera; open tx-isp-t32.ko ds-batch d4132a79 + OpenIMP libimp)",
+        "T32": "apitest t32-cases 2026-11-25 .136 (API round trip, no visible effect expected)",
         "T33": "apitest d-dev1 2026-11-20 .122 (#709, open-tx-isp next 194fa4cf0 / b93660e11 as test ko e17e7084): GetSensorRegister chip id 0x3003/0x3002 = 0x2005 PASS, SetSensorRegister same value 0x20 to 0x3003 read back 0x20, frames flow; QEMU q/sreg-709a 0x2005"
       }
     },
@@ -1327,7 +1327,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -4652,7 +4652,7 @@
         "T23": "rt",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "aud",
+        "T32": "rt",
         "T33": "rt",
         "T40": "dev",
         "T41": "rt"
@@ -4672,7 +4672,8 @@
       "ref": {
         "T41": "apitest rc3-cases 2026-10-26 .34 (API round trip, no visible effect expected)",
         "T23": "apitest t23pass 2026-11-04 .30",
-        "T33": "apitest t33c1117 2026-11-17 .122 (case t33gaps: the day bin in use switched to itself, then enable 0 back to the default: both ret 0, picture recovers, frames flow; QEMU vendor 2.0.2.1 gives the same return codes)"
+        "T33": "apitest t33c1117 2026-11-17 .122 (case t33gaps: the day bin in use switched to itself, then enable 0 back to the default: both ret 0, picture recovers, frames flow; QEMU vendor 2.0.2.1 gives the same return codes)",
+        "T32": "apitest t32-cases 2026-11-25 .136 (API round trip, no visible effect expected)"
       }
     },
     "ISP_Tuning_WaitFrame": {
@@ -10073,7 +10074,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -10174,7 +10175,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -10254,7 +10255,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -10334,7 +10335,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -10610,7 +10611,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -10770,7 +10771,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -18944,7 +18945,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },
@@ -19304,7 +19305,7 @@
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "apitest t30b30 2026-11-05 .231",
-        "T32": "apitest t32-1124 2026-11-24 .136",
+        "T32": "apitest t32-cases 2026-11-25 .136",
         "T33": "apitest t33-silent-ao 2026-11-17 .122"
       }
     },

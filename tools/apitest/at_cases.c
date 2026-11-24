@@ -810,7 +810,7 @@ static const struct { const char *n; uint32_t rh, rl, vh, vl; } sids[] = {
     { "jxh42", 0x0a, 0x0b, 0xa0, 0x42 }, { "jxf22", 0x0a, 0x0b, 0x0f, 0x22 }, { "jxf23", 0x0a, 0x0b, 0x0f, 0x23 },
     { "sc1a4t", 0x3107, 0x3108, 0xda, 0x4d }, { "sc2336", 0x3107, 0x3108, 0xcb, 0x3a }, { "sc4336p", 0x3107, 0x3108, 0x9c, 0x42 },
     { "sc5336", 0x3107, 0x3108, 0xce, 0x50 }, { "sc830ai", 0x3107, 0x3108, 0xc1, 0x43 }, { "gc5603", 0x03f0, 0x03f1, 0x56, 0x03 },
-    { "gc4653", 0xf0, 0xf1, 0x46, 0x53 },         /* PRJ007 module: GC4653 chip id 0x4653 (sensor_gc4653_t32) */
+    { "gc4653", 0x03f0, 0x03f1, 0x46, 0x53 },     /* PRJ007 module: 16-bit addresses, vendor sensor_gc4653_t32.ko g_chip_ident li a1,1008 / 1009 (0x724 / 0x778), #863 */
     { "cv2005", 0x3003, 0x3002, 0x20, 0x05 },     /* T33L: sensor_cv2005_t33.ko g_chip_ident 0x84c..0x8d8 (0x2005) */
 };
 
@@ -826,7 +826,8 @@ static void cs_sensorreg(void)
     NEED(IMP_ISP_GetSensorRegister) {
         r1 = sreg_get(sids[i].rh, &h); r2 = sreg_get(sids[i].rl, &l);
         rep(FN(IMP_ISP_GetSensorRegister), r1 | r2, (r1 == 0 && r2 == 0 && h == sids[i].vh && l == sids[i].vl) ? V_PASS : V_FAIL,
-            "chip id regs 0x%x/0x%x = 0x%02x%02x (%s expects 0x%02x%02x)", sids[i].rh, sids[i].rl, h, l, sids[i].n, sids[i].vh, sids[i].vl);
+            "chip id regs 0x%x/0x%x = 0x%02x%02x (%s expects 0x%02x%02x)%s", sids[i].rh, sids[i].rl, h, l, sids[i].n, sids[i].vh, sids[i].vl,
+            (r1 == 0 && r2 == 0 && !h && !l) ? "; both 0 with ret 0: check the register address width in sids[] against the sensor ko g_chip_ident (#863)" : "");
         NEED(IMP_ISP_SetSensorRegister) {
             /* the chip id register is read-only: writing back the value just read changes nothing, and a read after it must agree */
             r3 = sreg_set(sids[i].rh, h); r4 = sreg_get(sids[i].rh, &h2);
@@ -1285,6 +1286,38 @@ void t_binpath_pre(void)
         gfree(o); gfree(b); gfree(p);
     }
 }
+#elif defined(APITEST_T32) && !defined(APITEST_T33) && HAS_IMP_ISP_GetDefaultBinPath && HAS_IMP_ISP_SetDefaultBinPath
+/* T32 (2.2.0 IMPISPDefaultBinAttr {mode, bname}): before AddSensor read the day slot (none stored), refuse a missing file
+ * (nothing stored), store the sensor's own day bin /etc/sensor/<sensor>-PRJ007-day.bin and read it back; AddSensor then loads it
+ * (library log "VI 0 day bin"). T33 runs its own variant (t33last3, at_t33.c). */
+void t_binpath_pre(void)
+{
+    const char *want = getenv("APITEST_CASES");
+    IMPISPDefaultBinAttr a, b;
+    struct stat st;
+    int r0, r1, r2, r3;
+
+    if (!want || !strstr(want, "binpath")) return;
+    memset(&a, 0, sizeof(a)); memset(&b, 0, sizeof(b));
+    a.mode = b.mode = IMPISP_BIN_MODE_DAY;
+    r0 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    snprintf(a.bname, sizeof(a.bname), "/tmp/does-not-exist-binpath.bin");
+    r1 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, &a);
+    memset(&b, 0, sizeof(b)); r2 = IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    snprintf(a.bname, sizeof(a.bname), "/etc/sensor/%s-PRJ007-day.bin", g_sensor.name);
+    if (stat(a.bname, &st) != 0) {
+        rep(FN(IMP_ISP_GetDefaultBinPath), r0, r0 == 0 ? V_PASS : V_FAIL, "before AddSensor: ret %d (empty = none stored)", r0);
+        rep(FN(IMP_ISP_SetDefaultBinPath), 0, V_SKIP, "%s does not exist", a.bname);
+        return;
+    }
+    r3 = IMP_ISP_SetDefaultBinPath(IMPVI_MAIN, &a);
+    memset(&b, 0, sizeof(b)); b.mode = IMPISP_BIN_MODE_DAY; r0 |= IMP_ISP_GetDefaultBinPath(IMPVI_MAIN, &b);
+    rep(FN(IMP_ISP_GetDefaultBinPath), r0, (r0 == 0 && r2 == 0 && !strcmp(a.bname, b.bname)) ? V_PASS : V_FAIL,
+        "day slot before AddSensor: after the refused Set empty (ret %d), after Set \"%.100s\"", r2, b.bname);
+    rep(FN(IMP_ISP_SetDefaultBinPath), r3, (r1 != 0 && r3 == 0 && !strcmp(a.bname, b.bname)) ? V_PASS : V_FAIL,
+        "missing file refused (ret %d, nothing stored); day bin %s stored before AddSensor (ret %d), read back %s", r1, a.bname, r3,
+        !strcmp(a.bname, b.bname) ? "equal" : "DIFFERENT");
+}
 #else
 void t_binpath_pre(void) {}
 #endif
@@ -1316,6 +1349,38 @@ static void cs_switchbin(void)
             rep(FN(IMP_ISP_Tuning_SwitchBin), r2, (r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL, "rt: the bin file in use (%.60s) switched to itself (ret %d), picture %s same (Y %.1f -> %.1f), frames flow", p, r2, ms >= 0 ? "" : "NOT", base.y, back.y);
         }
         gfree(p); gfree(a);
+    }
+}
+#elif defined(APITEST_T32) && !defined(APITEST_T33) && HAS_IMP_ISP_Tuning_SwitchBin && HAS_IMP_ISP_Tuning_GetISPRunningMode
+/* T32 SwitchBin (2.2.0 IMPISPBinAttr {enable, mode, bname}): for the running mode (day/night) switch to the sensor's own bin of that
+ * mode, then back to the default (enable 0); a missing file is refused.  Ret 0, picture recovers, frames flow. */
+static void cs_switchbin(void)
+{
+    NEED(IMP_ISP_Tuning_SwitchBin) {
+        G(IMPISPBinAttr, a);
+        IMPISPRunningMode rm = IMPISP_RUNNING_MODE_DAY;
+        struct stat st;
+        int r0, r1 = -1, r2 = -1, r3, ms = 0;
+        Fst base, back;
+
+        r0 = IMP_ISP_Tuning_GetISPRunningMode(IMPVI_MAIN, &rm);
+        a->mode = rm == IMPISP_RUNNING_MODE_NIGHT ? IMPISP_BIN_MODE_NIGHT : IMPISP_BIN_MODE_DAY;
+        a->enable = IMPISP_TUNING_OPS_MODE_ENABLE;
+        snprintf(a->bname, sizeof(a->bname), "/tmp/does-not-exist-switchbin.bin");
+        r3 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a);
+        snprintf(a->bname, sizeof(a->bname), "/etc/sensor/%s-PRJ007-%s.bin", g_sensor.name, a->mode == IMPISP_BIN_MODE_NIGHT ? "night" : "day");
+        if (r0 != 0 || stat(a->bname, &st) != 0) {
+            rep(FN(IMP_ISP_Tuning_SwitchBin), r0, V_SKIP, "running mode ret %d / no %s", r0, a->bname);
+        } else {
+            base = fst(800);
+            r1 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a);
+            a->enable = IMPISP_TUNING_OPS_MODE_DISABLE;
+            r2 = IMP_ISP_Tuning_SwitchBin(IMPVI_MAIN, a); back = recover(base.y, &ms);
+            rep(FN(IMP_ISP_Tuning_SwitchBin), r1 | r2, (r3 != 0 && r1 == 0 && r2 == 0 && ms >= 0 && flow()) ? V_PASS : V_FAIL,
+                "rt: missing file refused (ret %d); %s mode: %.50s (ret %d), back to the default (ret %d), Y %.1f -> %.1f, frames flow",
+                r3, rm == IMPISP_RUNNING_MODE_NIGHT ? "night" : "day", a->bname, r1, r2, base.y, back.y);
+        }
+        gfree(a);
     }
 }
 #else
