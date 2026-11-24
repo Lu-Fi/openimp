@@ -113,7 +113,7 @@ the tisp tuning netlink channel that the vendor tuning tool talks to and that bo
 | `tisp_nl get 0x7d` / `0x7e` / `0x7f` | type 0 | A / T / D linear CCM, 9 x int32, 14-bit two's complement Q10 (1024 = 1.0, rows sum to 1024) |
 | `tisp_nl get 0x81` / `0x82` | type 0 | saturation list per EV (9, 256 = 1.0) / CT thresholds of the CCM choice (jxf23: 4500 3100) |
 | `tisp_nl set ID w0 ..` | type 1 | copies the array and recomputes the CCM (`force_update`, `jz_isp_ccm`) |
-| `tisp_nl wbget` / `wbset MODE R B` | type 3 / 2, id 5 | WB attr {mode, manual r/b, statis r/b, global r/b}; mode 1 = manual gains, 0 = auto |
+| `tisp_nl wbget` / `wbset MODE R B` | type 3 / 2, id 5 | WB attr {mode, manual r/b, statis r/b, global r/b}; mode 1 = manual gains (256 = 1.0), 0 = auto. `statis` / `global` are the AWB's R/G and B/G RATIOS in /256, not gains: the manual gain that reproduces the auto picture is 65536 / global (the isp proc file prints `0x10000 / global` as "ISP WB weighted rgain"); jxf23 in the box: global 221 / 101 at 3000 K = gains 297 / 649, 156 / 131 at 5000 K = 420 / 500 |
 
 Changes last until the ISP reloads the bin tables (module reload; the day/night parameter switch reloads the CCM tables). jxf23
 (Victure PC420 T21) vendor tables: A 1.484 -0.367 -0.117 / -0.344 1.602 -0.256 / -0.359 -1.672 3.030 (bin row sum 1023),
@@ -124,5 +124,18 @@ QEMU (-M ingenic-t21, t21b24 image, 2026-11-23): get of all arrays = the bin val
 (snapshot 200 before / during / after), restore by writing the saved arrays back, no oops.  The light-box runner phase `boxcal`
 (runner `lb_boxcal.py`) fits the matrix and the WB gains on the chart per lamp CT, applies them through `tisp_nl`, captures the chart
 again and restores the vendor tables; the report shows vendor / open / open + calibration as "info: beyond vendor" next to the gate
-rows (the gate compares vendor and open without the calibration). Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
+rows (the gate compares vendor and open without the calibration).
+
+Saturation list: vendor `cm_control` builds `sat/256 x I + (1 - sat/256) x 1 x (0.299 0.587 0.114)` (Q16 19595 / 38470 / 7471) and
+the effective colour matrix is CCM @ that matrix, so 256 is exactly "no saturation change".
+
+First device run (T21 jxf23 in the box, 2026-11-24) and what it changed: the runner had written the `global` ratio words as manual
+gains (green picture) and fitted at the normal AE with 12-15 of 24 patches clipped; the calibrated picture was worse (dE00 11.7 ->
+26.2 at 3000 K, 11.0 -> 19.6 at 5000 K). The runner now captures the chart at a lower exposure (`image.ae_compensation`), uses an
+identity-CCM base with the AWB's own gains, refuses a fit with fewer than 18 usable patches or out-of-range gains / coefficients,
+applies a result only if its leave-one-out predicted dE00 beats the normal picture, and keeps it only if the chart measured with it
+is better (otherwise the report says "rejected" and shows the vendor tuning). Offline on the stored low-exposure shots the jxf23
+vendor matrix is already close to the dE00 optimum: about 75 % of the 8-9 dE00 is lightness (tone curve / ADR, grey row dL -29 .. +8),
+the best matrix gains 0.2-0.45 in-sample and nothing leave-one-out, so "rejected: no predicted gain" is the expected verdict on
+this sensor until a device run shows otherwise. Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
 (thingino T21 toolchain). Only one netlink tuning client at a time (fixed port 50).
