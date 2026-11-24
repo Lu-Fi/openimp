@@ -5357,6 +5357,10 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
      * `lhu s5,104(sp)` and the width with `andi s8,a3,0xffff` and never
      * tests either for zero (it would just compute a zero-size stream), so
      * the width/height test above is stricter than the vendor's. */
+#if defined(PLATFORM_T31)
+    if (codec_type == 4u)      /* vendor 0x931cc: the pack pseudo-type forces rc mode 0 (#868) */
+        rc_mode = IMP_ENC_RC_MODE_FIXQP;
+#endif
     memset(attr, 0, sizeof(*attr));
     attr->encAttr.profile = profile;
     attr->encAttr.level = 51;
@@ -5374,6 +5378,14 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     attr->gopAttr.uGopCtrlMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT;
     if (max_same_scene < 1)
         attr->gopAttr.uMaxSameSenceCnt = 1;
+    /* #868, read back from the vendor on the T31X .224 (all codecs, rc modes,
+     * qualities): level 0x33 / tier 0 for AVC, 0x32 / tier 1 for HEVC (tier =
+     * the top byte of the profile), 0 / 0 for JPEG and the pack types;
+     * encOptions 0x40028, encTools 0x9c */
+    attr->encAttr.level = codec_type == 0u ? 0x33u : codec_type == 1u ? 0x32u : 0u;
+    attr->encAttr.tier = codec_type == 1u ? (uint8_t)codec_type : 0u;
+    attr->encAttr.encOptions = 0x40028u;
+    attr->encAttr.encTools = 0x9cu;
 #endif
 #if defined(PLATFORM_T41)
     /* T41 1.2.6 IMP_Encoder_SetDefaultParam (0x38014), read back on .32
@@ -5442,7 +5454,7 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
         attr->rcAttr.attrRcMode.rcMode = IMP_ENC_RC_MODE_FIXQP;
 #endif
     if (codec_type == IMP_ENC_TYPE_JPEG || rc_mode == IMP_ENC_RC_MODE_FIXQP) {
-#if defined(PLATFORM_T40)
+#if defined(PLATFORM_T40) || defined(PLATFORM_T31)   /* T31: the vendor stores the caller's value unchecked (#868) */
         attr->rcAttr.attrRcMode.attrFixQp.iInitialQP = (int16_t)quality;
 #else
         attr->rcAttr.attrRcMode.attrFixQp.iInitialQP =
@@ -5774,6 +5786,9 @@ int IMP_Encoder_SetChnFrmRate(int channel, IMPEncoderFrmRate *rate,
         (uint64_t)ch->attr.rcAttr.outFrmRate.frmRateNum * rate->frmRateDen)
         __atomic_store_n(&ch->gop_restart, 1, __ATOMIC_RELEASE);
 #endif
+#if defined(PLATFORM_T31)
+    const IMPEncoderFrmRate t31_old_rate = ch->attr.rcAttr.outFrmRate;
+#endif
     ch->attr.rcAttr.outFrmRate = *rate;
     ch->next_frame_due_us = 0;
     ch->output_timestamp_us = 0;
@@ -5781,6 +5796,28 @@ int IMP_Encoder_SetChnFrmRate(int channel, IMPEncoderFrmRate *rate,
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
+#if defined(PLATFORM_T31)
+    {
+        /* vendor T31 1.1.6 glue (#868): a new rate rescales the stored GOP
+         * length in float seconds and re-runs SetGopParam */
+        const IMPEncoderFrmRate old = t31_old_rate;
+
+        if ((uint64_t)rate->frmRateNum * old.frmRateDen !=
+            (uint64_t)old.frmRateNum * rate->frmRateDen &&
+            ch->attr.gopAttr.uGopLength) {
+            IMPEncoderGopAttr eff = ch->attr.gopAttr;
+
+            eff.uGopLength = (uint16_t)t31_vendor_rate_gop(
+                eff.uGopLength, old.frmRateNum, old.frmRateDen,
+                rate->frmRateNum, rate->frmRateDen);
+            ch->attr.gopAttr = eff;
+            eff.gopLength = (uint16_t)t31_vendor_idr_distance(
+                eff.uGopLength, eff.uMaxSameSenceCnt, rate->frmRateNum,
+                rate->frmRateDen);
+            (void)AL_Codec_Encode_SetGopParam(ch->codec, &eff);
+        }
+    }
+#endif
 #if defined(PLATFORM_T23)
     /* reach the running Helix encoder (OEM: i264e frame-rate param) */
     if (openimp_t23_enc_push_fps(ch->codec, ch->codec_type, rate) != 0) {

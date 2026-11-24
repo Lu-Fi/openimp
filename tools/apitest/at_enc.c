@@ -647,7 +647,22 @@ static void live_common(int chn, int codec)
         t1 = now_us();
         rep(LBL("encoder output rate after SetChnFrmRate 10/1"), 0, (si.frames == 20 && (t1 - t0) > 1500000 && (t1 - t0) < 2600000) ? V_PASS : V_FAIL,
             "%d frames in %lld ms = %.1f fps (expect ~10)", si.frames, (long long)((t1 - t0) / 1000), si.frames * 1e6 / (double)(t1 - t0));
+#if defined(PLATFORM_T31) && HAS_IMP_Encoder_GetChnGopAttr
+        {   /* vendor 1.1.6 glue (#868): at 10/1 the stored GOP length is rescaled (30 at 15 fps -> 20), back at 15/1 -> 30 */
+            IMPEncoderGopAttr ga;
+            unsigned at10;
+
+            memset(&ga, 0, sizeof ga); IMP_Encoder_GetChnGopAttr(chn, &ga); at10 = ga.uGopLength;
+            IMP_Encoder_SetChnFrmRate(chn, &of);
+            pull(chn, codec, 6, 0, 0, &si, 2000);
+            memset(&ga, 0, sizeof ga); IMP_Encoder_GetChnGopAttr(chn, &ga);
+            rep(LBL("GOP length rescaled by SetChnFrmRate 10/1 and back"), 0,
+                (at10 == EGOP * 10 / EFPS && ga.uGopLength == EGOP) ? V_PASS : V_FAIL,
+                "at 10/1 %u (expect %d), back at %d/1 %u (expect %d)", at10, EGOP * 10 / EFPS, EFPS, ga.uGopLength, EGOP);
+        }
+#else
         IMP_Encoder_SetChnFrmRate(chn, &of);
+#endif
         gfree(f);
     }
     /* rate control attribute get/set */

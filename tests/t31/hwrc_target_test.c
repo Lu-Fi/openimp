@@ -56,6 +56,9 @@ int main(void)
            t31_vendor_set_gop(25u, 1, 15u, 1u), 39u);
     expect("set 25 @15 idr", t31_vendor_idr_distance(
         t31_vendor_set_gop(25u, 1, 15u, 1u), 1u, 15u, 1u), 45u);
+    expect("rate 15->10 gop 30", t31_vendor_rate_gop(30u, 15u, 1u, 10u, 1u), 20u);
+    expect("rate 10->15 gop 20", t31_vendor_rate_gop(20u, 10u, 1u, 15u, 1u), 30u);
+    expect("rate 15->25 gop 30", t31_vendor_rate_gop(30u, 15u, 1u, 25u, 1u), 50u);
     expect("set 30 @15 (whole)", t31_vendor_set_gop(30u, 1, 15u, 1u), 30u);
     expect("set 50 @15 (float: 64.99999)",
            t31_vendor_set_gop(50u, 1, 15u, 1u), 64u);

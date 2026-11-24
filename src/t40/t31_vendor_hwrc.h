@@ -96,6 +96,31 @@ static inline uint32_t t31_vendor_set_gop(uint32_t len, int changed,
     return (uint32_t)t & 0xffffu;
 }
 
+/*
+ * GOP length after a new output rate (#868).  The encoder-thread glue sees
+ * the channel rate differ from the one in effect (0x7ef94..0x7efac), sets
+ * the new rate (0x7f8fc..0x7f938) and, when the pending length equals the
+ * active one, re-derives the length at the new rate without the extra second
+ * (0x7f960..0x7f97c -> 0x7f070):
+ *   g = trunc(((len * den_old) / num_old) * num_new / den_new) & 0xffff
+ * GOP 30 at 15 fps -> 10 fps: 20; back to 15 fps: 30.  The result goes
+ * through AL_Codec_Encode_SetGopParam like the run-time setters.
+ */
+static inline uint32_t t31_vendor_rate_gop(uint32_t len, uint32_t num_old,
+                                           uint32_t den_old, uint32_t num_new,
+                                           uint32_t den_new)
+{
+    volatile float s, t;
+
+    if (!num_old || !den_old || !num_new || !den_new)
+        return len;
+    s = (float)(len * den_old);
+    s = s / (float)num_old;
+    t = s * (float)num_new;
+    t = t / (float)den_new;
+    return (uint32_t)t & 0xffffu;
+}
+
 /* AL_TRCParam.uCPBSize of an IMP channel: 270000 ticks of 90 kHz
  * (AL_Codec_Encode_SetDefaultParam 0x790b8, see avpu_t31_al_param). */
 #define T31_VENDOR_CPB_TICKS 270000u
