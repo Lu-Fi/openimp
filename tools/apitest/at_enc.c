@@ -80,8 +80,37 @@ static unsigned t41_gop_rb(unsigned len, unsigned same, unsigned active)
 }
 # define GOP_RB(len, same) t41_gop_rb((len), (same), (len))
 # define GOP_SET_RB_T41(len, same, active) t41_gop_rb((len), (same), (active))
+#elif defined(PLATFORM_T31)
+/* T31 vendor 1.1.6 (#866): the encoder thread applies a pending rate / GOP before the picture it encodes next
+ * (a frame-rate change rescales the stored GOP length, SetChnFrmRate 10/1 then 15/1 reads 20 until pictures
+ * pass), so the GOP read-back is checked after a few pictures; the created mode is DEFAULT (2). */
+# define GOP_RB(len, same) (len)
+/* run-time length 25 at 15 fps reads back 39 on the vendor (glue: float seconds plus one second unless whole) */
+static unsigned t31_gop_set_rb(unsigned len)
+{
+    volatile float s, t;
+
+    s = (float)len; s = s / (float)EFPS;
+    if (len % EFPS) s = s + 1.0f;
+    t = s * (float)EFPS; t = t / 1.0f;
+    return (unsigned)t & 0xffffu;
+}
+# undef GOP_RB_SET
+# define GOP_RB_SET(len) t31_gop_set_rb(len)
+# define GOP_SETTLE(chn, codec) pull((chn), (codec), 6, 0, 0, &si, 2000)
 #else
 # define GOP_RB(len, same) (len)
+#endif
+#if defined(PLATFORM_T31) && !defined(APITEST_T40)
+# define GOP_MODE_OK(g) ((g)->uGopCtrlMode == IMP_ENC_GOP_CTRL_MODE_DEFAULT)
+#else
+# define GOP_MODE_OK(g) 1
+#endif
+#ifndef GOP_RB_SET
+# define GOP_RB_SET(len) (len)
+#endif
+#ifndef GOP_SETTLE
+# define GOP_SETTLE(chn, codec) RB_SETTLE(chn, codec)
 #endif
 /* T10/T20/T21/T30 (#367, #421): the vendor IMP glue latches SetChnFrmRate / SetGOPSize to the next picture,
  * GetChnFrmRate / GetGOPSize answer the running values and a requested GOP is rounded up to a multiple of the
@@ -714,17 +743,17 @@ static void live_common(int chn, int codec)
         G(IMPEncoderGopAttr, g2);
         int r2;
 
-        RB_SETTLE(chn, codec);   /* pending values of the RC tests above */
+        GOP_SETTLE(chn, codec);   /* pending values of the RC tests above */
         r = IMP_Encoder_GetChnGopAttr(chn, g); gchk(g);
-        CHECK(IMP_Encoder_GetChnGopAttr, r, g->uGopLength == GOP_RB(EGOP, g->uMaxSameSenceCnt), "mode 0x%x length %u (created %d) maxSameSence %u", (unsigned)g->uGopCtrlMode, g->uGopLength, EGOP, g->uMaxSameSenceCnt);
+        CHECK(IMP_Encoder_GetChnGopAttr, r, g->uGopLength == GOP_RB(EGOP, g->uMaxSameSenceCnt) && GOP_MODE_OK(g), "mode 0x%x length %u (created %d) maxSameSence %u", (unsigned)g->uGopCtrlMode, g->uGopLength, EGOP, g->uMaxSameSenceCnt);
         NEED(IMP_Encoder_SetChnGopLength) {
             r2 = IMP_Encoder_SetChnGopLength(chn, 25);
-            RB_SETTLE(chn, codec);
+            GOP_SETTLE(chn, codec);
             r = IMP_Encoder_GetChnGopAttr(chn, g2); gchk(g2);
 #if defined(PLATFORM_T41) && !defined(APITEST_T40)
             CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_SET_RB_T41(25, g2->uMaxSameSenceCnt, g->uGopLength), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
 #else
-            CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB(25, g2->uMaxSameSenceCnt), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
+            CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB_SET(25), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
 #endif
 #if defined(PLATFORM_T31)
             /* #804: the run-time length must reach the encoder. Vendor 1.1.6 glue: length in seconds, +1 s unless whole
@@ -752,7 +781,7 @@ static void live_common(int chn, int codec)
             unsigned active = g2->uGopLength;      /* running length after the SetChnGopLength above */
 #endif
             r2 = IMP_Encoder_SetChnGopAttr(chn, g);
-            RB_SETTLE(chn, codec);
+            GOP_SETTLE(chn, codec);
 #if defined(PLATFORM_T41) && !defined(APITEST_T40)
             g->uGopLength = GOP_SET_RB_T41(g->uGopLength, g->uMaxSameSenceCnt, active);
 #else

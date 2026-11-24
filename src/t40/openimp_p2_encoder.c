@@ -5368,6 +5368,13 @@ int IMP_Encoder_SetDefaultParam(IMPEncoderChnAttr *attr, IMPEncoderProfile profi
     attr->rcAttr.outFrmRate.frmRateDen = (uint32_t)fps_den;
     attr->gopAttr.uGopLength = (uint16_t)gop_length;
     attr->gopAttr.uMaxSameSenceCnt = (uint32_t)max_same_scene;
+#if defined(PLATFORM_T31)
+    /* T31 1.1.6 IMP_Encoder_SetDefaultParam (0x831a0, #866): GOP mode
+     * DEFAULT (2) (attr word 22 = 2); a same-scene count below 1 becomes 1 */
+    attr->gopAttr.uGopCtrlMode = IMP_ENC_GOP_CTRL_MODE_DEFAULT;
+    if (max_same_scene < 1)
+        attr->gopAttr.uMaxSameSenceCnt = 1;
+#endif
 #if defined(PLATFORM_T41)
     /* T41 1.2.6 IMP_Encoder_SetDefaultParam (0x38014), read back on .32
      * with the vendor libimp: GOP mode DEFAULT (2), encOptions 0x1040028
