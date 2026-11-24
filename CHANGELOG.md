@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-24: T32 apitest: module-control read back after one frame, face AE / OSD ISP expectations like the vendor T32 (#857, #860, #861)
+- #857: on the T32 silicon the top register 0x40 takes a write at the next frame start and reads the active value until then (devmem on PRJ007: 11 of 12 immediate reads old, 12 of 12 new after 80 ms). The vendor `tisp_g_module_control` reads 0x40 directly too, so `cs_modctl` now waits one frame (100 ms) before GetModuleControl on T32. The gamma bypass bit then reads back 1 (Y 133.8 -> 52.4).
+- #860: the vendor T32 libimp `IMP_ISP_Tuning_SetFaceAe` (0x114610) checks only sensor / NULL / state and tx-isp-t32.ko `tisp_ae_face_set` (0xb21f4) returns 0, so the empty face window is accepted as on the T33; `cs_faceae` takes the T33 branch on T32.
+- #861: the vendor T32 libimp `IMP_OSD_SetRgnAttr_ISP` checks sensor < 5 (0x154388) like the T33, and tx-isp-t32.ko `tisp_msca_api_get_mask_out_cfg` writes the cover enable byte (0x855cc..0x855d0); `cs_rgnisp` takes the T33 expectations on T32.
+- Device (PRJ007 gc4653, image claude/t32-openimp+d06a913 + open-tx-isp #859 test ko): modctl, aestats, faceae, rgnisp: 8 of 8 PASS.
+
 ## 2026-11-24: T32 apitest follows the shared T32/T33 behaviour for InsertUserData and Raw2SUTime (#99)
 
 - Test only. `tools/apitest/at_enc.c`: on a channel without user-data buffers, the T32 library refuses `IMP_Encoder_InsertUserData` with 0x80040080, like vendor 2.0.2.1 on the T33 (shared E1 path). The check for this refusal was guarded by `APITEST_T33` only, so the T32 build reported a missing SEI. It is now guarded by `APITEST_T32`.

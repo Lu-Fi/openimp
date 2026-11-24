@@ -1157,7 +1157,14 @@ static void cs_modctl(void)
         base = fst(800);
         /* effect: bypass the gamma module (the picture goes dark: the linear sensor data without the gamma curve), restored afterwards */
         *m = *o; m->bitBypassGAMMA = 1;
-        r4 = IMP_ISP_Tuning_SetModuleControl(V0 m); r5 = IMP_ISP_Tuning_GetModuleControl(V0 c); off_s = fst(100); off = fst(1400);
+        r4 = IMP_ISP_Tuning_SetModuleControl(V0 m);
+#ifdef APITEST_T32
+        /* T32 (#857): the top register 0x40 takes a write at the next frame start and reads the active value until then (PRJ007
+         * silicon, devmem 2026-11-24: write 0x780100 over 0x780180, read back 0x780180 at once, 0x780100 one frame later); the vendor
+         * tisp_g_module_control reads 0x40 directly as well, so the read back waits for one frame (100 ms) */
+        usleep(100000);
+#endif
+        r5 = IMP_ISP_Tuning_GetModuleControl(V0 c); off_s = fst(100); off = fst(1400);
         /* The closed-loop AE sees the luma after the gamma stage and compensates a bypass within ~1 s (T40: Y 123.6 -> 117.1 settled,
          * same mechanism as the SetGammaAttr case, #167), so the verdict also accepts the early window (~250 ms after the set). */
         IMP_ISP_Tuning_SetModuleControl(V0 o); back = recover(base.y, &ms);
@@ -2336,7 +2343,9 @@ static void cs_faceae(void)
             "initial enable %d; while set: enable %d window (%u,%u)-(%u,%u) target %u (set (%d,%d)-(%d,%d) %d)", (int)o.enable, (int)g.enable, g.left, g.top, g.right, g.bottom, g.target,
             g_sw / 4, g_sh / 4, g_sw * 3 / 4, g_sh * 3 / 4, lot);
         {
-#ifdef APITEST_T33
+#ifdef APITEST_T32   /* T32 and T33 */
+            /* T32 (#860): the same: vendor T32 libimp IMP_ISP_Tuning_SetFaceAe (0x114610) checks only sensor / NULL / state, tx-isp-t32.ko
+             * tisp_ae_face_set (0xb21f4) returns 0 after tisp_ae_sepc_area (0xb2210) */
             /* T33: the vendor libimp passes the empty window to the driver unchecked and tisp_ae_face_set returns 0 (tx-isp-t33.ko
              * 0xf9aa8: tisp_ae_sepc_area, then v0 = 0; tisp_ae_roi_point only prints "ROI point error"), so ret 0 is vendor-equal */
             int refused = 1;
@@ -6095,7 +6104,8 @@ static void cs_rgnisp(void)
         memset(g, 0, sizeof(*g)); g->osdispdraw.stCoverAttr.chx = 0; g->osdispdraw.stCoverAttr.pinum = 0;
         r4 = IMP_OSD_GetRgnAttr_ISP(0, g, &shown); gchk(g);
         /* the stock kernel getter never writes mask_en (vendor tisp_g_mscaler_mask_block_attr leaves byte 2 alone, libimp does not fill it): it reads back 0 */
-#if defined(APITEST_T33)
+#if defined(APITEST_T32)   /* T32 and T33 (the T33 build defines both) */
+        /* T32 (#861): vendor tx-isp-t32.ko tisp_msca_api_get_mask_out_cfg 0x855cc..0x855d0 writes byte 2 = the block's enable too */
         /* T33 2.0.2.1 (vendor and OpenIMP, QEMU t33-cache v-rgn/o-rgn 2026-11-22): the T33 module's getter does return mask_en (1) */
         g2 = g->osdispdraw.stCoverAttr.mask_en == 1 && g->osdispdraw.stCoverAttr.mask_width == 64 && g->osdispdraw.stCoverAttr.mask_height == 64 &&
              g->osdispdraw.stCoverAttr.mask_pos_left == 64 && g->osdispdraw.stCoverAttr.mask_pos_top == 64;
@@ -6107,7 +6117,8 @@ static void cs_rgnisp(void)
         a->type = OSD_REG_ISP_PIC; e1 = IMP_OSD_SetRgnAttr_ISP(0, a, 1);           /* pictures: IMP_OSD_SetRgnAttr_PicISP */
         e2 = IMP_OSD_SetRgnAttr_ISP(2, a, 1); e3 = IMP_OSD_SetRgnAttr_ISP(0, NULL, 1);
         e4 = IMP_OSD_GetRgnAttr_ISP(0, g, NULL);
-#if defined(APITEST_T33)
+#if defined(APITEST_T32)   /* T32 and T33 */
+        /* T32 (#861): vendor T32 libimp IMP_OSD_SetRgnAttr_ISP 0x154388 checks sensor < 5 like the T33, sensor 2 fails in the draw block */
         /* vendor 2.0.2.1 IMP_OSD_SetRgnAttr_ISP (0x185ea0): sensor < 5 passes, the draw block of the absent sensor 2 then fails: 0x80020040 */
         ok = e1 == (int)0x80020040 && e2 == (int)0x80020040 && e3 == (int)0x80020010 && e4 == (int)0x80020010 && flow();
 #else
