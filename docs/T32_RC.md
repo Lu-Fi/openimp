@@ -103,6 +103,17 @@ T32 support is in development (QEMU only, no T32 camera yet); this is not a rele
   calls the vendor `i264e_set_param` at random pictures (390 changes in 40 scenarios, QPs up to 60, rates from 1)
   and lets the vendor `i264e_idr_reconfig` take them; `rc33_test` on `vendor-2.2.0-rc33-setters-h264.txt.gz`:
   the QP of every picture equal (without the second start 36 of the 40 runs differ). QEMU apitest (`enc` area): SetChnBitRate reads back the new rate at once (vendor 2.2.0 still the old one until the IDR; it writes the attribute, its getter reads elsewhere), SetChnQpBoundsPerFrame 0, SetChnMaxPictureSize the same picture-size FAIL as the vendor (no re-encoding in either).
+- `IMP_Encoder_SetChnMaxPictureSize` is a picture-size target, not a cap (#295). Vendor 2.2.0:
+  `i264e_reconfig_maxpicsize_set` (0x717ec) stores I / P at +0x2bc4 / +0x2bc8 and sets flag 0x100000 (0x71838..0x71854);
+  `i264e_idr_reconfig` takes them at the next IDR; `JZ_VPU_RC_FRAME_START_H264_T33` reads them at e+0x85c / +0x860
+  (0x19b1b4 / 0x19b1bc) into the encoder's size target (output +0x18, flag +0x24) for the HERA row budgets;
+  `JZ_VPU_RC_FRAME_REPEATE_JUDGE_H264_T33` (0x19d44c) returns 0, so no picture is encoded again. H.265 goes through
+  `I265eReconfig_setMaxPicSize` (0x87518) the same way. Device A/B on the PRJ007 module (apitest `enc`, vendor lib
+  from /tmp with `APITEST_NOPOOL=1`, same scene): with half the biggest picture as the limit the vendor's biggest
+  picture after the change was 2.2x / 2.6x (H.264) and 2.8x / 2.0x (H.265) of the limit, in 3 of the 4 cases larger than the
+  biggest one before it; OpenIMP 2.0x / 1.4x (H.264) and 1.2x / 1.1x (H.265). The apitest checks on T32 that both
+  calls are accepted and the stream keeps flowing and reports the sizes; T33 (2.0.2.1) keeps the limit +15 % check
+  (#706: vendor 5751 B for 5250 B on the T33L).
 - H.265 QP check: `tools/eprc_t33_h265_oracle.py --scenarios` / `--rows` runs the vendor i265e glue and controller
   under unicorn on the synthetic size and statistics model; `rc65_test` on `vendor-2.2.0-rc65-h265.txt.gz`
   (164 scenarios, modes 1..5, 640x360 .. 2560x1440, 21740 pictures, 40 with per-row IDR sizes; the harness sets

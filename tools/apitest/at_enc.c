@@ -1031,8 +1031,21 @@ static void live_common(int chn, int codec)
             RB_SETTLE(chn, codec);
             IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &s1, 3000);
             IMP_Encoder_SetChnMaxPictureSize(chn, 60000, 40000);
+#if defined(APITEST_T32) && !defined(APITEST_T33)
+            /* T32 vendor 2.2.0 (#295): no cap.  i264e_reconfig_maxpicsize_set 0x717ec stores I/P (+0x2bc4/+0x2bc8, flag
+             * 0x100000), i264e_idr_reconfig takes them at the next IDR, the controller passes them to the HERA as the
+             * picture's size target (FRAME_START 0x19b1b4/0x19b1bc read e+0x85c/+0x860) and never re-encodes
+             * (JZ_VPU_RC_FRAME_REPEATE_JUDGE_H264_T33 0x19d44c returns 0).  On the PRJ007 module the vendor lib gives the
+             * same result as OpenIMP: biggest picture 2.2x (H.264) / 2.8x (H.265) of the limit, above the one before.
+             * Checked: both calls accepted and the stream keeps flowing; the sizes are reported only. */
+            CHECK(IMP_Encoder_SetChnMaxPictureSize, r | r2, r == 0 && r2 == 0 && s1.frames > 10,
+                  "%s: I and P %d kbit (%d B) as the picture size target (T32: no cap, as vendor 2.2.0): biggest picture %d B, mean %lu B (before: %d B, mean %lu B), %d pictures",
+                  cname[codec], lim_kbit, lim_kbit * 125, s1.bytes_max, s1.frames ? s1.bytes / (unsigned long)s1.frames : 0UL,
+                  s0.bytes_max, s0.frames ? s0.bytes / (unsigned long)s0.frames : 0UL, s1.frames);
+#else
             CHECK(IMP_Encoder_SetChnMaxPictureSize, r | r2, r == 0 && r2 == 0 && s1.frames > 10 && s1.bytes_max <= lim_kbit * 125 * 115 / 100 && s1.bytes_max < s0.bytes_max,
                   "%s: I and P limited to %d kbit (%d B): biggest picture %d B (before: %d B), limit +15 %%", cname[codec], lim_kbit, lim_kbit * 125, s1.bytes_max, s0.bytes_max);
+#endif
         } else
 #endif
         RET0(IMP_Encoder_SetChnMaxPictureSize, r, "I 60000 P 40000 (no getter)");

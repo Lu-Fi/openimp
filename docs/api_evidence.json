@@ -9015,7 +9015,7 @@
         "T23": "dev",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "err",
+        "T32": "dev",
         "T33": "dev",
         "T40": "n.a.",
         "T41": "dev"
@@ -9035,7 +9035,7 @@
       "ref": {
         "T23": "apitest agg47 2026-10-26 .30",
         "T41": "apitest t41pass 2026-11-04 .34",
-        "T32": "FAIL apitest t32-1124 2026-11-24 .136: ret=0 H264: I and P limited to 41 kbit (5125 B): biggest picture 15315 B (before: 10358 B), limit +15 %",
+        "T32": "apitest t32-295 2026-11-25 .136",
         "T33": "apitest t33-1117/#714 2026-11-21 .122: H.264 #706 3102 B for 3750 B limit, H.265 #714 7911 B for 7375 B limit (before 14953 B)"
       }
     },
