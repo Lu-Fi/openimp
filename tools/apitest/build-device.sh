@@ -24,7 +24,8 @@ case $soc in
   T31) hv=T31/1.1.6/en;   defs="-DPLATFORM_T31";;
   T40) hv=T40/1.3.1/en;   defs="-DPLATFORM_T41 -DAPITEST_T40";;
   T41) hv=T41/1.2.6/zh;   defs="-DPLATFORM_T41";;
-  T32) hv=T32/1.0.6/en;   defs="-DPLATFORM_T41 -DAPITEST_T32 -DAPITEST_T32_PICTURE";;   # planned (#300): T41 family + T23-family encoder
+  T32) hv=T32/${APITEST_T32_HDR:-2.2.0}/en; defs="-DPLATFORM_T41 -DAPITEST_T32 -DAPITEST_T32_PICTURE"   # the T32 library follows vendor 2.2.0 (#851); APITEST_T32_HDR=1.0.6 for the old headers
+       [ "${APITEST_T32_HDR:-2.2.0}" = 2.2.0 ] && defs="$defs -DAPITEST_T32_HDR220";;   # planned (#300): T41 family + T23-family encoder
   T33) hv=T33/2.0.2.1/en; defs="-DPLATFORM_T41 -DAPITEST_T32 -DAPITEST_T33";;   # planned (#394): the T32 apitest on the T33 2.0.2.1 API
   *) echo "unsupported SoC $soc" >&2; exit 2;;
 esac

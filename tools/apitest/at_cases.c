@@ -103,12 +103,16 @@ int cases_flow(void) { return flow(); }      /* for at_t33.c */
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#ifndef APITEST_T32_HDR220   /* the 1.0.6 headers have no LDC offline API: own weak declarations; 2.2.0 declares them (imp_isp.h / imp_ldc.h, #851) */
 extern int IMP_ISP_LDC_SetMode(int mode) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineInit(int mode) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineCreateJob(void *attr) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineDestroyJob(uint32_t job) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineSubmitTask(void *task) __attribute__((weak));
 extern int IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr) __attribute__((weak));
+#else
+#include <imp/imp_ldc.h>
+#endif
 
 void cs_t32l2(void)
 {
@@ -128,7 +132,7 @@ void cs_t32l2(void)
     memset(ja, 0, sizeof(ja));
     ja[0] = 1;
     ja[1] = (uint32_t)H << 16 | W;
-    rc = IMP_ISP_LDC_OfflineCreateJob(ja);
+    rc = IMP_ISP_LDC_OfflineCreateJob((void *)ja);
     isp = open("/dev/tx-isp", O_RDWR);
     mem = open("/dev/mem", O_RDWR | O_SYNC);
     memset(mb, 0, sizeof(mb));
@@ -152,16 +156,16 @@ void cs_t32l2(void)
         memset(p[2], 0, W * H);
         task[0] = ja[36]; task[1] = mb[0][1]; task[2] = mb[1][1]; task[3] = mb[2][1]; task[4] = mb[3][1];
         task[5] = (uint32_t)W << 16 | W; task[6] = 2; task[7] = 1;
-        rs = IMP_ISP_LDC_OfflineSubmitTask(task);
+        rs = IMP_ISP_LDC_OfflineSubmitTask((void *)task);
         for (y = 0; y < H && bad < 0; y++)
             for (x = 0; x < W && bad < 0; x++)
                 if (p[2][y * W + x] != (uint8_t)((W - 1 - x) * 4 + (H - 1 - y)))
                     bad = y * W + x;
         task[7] = 4;
-        rs4 = IMP_ISP_LDC_OfflineSubmitTask(task);
+        rs4 = IMP_ISP_LDC_OfflineSubmitTask((void *)task);
         memset(upd, 0, sizeof(upd));
         upd[0] = ja[36]; upd[1] = 1;
-        ru = IMP_ISP_LDC_OfflineUpdateLutToJob ? IMP_ISP_LDC_OfflineUpdateLutToJob(upd) : -2;
+        ru = IMP_ISP_LDC_OfflineUpdateLutToJob ? IMP_ISP_LDC_OfflineUpdateLutToJob((void *)upd) : -2;
     }
     rdu = IMP_ISP_LDC_OfflineDestroyJob ? IMP_ISP_LDC_OfflineDestroyJob(0x1234) : -2;
     if (ja[36] && IMP_ISP_LDC_OfflineDestroyJob)

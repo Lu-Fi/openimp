@@ -18,6 +18,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - apitest on the T32: the `picture` area (former imgfx) is built for T32 (`-DAPITEST_T32_PICTURE`; AE scene attr and ADR bypass are not in the 1.0.6 headers), the ISP OSD case runs on T32 (pool size set before the OSD init like the T33), the gc4653 chip id is known to the sensor-register case.
 - Device run on .136 (image with audio.ko): sys + audio without AO, audio with the silent AO, dmic, cases: 0 FAIL except `IMP_ISP_GetSensorRegister` (#863, reads 0x0000); picture: 77 pictures, brightness / contrast / saturation / sharpness / flips / mask block change the picture as expected (#864: the run does not return to the base picture).
 - Matrix: 69 audio cells (AI / AO / AENC / DMIC) and 15 ISP cells moved to dev / rt / nohw like the T33. T32 streamer functions 137 -> 252 of 258; open: `ISP_Get/SetSensorRegister` (#863), `ISP_Get/SetDefaultBinPath`, `ISP_Tuning_SwitchBin` (no T32 case yet), `Encoder_SetChnMaxPictureSize` (#295).
+## 2026-11-24: T32 apitest builds against the vendor 2.2.0 headers (#851)
+
+- `tools/apitest/build-device.sh`: the T32 apitest now uses the vendor **2.2.0** headers by default, the API that the T32 library and the streamers (timps, raptor-hal `HEADER_VER_T32 := 2.2.0`) follow. `APITEST_T32_HDR=1.0.6` builds against the old headers. `tools/apitest/at_cases.c`: the local weak LDC-offline declarations are only used with 1.0.6. With 2.2.0, `imp/imp_ldc.h` declares them, and the job/task words are passed as `void *`.
+- The struct layouts that the apitest uses are the same in both header sets. 2.2.0 only adds declarations (Joint, LDC expand, MotionQuality, `IMPEncoderKernEncOut.pack`).
+- QEMU -M ingenic-t32, A/B of the same image: sys, fs, osd, ivs, isp and cases give the same 200 verdicts with both builds. enc gives the same 2 FAILs (SetChnMaxPictureSize, #295). A stall in the middle of enc (QpBounds onward, 0 pictures) hit one run of each header build: a QEMU flake, not the headers.
 
 ## 2026-11-24: T32 device API test on the PRJ007 module, matrix cells (#99)
 
