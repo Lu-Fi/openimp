@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-24: T32 device API test on the PRJ007 module, matrix cells (#99)
+
+- The T32 now has device evidence from an apitest run on the PRJ007 module (bench, no light box). sys, fs, osd, ivs, isp, su and cases have no FAIL. enc has 2 FAILs (SetChnMaxPictureSize H.264 / H.265, #295). 0 oops, 10/10 reload cycles, the kill -9 restart works. 152 T32 API cells go to dev, 10 to rt and 1 to err. Streamer functions that work on the T32: 0 -> 137 of 258. The matrix and release-gate tables label the T32 "T32 module, bench, no light box".
+
 ## 2026-11-24: T32 apitest: module-control read back after one frame, face AE / OSD ISP expectations like the vendor T32 (#857, #860, #861)
 - #857: on the T32 silicon the top register 0x40 takes a write at the next frame start and reads the active value until then (devmem on PRJ007: 11 of 12 immediate reads old, 12 of 12 new after 80 ms). The vendor `tisp_g_module_control` reads 0x40 directly too, so `cs_modctl` now waits one frame (100 ms) before GetModuleControl on T32. The gamma bypass bit then reads back 1 (Y 133.8 -> 52.4).
 - #860: the vendor T32 libimp `IMP_ISP_Tuning_SetFaceAe` (0x114610) checks only sensor / NULL / state and tx-isp-t32.ko `tisp_ae_face_set` (0xb21f4) returns 0, so the empty face window is accepted as on the T33; `cs_faceae` takes the T33 branch on T32.

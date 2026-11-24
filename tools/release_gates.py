@@ -216,8 +216,8 @@ class Gates:
             o.append("| %s | %d/%d | `%s` | %d |" % (s + (" (%s)" % self.extra_label(s) if s in self.extra else ""),
                      v["ok"], v["total"], bar(v["ok"], v["total"]), v["total"] - v["ok"]))
         if self.extra:
-            o += ["", "%s are not gate SoCs (in development). T32 runs in QEMU only (no test camera), so no streamer function counts as working there yet; "
-                  "T33 runs on the T33L module on the bench (no light box): its count is the streamer functions with device evidence (API test on the module). "
+            o += ["", "%s are not gate SoCs (in development). T32 runs on the PRJ007 module and T33 on the T33L module, both on the bench (no light box): "
+                  "their count is the streamer functions with device evidence (API test on the module). "
                   "The count uses the same vendor-function weighting as the other SoCs." % ", ".join(self.extra)]
         o.append("")
         for s in self.socs:
@@ -262,7 +262,7 @@ class Gates:
                 % (cls, pct, n, total, gap, 100 - pct if total else 0))
 
     def extra_label(self, soc):
-        return {"T33": "T33L module, bench, no light box"}.get(soc, "QEMU only, no camera")
+        return {"T33": "T33L module, bench, no light box", "T32": "T32 module, bench, no light box"}.get(soc, "QEMU only, no camera")
 
     def html(self):
         def head(ok, label, sub):
@@ -302,7 +302,7 @@ class Gates:
         h.append('<table class="mi"><thead><tr><th>SoC</th><th>streamer functions that work</th><th>progress</th><th>missing</th></tr></thead>'
                  "<tbody>%s</tbody></table>" % "".join(rows))
         if self.extra:
-            h.append('<p class="small">%s are not gate SoCs (in development): T32 runs in QEMU only (no test camera, 0 count as working), T33 on the T33L module on the bench (no light box; the count is the streamer functions with device evidence).</p>' % ", ".join(self.extra))
+            h.append('<p class="small">%s are not gate SoCs (in development): T32 on the PRJ007 module, T33 on the T33L module, both on the bench (no light box; the count is the streamer functions with device evidence).</p>' % ", ".join(self.extra))
         for s in self.socs:
             v = self.rc3[s]
             if not v["missing"]:

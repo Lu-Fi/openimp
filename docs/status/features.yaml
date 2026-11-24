@@ -19,7 +19,7 @@ legend:
 - '✅ supported: works, matches vendor behaviour, tested or backed by the changelog'
 - '✅+ improved beyond vendor: more robust, leaner or more functional than the vendor stack'
 - '⚠️ known defect / deviation: runs, but with a known defect or a deviation from the vendor'
-- '🔧 in progress: branch is running or a test is pending (T32 cells with QEMU or host evidence: in development, not a release gate, no device result yet; T33 cells: the T33L module runs the open stack since 2026-11-14, a cell stays 🔧 where device evidence is partial, a real item is open, or the picture is not yet compared to the vendor in a light box)'
+- '🔧 in progress: branch is running or a test is pending (T32 cells: in development, not a release gate; the PRJ007 module runs the open stack since 2026-11-24, first device API test 2026-11-24 (#99); T33 cells: the T33L module runs the open stack since 2026-11-14, a cell stays 🔧 where device evidence is partial, a real item is open, or the picture is not yet compared to the vendor in a light box)'
 - '📋 planned: deliberately scheduled, not started yet (mostly low priority)'
 - '❌ missing: not implemented'
 - '— hardware does not have it: not applicable'
