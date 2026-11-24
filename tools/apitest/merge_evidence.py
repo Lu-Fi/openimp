@@ -83,7 +83,7 @@ for spec in files:
             F[k]["cells"][soc] = "err"; report["err"].append((soc, k, det))
             F[k].setdefault("ref", {})[soc] = "FAIL %s: %s" % (ref, det)
 if not dry:
-    json.dump(ev, open(EVID, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    json.dump(ev, open(EVID, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
     open(EVID, "a").write("\n")
 for k in ("dev", "err"):
     print(k, len(report[k]))
