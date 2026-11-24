@@ -141,8 +141,8 @@ the best matrix gains 0.2-0.45 in-sample and nothing leave-one-out in the full d
 Target since 2026-11-24 (user decision): chroma + hue only. The fit and the acceptance use the dE00 with the measured lightness
 replaced by the reference lightness ("chroma/hue dE00"); the full dE00 is reported next to it and may not get worse by more than
 0.3 (predicted and measured). The R and B white-balance gains are fitted together with the matrix (the grey-only WB estimate asked
-for R x0.87 and made the colours worse). Offline on the stored jxf23 low-exposure shots (leave-one-out in brackets): 3000 K
-4.50 -> 3.47 (3.60), full dE00 8.55 -> 8.47 (8.55); 5000 K 3.48 -> 2.99 (3.17), full 7.92 -> 7.98 (8.05); on a second pair of shots
-of the same light 4.56 -> 4.16 (4.34) and 3.58 -> 3.37 (3.68, refused: no gain). So a small chroma/hue gain of about 0.2-0.9 is
-expected; the device run decides. Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
+for R x0.87 and made the colours worse); the grey patches count double. Offline on the stored jxf23 low-exposure shots
+(leave-one-out in brackets): 3000 K 4.50 -> 3.59 (3.75), full dE00 8.55 -> 8.59 (8.73); 5000 K 3.48 -> 2.82 (3.01), full
+7.92 -> 7.92 (8.00); on a second pair of shots of the same lights 4.56 -> 3.98 (4.03) and 3.58 -> 3.33 (3.61, refused: no gain).
+So a chroma/hue gain of about 0.5-0.9 at best is expected with the full dE00 unchanged within +-0.2; the device run decides. Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
 (thingino T21 toolchain). Only one netlink tuning client at a time (fixed port 50).
