@@ -806,6 +806,7 @@ static const struct { const char *n; uint32_t rh, rl, vh, vl; } sids[] = {
     { "jxh42", 0x0a, 0x0b, 0xa0, 0x42 }, { "jxf22", 0x0a, 0x0b, 0x0f, 0x22 }, { "jxf23", 0x0a, 0x0b, 0x0f, 0x23 },
     { "sc1a4t", 0x3107, 0x3108, 0xda, 0x4d }, { "sc2336", 0x3107, 0x3108, 0xcb, 0x3a }, { "sc4336p", 0x3107, 0x3108, 0x9c, 0x42 },
     { "sc5336", 0x3107, 0x3108, 0xce, 0x50 }, { "sc830ai", 0x3107, 0x3108, 0xc1, 0x43 }, { "gc5603", 0x03f0, 0x03f1, 0x56, 0x03 },
+    { "gc4653", 0xf0, 0xf1, 0x46, 0x53 },         /* PRJ007 module: GC4653 chip id 0x4653 (sensor_gc4653_t32) */
     { "cv2005", 0x3003, 0x3002, 0x20, 0x05 },     /* T33L: sensor_cv2005_t33.ko g_chip_ident 0x84c..0x8d8 (0x2005) */
 };
 
@@ -1966,7 +1967,7 @@ static double region_y(int x0, int y0, int x1, int y1)      /* mean luma of a re
 }
 #endif
 
-#if !defined(APITEST_T40) && (!defined(APITEST_T32) || defined(APITEST_T33)) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+#if !defined(APITEST_T40) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_ShowOsdRgn && HAS_IMP_ISP_Tuning_DestroyOsdRgn && HAS_IMP_ISP_Tuning_SetOsdPoolSize
 static void cs_isposd(void)
 {
     NEED(IMP_ISP_Tuning_CreateOsdRgn) NEED(IMP_ISP_Tuning_SetOsdRgnAttr) NEED(IMP_ISP_Tuning_ShowOsdRgn) NEED(IMP_ISP_Tuning_DestroyOsdRgn) NEED(IMP_ISP_Tuning_SetOsdPoolSize) {
@@ -1985,6 +1986,7 @@ static void cs_isposd(void)
 #ifdef PLATFORM_T41
         /* a consumer on the drawn output: a JPEG encoder bound to FS ch0 (the ISP OSD is committed per frame of MSCA output 0;
          * isp_osd_devtest, the proof of the driver, runs with it) */
+#ifndef APITEST_T32   /* T32 1.0.6 encoder types differ: no JPEG consumer here */
         {
             IMPCell fs0 = { DEV_ID_FS, 0, 0 }, en0 = { DEV_ID_ENC, 6, 0 };
             IMPEncoderChnAttr *ea = (IMPEncoderChnAttr *)calloc(1, sizeof(*ea));
@@ -1999,7 +2001,8 @@ static void cs_isposd(void)
             free(ea);
         }
 #endif
-#ifdef APITEST_T33
+#endif
+#if defined(APITEST_T33) || defined(APITEST_T32)
         /* T33 (vendor 2.0.2.1 library and module in QEMU, #99 round 13): the pool size is read at IMP_OSD_Init_ISP, so it is set BEFORE the init;
          * after the init the pool is the 1-byte default and SetRgnAttr answers -1 "no pool space" (vendor and OpenIMP alike) */
         rp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);

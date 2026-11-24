@@ -1,7 +1,7 @@
 #include <stdio.h>
-#if defined(APITEST_T40) || defined(APITEST_T32)   /* no picture cases on T40: its image functions are covered by area t40dev;
-                                                         T32 (planned): no picture cases until the ISP tuning layer exists */
-int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr, "picture: not built for T40 (use area t40dev) or T32\n"); return 2; }
+#if defined(APITEST_T40) || (defined(APITEST_T32) && !defined(APITEST_T32_PICTURE))   /* no picture cases on T40: its image functions are covered by area t40dev;
+                                                         T33: not built; T32 builds them with -DAPITEST_T32_PICTURE */
+int picture_main(int argc, char **argv) { (void)argc; (void)argv; fprintf(stderr, "picture: not built for T40 (use area t40dev) or T33\n"); return 2; }
 #else
 /* imgfx - device test: one picture per image-changing IMP function/case.
  *
@@ -1167,6 +1167,7 @@ static int c_gamma(int ph, int arg, char *info, size_t n)
     return r;
 }
 
+#ifndef APITEST_T32
 /* AE scene attr: arg 0/1 = target compensation low/high; 2 = HLC on, 3 = BLC on */
 static int c_aescene(int ph, int arg, char *info, size_t n)
 {
@@ -1187,6 +1188,8 @@ static int c_aescene(int ph, int arg, char *info, size_t n)
              cur.AeHLCEn, cur.AeHLCStrength, cur.AeBLCEn, cur.AeBLCStrength, cur.luma, old.AeTargetComp);
     return r;
 }
+
+#endif
 
 /* AE expr info: arg 0 it short, 1 it long, 2 again low, 3 again high, 4 max again low, 5 max dgain low */
 static int c_aeexpr(int ph, int arg, char *info, size_t n)
@@ -1240,7 +1243,7 @@ static int c_awb(int ph, int arg, char *info, size_t n)
     r = IMP_ISP_Tuning_SetAwbAttr(IMPVI_MAIN, &w);
     memset(&cur, 0, sizeof(cur)); IMP_ISP_Tuning_GetAwbAttr(IMPVI_MAIN, &cur);
     snprintf(info, n, "mode %d r=%u b=%u ct=%u (was mode %d r=%u b=%u)", cur.mode, cur.gain_val.rgain, cur.gain_val.bgain,
-             cur.ct, old.mode, old.gain_val.rgain, old.gain_val.bgain);
+             0u, old.mode, old.gain_val.rgain, old.gain_val.bgain);
     return r;
 }
 
@@ -1307,8 +1310,13 @@ static int c_ratio(int ph, int arg, char *info, size_t n)
     return r;
 }
 
+#ifdef APITEST_T32
+# define MB_ADR_X(X)
+#else
+# define MB_ADR_X(X) X(adr, bitBypassADR)
+#endif
 #define MODBITS(X) X(ccm, bitBypassCCM) X(gamma, bitBypassGAMMA) X(defog, bitBypassDEFOG) X(lsc, bitBypassLSC) \
-    X(dpc, bitBypassDPC) X(sdns, bitBypassSDNS) X(mdns, bitBypassMDNS) X(sharpen, bitBypassYSP) X(adr, bitBypassADR) \
+    X(dpc, bitBypassDPC) X(sdns, bitBypassSDNS) X(mdns, bitBypassMDNS) X(sharpen, bitBypassYSP) MB_ADR_X(X) \
     X(ydns, bitBypassYDNS) X(bcsh, bitBypassBCSH)
 #define XE(nm, bit) MB_##nm,
 enum { MODBITS(XE) MB_N };
@@ -1451,10 +1459,18 @@ static const Case cases[] = {
     { "gamma-steep", c_gamma, 0, SET, 0 },
     { "gamma-linear", c_gamma, 1, SET, 0 },
 #ifdef PLATFORM_T41
+#ifndef APITEST_T32
     { "aecomp-low", c_aescene, 0, AE, 0 },
+#endif
+#ifndef APITEST_T32
     { "aecomp-high", c_aescene, 1, AE, 0 },
+#endif
+#ifndef APITEST_T32
     { "ae-hlc", c_aescene, 2, AE, 0 },
+#endif
+#ifndef APITEST_T32
     { "ae-blc", c_aescene, 3, AE, 0 },
+#endif
     { "exp-short", c_aeexpr, 0, AE, 0 },
     { "exp-long", c_aeexpr, 1, AE, 0 },
     { "again-low", c_aeexpr, 2, AE, 0 },
