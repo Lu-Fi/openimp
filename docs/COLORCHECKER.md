@@ -136,6 +136,13 @@ identity-CCM base with the AWB's own gains, refuses a fit with fewer than 18 usa
 applies a result only if its leave-one-out predicted dE00 beats the normal picture, and keeps it only if the chart measured with it
 is better (otherwise the report says "rejected" and shows the vendor tuning). Offline on the stored low-exposure shots the jxf23
 vendor matrix is already close to the dE00 optimum: about 75 % of the 8-9 dE00 is lightness (tone curve / ADR, grey row dL -29 .. +8),
-the best matrix gains 0.2-0.45 in-sample and nothing leave-one-out, so "rejected: no predicted gain" is the expected verdict on
-this sensor until a device run shows otherwise. Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
+the best matrix gains 0.2-0.45 in-sample and nothing leave-one-out in the full dE00.
+
+Target since 2026-11-24 (user decision): chroma + hue only. The fit and the acceptance use the dE00 with the measured lightness
+replaced by the reference lightness ("chroma/hue dE00"); the full dE00 is reported next to it and may not get worse by more than
+0.3 (predicted and measured). The R and B white-balance gains are fitted together with the matrix (the grey-only WB estimate asked
+for R x0.87 and made the colours worse). Offline on the stored jxf23 low-exposure shots (leave-one-out in brackets): 3000 K
+4.50 -> 3.47 (3.60), full dE00 8.55 -> 8.47 (8.55); 5000 K 3.48 -> 2.99 (3.17), full 7.92 -> 7.98 (8.05); on a second pair of shots
+of the same light 4.56 -> 4.16 (4.34) and 3.58 -> 3.37 (3.68, refused: no gain). So a small chroma/hue gain of about 0.2-0.9 is
+expected; the device run decides. Build: `mipsel-linux-gcc -Os -static -o tisp_nl tools/tisp_nl/tisp_nl.c`
 (thingino T21 toolchain). Only one netlink tuning client at a time (fixed port 50).
