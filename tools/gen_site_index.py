@@ -68,6 +68,19 @@ def newest_tag():
         return ""
 
 
+def gate_chips(res):
+    """'GATE PASS, better 42 (incl. 30 beyond vendor) / equal 107 / worse 0 / invalid 0' -> chip html (release-gate verdict, 2026-11-24)"""
+    m = re.search(r"GATE (PASS|FAIL)", res)
+    if not m:
+        return ""
+    out = '<span class="chip %s">gate %s</span>' % ("ok" if m.group(1) == "PASS" else "warn", m.group(1).lower())
+    for k, cls in (("better", "ok"), ("equal", "eq"), ("worse", "warn"), ("invalid", "warn")):
+        mk = re.search(r"%s (\d+)" % k, res)
+        if mk and (int(mk.group(1)) or k in ("better", "equal")):
+            out += '<span class="chip %s">%s %s</span>' % (cls, mk.group(1), k)
+    return out
+
+
 def counts(res):
     """'28 pass / 3 differ' -> (28, 3)"""
     p = re.search(r"(\d+)\s*pass", res)
@@ -119,7 +132,7 @@ section{padding:26px 0}h2{font-size:1.25em;margin:0 0 4px}.sub{color:var(--mut);
 .rep .t{font-weight:600}.rep .t a{color:var(--fg)}.rep .m{color:var(--mut);font-size:.88em}
 .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .chip{font-size:.8em;border-radius:999px;padding:3px 10px;white-space:nowrap}.chip.plan{background:var(--line);color:var(--plan)}
-.soc .n .chip{font-weight:600;font-size:.72em;padding:2px 8px}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.soc .n .chip{font-weight:600;font-size:.72em;padding:2px 8px}.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.warn{background:var(--warn-soft);color:var(--warn)}.chip.eq{background:var(--line);color:var(--fg)}
 .rep .open{grid-column:3;justify-self:end;font-size:.88em}
 .rep .hist{grid-column:1/-1;font-size:.88em;color:var(--mut)}.rep .hist summary{cursor:pointer}.rep .hist ul{margin:6px 0 0;padding-left:18px}
 @media (max-width:640px){.rep{grid-template-columns:auto 1fr}.chips,.rep .open{grid-column:1/-1;justify-content:flex-start;justify-self:start}}
@@ -507,12 +520,13 @@ def main():
                 hres = rows.get(hf, ("", "", "", "", ""))[4]
                 hp, hn = counts(hres)
                 items.append('<li><a href="lightbox/%s">%s</a>%s</li>' % (esc(hf), esc(d),
-                             (" &middot; %d pass / %d %s" % (hp, hn or 0, "differ" if "differ" in hres else "fail")) if hp is not None else ""))
+                             (" &middot; %d pass / %d %s" % (hp, hn or 0, "differ" if "differ" in hres else "fail")) if hp is not None and "GATE" not in hres
+                             else (" &middot; " + re.search(r"GATE \w+", hres).group(0)) if "GATE" in hres else ""))
             hist = '<details class="hist"><summary>History: %d earlier run%s</summary><ul>%s</ul></details>' % (
                 len(runs) - 1, "s" if len(runs) > 2 else "", "".join(items))
         npass, nfail = counts(res)
-        chips = ""
-        if npass is not None:
+        chips = gate_chips(res)
+        if npass is not None and not chips:
             chips += '<span class="chip ok">%d pass</span>' % npass
         if nfail:
             chips += '<span class="chip warn">%d %s</span>' % (nfail, "differ" if "differ" in res else "fail")

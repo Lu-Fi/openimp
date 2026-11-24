@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-24: start page shows the release-gate verdict of light-box runs (#230)
+
+- `tools/gen_site_index.py`: a protocol whose result is `GATE PASS` / `GATE FAIL` (vendor-relative verdict, since 2026-11-23) now gets chips (gate pass/fail, better, equal, worse, invalid) on the light-box card and the verdict in the history list; before, such cards had no chips because only `N pass / M fail` was parsed.
+
 ## 2026-11-24: Release 1 light-box gate green on T21 (#230)
 
 - T21 (cam-D, Victure PC420 T21N jxf23): gate run 2026-11-23/24 both stacks at 3000 K and 5000 K, GATE PASS at both (vendor-relative: worse 0, invalid 0; 3000 K better 13 / equal 105, 5000 K better 12 / equal 107, 30 rows beyond vendor). `docs/status/release.yaml` lightbox_runs T21 points to the 5000 K report; the 3000 K report is `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html`. Report generator fixes on the way (light-box runner, local): vendor-lacks guard was always empty, reference lost frames now vs the nominal fps, FixQP PSNR-rise guard 2.5 dB (user decision).
