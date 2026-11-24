@@ -729,17 +729,18 @@ static void live_common(int chn, int codec)
 #if defined(PLATFORM_T31)
             /* #804: the run-time length must reach the encoder. Vendor 1.1.6 glue: length in seconds, +1 s unless whole
              * seconds, IDR distance rounded up to whole seconds (GOP 25 at 15 fps -> length 39, IDR every 45).  Count the
-             * distance between the 2nd and 3rd IDR after the setter (the 1st may still follow the old schedule). */
+             * distance between the 2nd and 3rd IDR after the setter (the 1st may still follow the old schedule); the IDR distance
+             * is that length rounded to whole seconds times uMaxSameSenceCnt (vendor 1.1.6 device run 2026-11-24: IDR at 0 and 90). */
             if (r2 == 0) {
                 SI sg;
                 double sec = 25.0 / EFPS;
                 int len = (int)((sec == (int)sec ? sec : sec + 1.0) * EFPS);
-                int exp = (len + EFPS - 1) / EFPS * EFPS;
+                int exp = (len + EFPS - 1) / EFPS * EFPS * (g2->uMaxSameSenceCnt > 1 ? (int)g2->uMaxSameSenceCnt : 1); /* x maxSameSence (vendor 1.1.6 on .224: 90 at GOP 25, maxSameSence 2) */
                 int d;
 
                 pull(chn, codec, 3 * exp + 10, 0, 0, &sg, 1000);
                 d = sg.idr_n >= 3 ? sg.idr_at[2] - sg.idr_at[1] : -1;
-                CHECK(IMP_Encoder_SetChnGopLength, 0, d == exp, "25 at %d fps: IDR distance %d frames (expected %d, %d IDRs in %d frames)", EFPS, d, exp, sg.idr_n, sg.frames);
+                CHECK(IMP_Encoder_SetChnGopLength, 0, d == exp, "25 at %d fps: IDR distance %d frames (expected %d, %d IDRs in %d frames, at %d %d %d %d)", EFPS, d, exp, sg.idr_n, sg.frames, sg.idr_at[0], sg.idr_at[1], sg.idr_at[2], sg.idr_at[3]);
             }
 #endif
         }
