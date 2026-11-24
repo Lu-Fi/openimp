@@ -1050,8 +1050,9 @@ static void live_old(int chn, int codec)
         /* vendor T30 1.0.5: i264e_super_rc_set only stages the values, the controller takes them with the next picture
          * (a Get right after the Set shows the old ones, camera A/B 2026-11-03): read after a few pictures */
         pull(chn, codec, 3, 0, 0, &si, 2000);
-#elif defined(APITEST_T33)
-        /* vendor T33 2.0.2.1: taken at the next IDR (case t33e1, QEMU) */
+#elif defined(APITEST_T32)
+        /* vendor T33 2.0.2.1 and T32: taken at the next IDR (case t33e1, QEMU); the T32 build (APITEST_T32 without
+         * APITEST_T33) read the old values right after the Set (QEMU T32 2026-11-24, #99) */
         IMP_Encoder_RequestIDR(chn);
         pull(chn, codec, 3, 0, 0, &si, 2000);
 #endif
