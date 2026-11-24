@@ -78,7 +78,7 @@ gates:
         lightbox_runs:
           T10: null
           T20: null
-          T21: null
+          T21: docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html   # gate run 2026-11-23/24, 5000 K + 3000 K both GATE PASS (#230)
           T23: null
           T30: null
           T31: null
