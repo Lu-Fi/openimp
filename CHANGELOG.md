@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-24: T32 apitest waits for the IDR before reading back SuperFrameCfg (#99)
+
+- Test only. `tools/apitest/at_enc.c`: the T32 library takes a new super-frame configuration at the next IDR, like vendor 2.0.2.1 on the T33. The IDR wait before the read-back was guarded by `APITEST_T33` only, so the T32 build read the old values and reported FAIL. It is now guarded by `APITEST_T32`, which the T33 build also defines. QEMU -M ingenic-t32 (PRJ007 image): `IMP_Encoder_SetSuperFrameCfg` FAIL -> PASS on H.264 and H.265, enc area otherwise unchanged. Related: #851 (the T32 apitest builds against the 1.0.6 headers).
+
 ## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
 
 - Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html` (GATE PASS, better 43 (incl. 30 beyond vendor) / equal 105 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
