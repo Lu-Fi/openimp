@@ -1203,9 +1203,10 @@ static void live_old(int chn, int codec)
     NEED(IMP_Encoder_InsertUserData) {
         char ud[] = "apitest-user-data";
 
-#  if defined(APITEST_T33)
+#  if defined(APITEST_T32)
         /* vendor T33 2.0.2.1: a channel created without user-data buffers (encAttr.userData) refuses with 0x80040080; the SEI
-         * path with buffers is case t33e1 */
+         * path with buffers is case t33e1.  The T32 library shares this path (src/t32/openimp_t32_enc_e1.c, "T32 2.2.0 entry
+         * points are the same"): the T32 build reported the refusal as a missing SEI (T32 PRJ007 device + QEMU 2026-11-24, #99) */
         r = IMP_Encoder_InsertUserData(chn, ud, (uint32_t)strlen(ud));
         rep(FN(IMP_Encoder_InsertUserData), r, r == (int)0x80040080 ? V_PASS : V_FAIL, "no user-data buffers: 0x%x (vendor 0x80040080)", (unsigned)r);
 #  else
