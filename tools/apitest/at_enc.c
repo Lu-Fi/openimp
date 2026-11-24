@@ -127,6 +127,7 @@ typedef struct {
     int trunc;
     int first_idr_frame;                /* frame index of the first IDR (-1 none) */
     int last_frame_idr;
+    int idr_at[4], idr_n;               /* frame indices of the first 4 IDRs (#804 IDR distance) */
 } SI;
 
 static unsigned char *g_sbuf;           /* gathered frame */
@@ -274,6 +275,7 @@ static void scan_frame(const unsigned char *b, size_t n, int codec, SI *si)
     }
     si->last_frame_idr = idr_here;
     if (idr_here && si->first_idr_frame < 0) si->first_idr_frame = si->frames;
+    if (idr_here && si->idr_n < 4) si->idr_at[si->idr_n++] = si->frames;
     if (n >= 8) {                                        /* user data (InsertUserData) */
         for (i = 0; i + 7 <= n; i++) if (!memcmp(b + i, "apitest", 7)) { si->user++; break; }
     }
@@ -723,6 +725,22 @@ static void live_common(int chn, int codec)
             CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_SET_RB_T41(25, g2->uMaxSameSenceCnt, g->uGopLength), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
 #else
             CHECK(IMP_Encoder_SetChnGopLength, r2, r == 0 && g2->uGopLength == GOP_RB(25, g2->uMaxSameSenceCnt), "25, read back %u (maxSameSence %u)", g2->uGopLength, g2->uMaxSameSenceCnt);
+#endif
+#if defined(PLATFORM_T31)
+            /* #804: the run-time length must reach the encoder. Vendor 1.1.6 glue: length in seconds, +1 s unless whole
+             * seconds, IDR distance rounded up to whole seconds (GOP 25 at 15 fps -> length 39, IDR every 45).  Count the
+             * distance between the 2nd and 3rd IDR after the setter (the 1st may still follow the old schedule). */
+            if (r2 == 0) {
+                SI sg;
+                double sec = 25.0 / EFPS;
+                int len = (int)((sec == (int)sec ? sec : sec + 1.0) * EFPS);
+                int exp = (len + EFPS - 1) / EFPS * EFPS;
+                int d;
+
+                pull(chn, codec, 3 * exp + 10, 0, 0, &sg, 1000);
+                d = sg.idr_n >= 3 ? sg.idr_at[2] - sg.idr_at[1] : -1;
+                CHECK(IMP_Encoder_SetChnGopLength, 0, d == exp, "25 at %d fps: IDR distance %d frames (expected %d, %d IDRs in %d frames)", EFPS, d, exp, sg.idr_n, sg.frames);
+            }
 #endif
         }
         NEED(IMP_Encoder_SetChnGopAttr) {
