@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: start page shows T32 / T33 device coverage
+
+- README completeness table: T32 343/610 works (56.2 %), T33 489/571 (85.6 %), from the coverage summary of the feature matrix; both run on hardware (PRJ007 / T33L module). `tools/gen_site_index.py` shows them with their bar instead of "QEMU only"; the release-gate count and the mean use only the gate SoCs.
+
 ## 2026-11-25: T10 AEC locks at every start (libaudioProcess-neo fork, #640)
 
 - Cause: libaudioProcess-neo starts the WebRTC AEC in its startup phase with a reported delay of 0, which rewinds the far end by 12 ms on the first frame (`echo_cancellation.c:779-797`). The Ingenic OSS2 driver pairs mic and reference in whole 10 ms fragments, so the reference lead is either ~0-2 ms or ~10-12 ms per session; with the rewind the first case leaves the filter non-causal and the AEC never locks (flat ~20 dB). Both stacks use the same library, so both were affected (box: open 5 of 7, vendor 2 of 7 sessions).

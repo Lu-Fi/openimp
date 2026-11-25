@@ -554,13 +554,17 @@ def main():
                                                                  "&#10003; " if passed else "", esc(status))
         cards.append('<div class="soc"><div class="n">%s%s</div><div class="bar"><i style="width:%.1f%%"></i></div>'
                      '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), chip, pct, pct, nd, nf))
+    have = {x[0] for x in st}
     for soc in PLANNED:
+        if soc in have:
+            continue
         cards.append('<div class="soc plan"><div class="n">%s<span class="chip plan">in development</span></div><div class="bar"><i style="width:0"></i></div>'
                      '<div class="p">QEMU only</div></div>' % soc)
-    avg = sum(x[3] for x in st) / len(st) if st else 0.0
+    gate = [x for x in st if "gate" in x[4].lower()]
+    avg = sum(x[3] for x in gate) / len(gate) if gate else 0.0
     tag = newest_tag()
     page = PAGE.substitute(
-        repo=REPO, board=BOARD, release=esc(tag or "-"), ngate=len(st), avg="%.1f" % avg, nrep=len(reports), nplan=len(PLANNED),
+        repo=REPO, board=BOARD, release=esc(tag or "-"), ngate=len(gate), avg="%.1f" % avg, nrep=len(reports), nplan=len(PLANNED),
         socs="".join(cards),
         opts="".join('<option value="%s">%s</option>' % (esc(x), esc(x)) for x in sorted(socset - {""})),
         reps="".join(reps) or '<p class="sub">No protocols yet.</p>',
