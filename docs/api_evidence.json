@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-22",
+  "asof": "2026-11-25",
   "socs": [
     "T10",
     "T20",
@@ -18688,8 +18688,8 @@
       "cells": {
         "T10": "aud",
         "T20": "aud",
-        "T21": "aud",
-        "T23": "aud",
+        "T21": "dev",
+        "T23": "dev",
         "T30": "dev",
         "T31": "dev",
         "T32": "aud",
@@ -18701,8 +18701,8 @@
       "ref": {
         "T40": "keys 2026-11-12 .184: vendor 1.3.1 and OpenIMP both OpenEvent -1 (name gpio_keys vs gpio-keys); audit/matrix1112/keys/out-184*.txt | user decision 2026-11-12 (C4): vendor and OpenIMP fail identically (gpio_keys vs gpio-keys), rated nohw, no name fallback",
         "T30": "apitest/extras T30X b68 2026-11-13 (audit/t30/b68, one power cycle, vendor 1.0.5 stack then OpenIMP next c3319ab1 libimp + b67 ko, no flash, 0 oopses in su/encx): endis 28 with vendor libsysutils 1.0.5 (serves both stacks, no image library): Enable(28) ret 0; no open-side difference to rate. || T30X b88 2026-11-14 (audit/t30/b88, one power cycle, 3 min, no flash, 0 oopses): neo libsysutils (Lu-Fi/ingenic-system-libs-neo aperto 2d689bd, built for T30) from /tmp vs vendor 1.0.5, apitest next area su (APITEST_SU_NOHW=1 APITEST_KEYMASK=1) + tester; neo Open/Enable ok; the kernel refuses to mask key 102 (disabled_keys write EINVAL) for both libraries, so Disable answers -1/EINVAL on this board; cell unchanged.",
-        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud",
-        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud (finding #313): Disable(28) -> -1 EINVAL with both libraries; Enable returns -1 EACCES with the image library (writes the read-only keys list) and 0 with the vendor library; Disable of a key not in the list answers 0 with both",
+        "T21": "SU test 2026-11-11 T21 PC420 (JXF23), open stack, image libsysutils vs vendor T21 libsysutils 4.7.2 and 5.4.0 loaded from /tmp: image library EnableEvent -1/EACCES vs vendor 0 (issue #313), DisableEvent -1/EINVAL on all three; stays aud || 2026-11-25 T21 .24 (image libsysutils from /lib, small test audit/su-cells-1125/key_rt.c, no flash/module change): OpenEvent 4, EnableEvent(28) 0 and EnableEvent(102) 0 (the earlier -1/EACCES of #313 is gone with the fixed library), DisableEvent -1/EINVAL (kernel gpio-keys refuses disabled_keys writes, same as vendor, #909); Enable is device-verified, Disable stays a kernel limit",
+        "T23": "2026-11-11 T23 Jooan A6M (sc1a4t, open stack, kernel 3.10.14, no /sys/power, no RTC/ADC/AES nodes), image libsysutils (neo-sysutils-1.0) vs vendor T23 ISVP 1.3.0 libsysutils (with its libalog) loaded from /tmp: stays aud (finding #313): Disable(28) -> -1 EINVAL with both libraries; Enable returns -1 EACCES with the image library (writes the read-only keys list) and 0 with the vendor library; Disable of a key not in the list answers 0 with both || 2026-11-25 T23 .30 (neo PR #2 build, audit/neo-sysutils-prs, #909): Enable(28) 0 / Disable -1 (kernel refuses disabled_keys, vendor-equal) / Enable 0; Enable device-verified",
         "T32": "neo libsysutils export (nm) 2026-11-13, no QEMU PASS line",
         "T33": "apitest t33-devcells su4 2026-11-22 .122 (invalid-arg / pre-init paths; node missing in the T33L kernel)"
       }

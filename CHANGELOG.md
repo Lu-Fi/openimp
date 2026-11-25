@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: SU_Key_EnableEvent device-tested on T21 and T23 (#99)
+
+The API cell moves from audit to device for T21 (.24, image libsysutils: OpenEvent ok, Enable(28) and Enable(102) return 0) and T23 (.30, neo PR 2 build: Enable 0). DisableEvent still answers -1/EINVAL because the 3.10/4.4 gpio-keys kernel refuses `disabled_keys` writes, same as the vendor library (#909). T10 and T20 stay audit (T10 box busy, T20 camera offline), SU_CIPHER on T41 waits for a T41 board with the AES engine (.32 offline, .34 runs the k7 kernel without /dev/aes). SU_Base_Suspend/Shutdown unchanged: need a power cycle with the user present (plan in the session audit).
+
 ## 2026-11-25: T32 and T33 join the Release 1 gate (user decision)
 
 - `docs/status/release.yaml`: gate SoCs now include T32 (PRJ007 module, .136) and T33 (T33L module, .122); fleet map also lists the QC3 (.234, T23). RC3 streamer functions: 258/258 on both. Open for Release 1 on T32/T33: one green light-box run each and >= 72 h without an unplanned reset. README status and the start page updated.
