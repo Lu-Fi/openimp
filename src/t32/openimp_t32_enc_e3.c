@@ -27,9 +27,8 @@
  *   MultiProcessExit(): stops them.
  *   Server here: VBM allocation for the clients (IMP_Encoder_VbmAlloc / VbmFree, 16 entries) and
  *   the release of allocations whose client process is gone (/proc/<pid>, every 100 ms), as the
- *   vendor.  Not as the vendor: the YUV and JPEG requests are answered "failed" (status 0); the
- *   stand-alone encoder itself (IMP_Encoder_YuvInit / YuvEncode / InputJpege, #752) is below, the
- *   server does not call it yet.
+ *   vendor; the YUV and JPEG requests call the stand-alone encoder as the vendor (#782, see
+ *   mp_yuv_serve below).
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -632,6 +631,121 @@ static void *mp_pid_thread(void *arg)
     return NULL;
 }
 
+/*
+ * The stand-alone encoder served to one client process at a time, as vendor 2.0.2.1
+ * __jz_enc_msg_process (0xd1ecc): op 0 IMP_Encoder_YuvInit (refused while a client holds it; the
+ * client's handle is the slot index 0, the server keeps the encoder), op 1 IMP_Encoder_YuvEncode
+ * with the frame's and the output's virtual addresses from their physical ones (IMP_Encoder_VbmP2V,
+ * under a lock; the length goes back), op 2 IMP_Encoder_YuvExit.  A watcher per client (vendor: a
+ * thread created at init, cancelled at exit) frees the encoder when the client process is gone.
+ * Not as the vendor: a failed YuvInit is answered "failed" (the vendor overwrites its status with
+ * the watcher thread's start and answers 1).
+ */
+static struct {
+    pthread_mutex_t lock;
+    void *h;
+    int n;
+    int32_t pid;
+    pthread_t watch;
+    int on_watch;
+} mpy = { .lock = PTHREAD_MUTEX_INITIALIZER };
+
+static void *mp_yuv_watch(void *arg)
+{
+    char path[32];
+
+    (void)arg;
+    snprintf(path, sizeof(path), "/proc/%d", (int)mpy.pid);
+    for (;;) {
+        usleep(100000);
+        if (access(path, F_OK) == 0)
+            continue;
+        pthread_mutex_lock(&mpy.lock);
+        if (mpy.n > 0) {
+            IMP_LOG_WARN(TAG, "multi-process YUV client %d gone: encoder released", (int)mpy.pid);
+            IMP_Encoder_YuvExit(mpy.h);
+            mpy.h = NULL;
+            mpy.n = 0;
+        }
+        pthread_mutex_unlock(&mpy.lock);
+        return NULL;
+    }
+}
+
+static void mp_yuv_watch_stop(void)
+{
+    if (mpy.on_watch) {
+        pthread_cancel(mpy.watch);
+        pthread_join(mpy.watch, NULL);
+        mpy.on_watch = 0;
+    }
+}
+
+static uint32_t mp_yuv_serve(struct yuv_msg *m)
+{
+    uint32_t ok = 0;
+
+    pthread_mutex_lock(&mpy.lock);
+    switch (yuv_get(m, YUV_OP)) {
+    case 0: {
+        IMPEncoderYuvIn in;
+        void *h = NULL;
+
+        if (mpy.n >= 1) {
+            IMP_LOG_ERR(TAG, "multi-process YuvInit: the encoder is held by client %d", (int)mpy.pid);
+            break;
+        }
+        memcpy(&in, m->body + YUV_IN, sizeof(in));
+        if (IMP_Encoder_YuvInit(&h, (int)yuv_get(m, YUV_W), (int)yuv_get(m, YUV_H), &in) != 0) {
+            IMP_LOG_ERR(TAG, "multi-process YuvInit %ux%u failed", yuv_get(m, YUV_W), yuv_get(m, YUV_H));
+            break;
+        }
+        yuv_put(m, YUV_HANDLE, (uint32_t)mpy.n);
+        mpy.h = h;
+        mpy.n = 1;
+        mpy.pid = (int32_t)yuv_get(m, YUV_PID);
+        pthread_mutex_unlock(&mpy.lock);
+        mp_yuv_watch_stop();
+        mpy.on_watch = pthread_create(&mpy.watch, NULL, mp_yuv_watch, NULL) == 0;
+        return 1;
+    }
+    case 1: {
+        IMPFrameInfo f;
+        IMPEncoderYuvOut out;
+
+        if (mpy.n < 1)
+            break;
+        memcpy(&f, m->body + YUV_FRAME, sizeof(f) < YUV_FRAME_BYTES ? sizeof(f) : YUV_FRAME_BYTES);
+        f.virAddr = (uint32_t)IMP_Encoder_VbmP2V((intptr_t)f.phyAddr);
+        memset(&out, 0, sizeof(out));
+        out.outAddr = (uint8_t *)IMP_Encoder_VbmP2V((intptr_t)yuv_get(m, YUV_OUTPA));
+        out.outLen = yuv_get(m, YUV_OUTLEN);
+        if (!f.virAddr || !out.outAddr) {
+            IMP_LOG_ERR(TAG, "multi-process YuvEncode: frame 0x%x / output 0x%x not in rmem",
+                        f.phyAddr, yuv_get(m, YUV_OUTPA));
+            break;
+        }
+        ok = IMP_Encoder_YuvEncode(mpy.h, f, &out) >= 0;
+        yuv_put(m, YUV_OUTLEN, ok ? out.outLen : 0u);
+        break;
+    }
+    case 2:
+        if (mpy.n < 1)
+            break;
+        ok = IMP_Encoder_YuvExit(mpy.h) >= 0;
+        mpy.h = NULL;
+        mpy.n = 0;
+        pthread_mutex_unlock(&mpy.lock);
+        mp_yuv_watch_stop();
+        usleep(5000);
+        return ok;
+    default:
+        break;
+    }
+    pthread_mutex_unlock(&mpy.lock);
+    return ok;
+}
+
 static void *mp_yuv_thread(void *arg)
 {
     int q = mp_queue(Q_YUV);
@@ -651,15 +765,15 @@ static void *mp_yuv_thread(void *arg)
                 return NULL;
             continue;
         }
-        IMP_LOG_ERR(TAG, "multi-process YUV request %u: unbound YUV encoder not available on "
-                    "T32/T33", yuv_get(&m, YUV_OP));
-        yuv_put(&m, YUV_STATUS, 0);
+        yuv_put(&m, YUV_STATUS, mp_yuv_serve(&m));
         m.mtype = 3;
         msgsnd(q, &m, sizeof(m.body), 0);
     }
     return NULL;
 }
 
+/* vendor __jz_inputJpege_msg_process (0xd27cc): IMP_Encoder_InputJpege on the source's and the
+ * destination's virtual addresses (IMP_Encoder_VbmP2V), the stream length back */
 static void *mp_jpeg_thread(void *arg)
 {
     int q = mp_queue(Q_JPEG);
@@ -670,6 +784,8 @@ static void *mp_jpeg_thread(void *arg)
     for (;;) {
         struct jpeg_msg m;
         ssize_t n;
+        int len = 0;
+        uint8_t *src, *dst;
 
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
         n = msgrcv(q, &m, sizeof(m) - sizeof(long), 6, 0);
@@ -679,12 +795,14 @@ static void *mp_jpeg_thread(void *arg)
                 return NULL;
             continue;
         }
-        IMP_LOG_ERR(TAG, "multi-process JPEG request: unbound JPEG encoder not available on "
-                    "T32/T33");
-        m.status = 0;
-        m.len = 0;
+        src = (uint8_t *)IMP_Encoder_VbmP2V((intptr_t)m.src);
+        dst = (uint8_t *)IMP_Encoder_VbmP2V((intptr_t)m.dst);
+        m.status = src && dst &&
+                   IMP_Encoder_InputJpege(src, dst, (int)m.w, (int)m.h, (int)m.q, &len) >= 0;
+        m.len = m.status ? (uint32_t)len : 0u;
         m.mtype = 5;
         msgsnd(q, &m, sizeof(m) - sizeof(long), 0);
+        usleep(5000);
     }
     return NULL;
 }
@@ -703,6 +821,14 @@ void IMP_Encoder_MultiProcessExit(void)
     mp_stop(&mp.vbm, &mp.on_vbm);
     mp_stop(&mp.pidchk, &mp.on_pidchk);
     mp_stop(&mp.yuv, &mp.on_yuv);
+    mp_yuv_watch_stop();
+    pthread_mutex_lock(&mpy.lock);
+    if (mpy.n > 0) {                    /* a client still holding the encoder */
+        IMP_Encoder_YuvExit(mpy.h);
+        mpy.h = NULL;
+        mpy.n = 0;
+    }
+    pthread_mutex_unlock(&mpy.lock);
     mp_stop(&mp.jpeg, &mp.on_jpeg);
 }
 

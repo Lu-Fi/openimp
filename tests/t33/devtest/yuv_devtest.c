@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #if !defined(HOST_PATTERN)
 #include <imp/imp_common.h>
@@ -123,6 +124,67 @@ static void codes(void)
     }
 }
 
+/* #782: the stand-alone encoder through the multi-process server (vendor 2.0.2.1 _Ex clients) */
+static int ex_client(const char *mode, int w, int h, int n, int arg)
+{
+    uint32_t size = (uint32_t)w * (uint32_t)h * 3u / 2u, cap = size + 65536u;
+    uint8_t *pic = IMP_Encoder_VbmAlloc_Ex(size + (uint32_t)w * 16u, 256), *out = IMP_Encoder_VbmAlloc_Ex(cap, 256);
+    IMPEncoderYuvIn in;
+    IMPEncoderYuvOut eo;
+    IMPFrameInfo f;
+    int enc = -1, i, r = 0;
+
+    if (!pic || !out) {
+        fprintf(stderr, "VbmAlloc_Ex failed\n");
+        return 1;
+    }
+    memset(pic + size, 0, (size_t)w * 16u);
+    if (!strcmp(mode, "exjpeg")) {
+        int len = 0;
+
+        pattern(pic, w, h, 0);
+        r = IMP_Encoder_InputJpege_Ex(pic, out, w, h, n, &len);
+        fprintf(stderr, "InputJpege_Ex %dx%d: 0x%x, %d bytes\n", w, h, (unsigned)r, len);
+        if (!r && len > 0)
+            fwrite(out, 1, (size_t)len, stdout);
+        goto done;
+    }
+    memset(&in, 0, sizeof(in));
+    in.type = PT_H264;
+    in.mode.rcMode = ENC_RC_MODE_FIXQP;
+    in.mode.attrH264FixQp.IQp = in.mode.attrH264FixQp.PQp = (uint32_t)arg;
+    in.outFrmRate.frmRateNum = 25;
+    in.outFrmRate.frmRateDen = 1;
+    in.maxGop = 10;
+    r = IMP_Encoder_YuvInit_Ex(&enc, w, h, &in);
+    fprintf(stderr, "YuvInit_Ex %dx%d: 0x%x handle %d\n", w, h, (unsigned)r, enc);
+    if (r)
+        goto done;
+    for (i = 0; i < n; i++) {
+        pattern(pic, w, h, i);
+        memset(&f, 0, sizeof(f));
+        f.width = (uint32_t)w;
+        f.height = (uint32_t)h;
+        f.pixfmt = PIX_FMT_NV12;
+        f.size = size;
+        f.virAddr = (uint32_t)(uintptr_t)pic;
+        f.phyAddr = (uint32_t)IMP_Encoder_VbmV2P((intptr_t)pic);
+        f.timeStamp = (int64_t)i * 40000;
+        eo.outAddr = out;
+        eo.outLen = cap;
+        r = IMP_Encoder_YuvEncode_Ex(enc, f, &eo);
+        fprintf(stderr, "YuvEncode_Ex %d: 0x%x, %u bytes\n", i, (unsigned)r, eo.outLen);
+        if (r)
+            break;
+        fwrite(out, 1, eo.outLen, stdout);
+    }
+    fprintf(stderr, "YuvExit_Ex 0x%x\n", (unsigned)IMP_Encoder_YuvExit_Ex(enc));
+done:
+    IMP_Encoder_VbmFree_Ex(out);
+    IMP_Encoder_VbmFree_Ex(pic);
+    return r ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *mode = argc > 1 ? argv[1] : "";
@@ -135,6 +197,21 @@ int main(int argc, char **argv)
     IMPEncoderYuvOut eo;
     IMPFrameInfo f;
 
+    /* #782 multi-process: 'exsrv SECONDS' = the server (MultiProcessInit, then wait); 'exavc W H N ARG'
+     * and 'exjpeg W H Q' = a client process through the _Ex calls (no IMP_System_Init of its own) */
+    if (!strcmp(mode, "exsrv")) {
+        /* MultiProcessInit before the encoder module is up (after IMP_System_Init it answers 0x80040080) */
+        int mp = IMP_Encoder_MultiProcessInit();
+
+        r = IMP_System_Init();
+        fprintf(stderr, "MultiProcessInit 0x%x, IMP_System_Init %d\n", (unsigned)mp, r);
+        sleep((unsigned)(argc > 2 ? atoi(argv[2]) : 60));
+        IMP_Encoder_MultiProcessExit();
+        IMP_System_Exit();
+        return 0;
+    }
+    if (!strcmp(mode, "exavc") || !strcmp(mode, "exjpeg"))
+        return ex_client(mode, w, h, n, arg);
     r = IMP_System_Init();
     fprintf(stderr, "IMP_System_Init %d\n", r);
     if (!strcmp(mode, "codes")) {

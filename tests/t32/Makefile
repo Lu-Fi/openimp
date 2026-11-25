@@ -79,6 +79,7 @@ ENCQ_DEPS := encq_test.c $(PROJECT_DIR)/src/t32/openimp_t32_encq.h
 check: $(YUVRC_BIN) $(DBK_BIN) $(ENCQ_BIN) $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
 	$(YUVRC_BIN)
 	$(DBK_BIN)
+	sh check_ex_server.sh
 	sh check_fs_packed.sh
 	sh check_enc_pad.sh
 	$(ENCQ_BIN)
