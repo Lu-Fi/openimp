@@ -940,6 +940,9 @@ again:
             if (strstr(getenv("T32_ENC_PRE"), "mq") &&
                 (en = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetMotionQualityEnable")) != NULL)
                 printf("T32C pre SetMotionQualityEnable = %d\n", en(0, 1));
+            if (strstr(getenv("T32_ENC_PRE"), "fisheye") &&
+                (en = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetFisheyeEnableStatus")) != NULL)
+                printf("T32C pre SetFisheyeEnableStatus = %d\n", en(0, 1));
             if (strstr(getenv("T32_ENC_PRE"), "qpgai") &&
                 (en = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetChnQpgAIEnable")) != NULL)
                 printf("T32C pre SetChnQpgAIEnable = %d\n", en(0, 1));

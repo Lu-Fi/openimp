@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T33 Fisheye cell no-op; MapRoi analysed (#784)
+
+- Vendor 2.0.2.1 `IMP_Encoder_SetFisheyeEnableStatus` (before CreateChn) only feeds a create parameter: QEMU 0731 H.264 and H.265 at FIXQP show 0 HERA register differences; T33 cell cache -> no-op. `t32_trace_sample` T32_ENC_PRE=fisheye.
+- ResizeMode: no effect with equal FrameSource and encoder sizes (the case the vendor reads it for is a size mismatch); stays cache.
+- MapRoi: the vendor writes the (DEVIOUS-mapped) map bytes unchanged into the EMC QP table in 2x2-MB groups (vpi_emc_qpt_cfg); QEMU cannot show it (no register change, the model stream carries QP 0, no QPT capture): waits for a T33 device A/B.
+
 ## 2026-11-25: T31 FrameSource keeps capturing when the encoder stops reading (#908)
 
 - Same cause as #905 / T21: T31 gave a stopped reader's buffers back only after `VBM_PULL_IDLE_MS` (1 s). `VBMFeedDriverIdle` now also runs on T31. Device (Wuuk T31X .21, kernel 3.10, open-stack image, installed timps with RTSP off in the test copy of the config so a permanent RTSP client cannot keep chn0 busy, 20 on-demand chn0 restarts, DQBUF trace): before 20 / 20 restarts with a 945 ms ch0 gap, after 0 on both channels; snapshot 200. T30: not changed (its DQBUF path feeds a dry driver, #405).
