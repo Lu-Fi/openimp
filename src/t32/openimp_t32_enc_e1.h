@@ -68,7 +68,9 @@ void OpenIMP_T32_E1PskipTake(int encChn, int rc_mode, uint32_t bitrate, T32E1Psk
  * for every flag outside 0x1e0000.  qpg = the QpgMode word i264e_reconfig
  * (0x818e4, flag 0x8000) copies to P+0x194 before every picture; only
  * i264e_ratecontrol_init reads it.  Returns T32_E1RC_* flags (taken). */
-enum { T32_E1RC_TRIG = 1, T32_E1RC_SF = 2 };
+/* T32_E1RC_RESTART (#784 batch 3): vendor 2.0.2.1 i264e/i265e_set_param of Color2Grey (H.264, H.265)
+ * and HSkip (H.264) restarts the rate control at the next IDR; no HERA register changes (QEMU, FIXQP) */
+enum { T32_E1RC_TRIG = 1, T32_E1RC_SF = 2, T32_E1RC_RESTART = 4 };
 typedef struct {
     uint32_t trig[2];           /* P+0x140 level (raw word), +0x144 mode */
     uint32_t sf[6];             /* P+0x19c..0x1b0 */

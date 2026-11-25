@@ -1034,11 +1034,12 @@ int t32_rc_set_param(T32Rc *rc, unsigned id, const uint32_t *a)
 int t32_rc_idr_params(T32Rc *rc, unsigned flags, const uint32_t trig[2], const uint32_t sf[6], uint32_t qpg)
 {
     uint32_t *st = rc->stash;
+    int restart = (flags & 4u) != 0;    /* T32_E1RC_RESTART (#784) */
 
     if (rc->hevc)
-        return (flags & 2u) && rc->on;  /* the H.265 parameter fields: not ported (#784) */
+        return ((flags & 2u) || restart) && rc->on;  /* the H.265 parameter fields: not ported (#784) */
     if (!rc->have_stash)
-        return 0;
+        return restart;
     st[0x194 / 4] = qpg;
     if (rc->t33)
         t32_rc33_set(rc->t33, 0x194, qpg);
@@ -1049,7 +1050,7 @@ int t32_rc_idr_params(T32Rc *rc, unsigned flags, const uint32_t trig[2], const u
     if (flags & 2u)
         for (unsigned i = 0; i < 6; i++)
             st[0x19c / 4 + i] = sf[i];
-    return (flags & 3u) != 0;
+    return (flags & 7u) != 0;
 }
 
 uint32_t t32_rc_get_param(T32Rc *rc, uint32_t off)

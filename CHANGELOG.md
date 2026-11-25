@@ -17,6 +17,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-25: SU_Key_EnableEvent device-tested on T21 and T23 (#99)
 
 The API cell moves from audit to device for T21 (.24, image libsysutils: OpenEvent ok, Enable(28) and Enable(102) return 0) and T23 (.30, neo PR 2 build: Enable 0). DisableEvent still answers -1/EINVAL because the 3.10/4.4 gpio-keys kernel refuses `disabled_keys` writes, same as the vendor library (#909). T10 and T20 stay audit (T10 box busy, T20 camera offline), SU_CIPHER on T41 waits for a T41 board with the AES engine (.32 offline, .34 runs the k7 kernel without /dev/aes). SU_Base_Suspend/Shutdown unchanged: need a power cycle with the user present (plan in the session audit).
+## 2026-11-25: T33 Color2Grey / HSkip restart the rate control like the vendor; four setters no-op (#784 batch 3)
+
+- Vendor 2.0.2.1 in QEMU 0731 (change at picture 4 + RequestIDR): at FIXQP none of Color2Grey, HSkip, HSkipBlackEnhance, Denoise, ChangeRef and Srd changes a HERA register. At CBR, Color2Grey (H.264 and H.265) and HSkip (H.264) restart the rate control at the next IDR (QP 45 42 39 36 again); the earlier CBR-only comparison had read this RC restart as register effects.
+- OpenIMP stored these settings only. Color2Grey and H.264 HSkip now set `T32_E1RC_RESTART` (openimp_t32_enc_e1.c), and `t32_rc_idr_params` restarts the controller at that IDR (openimp_t32_rc.c). QEMU r*x* vs vendor: same QP sequences and IDR positions on H.264 (rh264xhskip 0 register differences); host test `tests/t33/rc784_test.c`.
+- Not ported: after any H.265 set_param the vendor's requested IDR comes one picture later (QEMU picture 5 instead of 4); OpenIMP keeps it at the requested picture.
+- Matrix T33: Color2Grey and HSkip cache -> qemu; Denoise, HSkipBlackEnhance, ChangeRef, SrdCfg cache -> no-op. MapRoi was not part of this run (stays cache).
 
 ## 2026-11-25: T32 and T33 join the Release 1 gate (user decision)
 

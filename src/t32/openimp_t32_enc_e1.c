@@ -529,6 +529,8 @@ int IMP_Encoder_SetChnColor2Grey(int encChn, const IMPEncoderColor2GreyCfg *c)
     rc = e1_get(encChn, &ci);
     if (!rc && ci.codec == 1 && c)
         E1.grey = c->enable ? 1 : 0;
+    if (!rc && ci.codec != 0 && c)
+        E1.rc_new |= T32_E1RC_RESTART;  /* #784: rate control restarts at the next IDR */
     pthread_mutex_unlock(&e1_lock);
     return rc;
 }
@@ -876,6 +878,8 @@ int IMP_Encoder_SetChnHSkip(int encChn, const IMPEncoderAttrHSkip *h)
             E1.hskip.skipType = h->skipType;
             E1.hskip.m = h->m;
             E1.hskip.n = h->n;
+            if (ci.codec == 1)
+                E1.rc_new |= T32_E1RC_RESTART;  /* #784: H.264 rate control restarts at the next IDR */
         }
     }
     pthread_mutex_unlock(&e1_lock);

@@ -61,6 +61,13 @@ int main(void)
     CHECK(t32_rc_get_param(&rc, 0x1a0) == 1920u * 1088u * 3u / 50u, "super I threshold clamp %u",
           t32_rc_get_param(&rc, 0x1a0));
     t32_rc_free(&rc);
+    /* batch 3: Color2Grey / HSkip (T32_E1RC_RESTART = 4) restart without parameter words */
+    int q4[10];
+    run(4, q4, &rc);
+    t32_rc_free(&rc);
+    CHECK(q4[4] == q0[0], "Color2Grey/HSkip restart QP %d (first %d)", q4[4], q0[0]);
+    for (int i = 0; i < 4; i++)
+        CHECK(q4[i] == q0[i], "restart flag: picture %d before the change", i);
     if (getenv("RC784_DUMP"))
         for (int i = 0; i < 10; i++)
             printf("pic %d qp %d %d %d\n", i, q0[i], q1[i], q2[i]);
