@@ -61,8 +61,8 @@ features:
       sym: ✅
       text: reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
     T32:
-      sym: 🔧
-      text: 'in development (T32, not a release gate): ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); ISP open / AddSensor / EnableSensor / tuning enable dev, the module streams since 2026-11-24 with 0 oops. in development (T32, not a release gate): ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 97
       - 288
@@ -130,7 +130,7 @@ features:
       text: 10x reload with kill -9; vmalloc leak of 252 KB/cycle fixed; residual drift ~45 KB/cycle
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no counted reload / stop-start cycle series on the module yet (runtime insmod swaps in the #884 / #892 runs only). in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -172,7 +172,7 @@ features:
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no boot-guard test on the module yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -227,7 +227,7 @@ features:
       - 710
     T32:
       sym: 🔧
-      text: '2026-11-21: SetFaceAe runs tisp_ae_sepc_area / ROI / face targets (#686). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. 2026-11-21: SetFaceAe runs tisp_ae_sepc_area / ROI / face targets (#686). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 686
@@ -284,7 +284,7 @@ features:
       text: 'device-tested: ae_comp (Y +13/−21), backlight (Y +19), highlight (Y −13) Re-tested 2026-10-10: OEM formula, luma 55 / 100 / 160 for 0 / 128 / 255; the AE is slow (about 6 s dead time, 25 to 30 s to settle), tests need at least 30 s settle'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -333,7 +333,7 @@ features:
       - 733
     T32:
       sym: 🔧
-      text: '2026-11-21: fps setter no longer a stub (#716); TX_ISP_EVENT_SYNC_SENSOR_ATTR re-syncs the AE sensor block (#724). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. 2026-11-21: fps setter no longer a stub (#716); TX_ISP_EVENT_SYNC_SENSOR_ATTR re-syncs the AE sensor block (#724). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 716
@@ -376,7 +376,7 @@ features:
       - 559
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -421,7 +421,7 @@ features:
       text: '2026-10-24: the AWB statistics sweeps run through the MXU2 vector unit by default in next (`t31_awb_impl=2`, chosen after a load-time self-test against the C code; `t31_awb_impl=0/1` switches it off): bit-exact against the C implementation, device-tested on a T31X (.21) and a T31L (.29), about 2.4 times faster sweeps (96 sweeps: 1229 us in C, 504 us with MXU2). Earlier (history): device-tested: manual R/B gains + presets 3/4/7 read back; chroma follows (Cb/Cr), auto restores'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -475,7 +475,7 @@ features:
       - 105
     T32:
       sym: 🔧
-      text: '2026-11-21 (#728, open-tx-isp next d95a82ea0, beyond vendor, user decision): LSC mirror / flip follows the sensor orientation, ring-format bins mirror the optical centre too. Not device-tested here, no symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. 2026-11-21 (#728, open-tx-isp next d95a82ea0, beyond vendor, user decision): LSC mirror / flip follows the sensor orientation, ring-format bins mirror the optical centre too. Not device-tested here, no symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 728
@@ -522,7 +522,7 @@ features:
       text: 13 switches in the 4.5 h soak
     T32:
       sym: 🔧
-      text: '2026-11-21: day/night IQ bin switch while streaming: step 2a in (MDNS refresh on the live context, #534), rest open. No symbol change. Earlier: in development (T32, not a release gate): the day/night IQ-bin switch (SetISPRunningMode) runs in QEMU (#289); the ISP-side tuning layer is in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: IQ bin day/night switch while streaming is partly ported (#534); no day/night A/B against the vendor yet. 2026-11-21: day/night IQ bin switch while streaming: step 2a in (MDNS refresh on the live context, #534), rest open. No symbol change. Earlier: in development (T32, not a release gate): the day/night IQ-bin switch (SetISPRunningMode) runs in QEMU (#289); the ISP-side tuning layer is in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 289
       - 296
@@ -571,8 +571,8 @@ features:
       sym: ✅
       text: 'device-tested: daynight night/day switches ircut + ir940 (no ir850 pin on this cam), ISP follows'
     T32:
-      sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: the IR cut filter switches on the PRJ007 module (GPIO 66 in / 67 out, 200 ms H-bridge pulse, 2026-11-24); the board has no IR LED. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -613,7 +613,7 @@ features:
       - 550
     T32:
       sym: 🔧
-      text: '2026-11-21: SetSharpness (#711) and the BCSH setters (#716) are no longer stubs; tunctl glue wired (#717). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. 2026-11-21: SetSharpness (#711) and the BCSH setters (#716) are no longer stubs; tunctl glue wired (#717). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 711
@@ -661,7 +661,7 @@ features:
       text: sc4336p vflip no longer reports an error [-all-13]; MSCA flip takes effect only at the next channel start, as with the vendor
     T32:
       sym: 🔧
-      text: '2026-11-21: LSC mesh follows sensor mirror / flip (hvflip glue, #722). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no mirror / flip A/B against the vendor on the module yet. 2026-11-21: LSC mesh follows sensor mirror / flip (hvflip glue, #722). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 722
@@ -708,7 +708,7 @@ features:
       - 563
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -752,7 +752,7 @@ features:
       text: 'device-tested: defog 255 (Y −10, laplacian +193). 2026-11-04 (open-tx-isp c8e3d4d3): the 29 defog tables now come from the active tuning-bin bank like the vendor (`tiziano_defog_load_bank`), device-proven on the T31X light-box camera; fleet image agg67 still has the old tables'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -800,7 +800,7 @@ features:
       - 106
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -849,7 +849,7 @@ features:
       - 106
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -888,7 +888,7 @@ features:
       text: 'device-tested: as T23 (claude/t23-t31-scene-colorfx, not yet in an aggregate)'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -925,7 +925,7 @@ features:
       text: as vendor, follows mirror/flip; emulator 400/400 identical; cam-A black+red ok [-all-13]
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no privacy-mask device result yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -964,7 +964,7 @@ features:
       - 124
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: works on the PRJ007 module (device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855)), no light-box comparison yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -1007,7 +1007,7 @@ features:
       text: 704×1280 correct, 9 ms/frame @15 fps, before OSD/IVS/encoder
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no rotation device result yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -1049,8 +1049,8 @@ features:
       sym: ✅
       text: soak 2 h 53, 260,648 frames, 1030/1030 snapshots, 0 errors
     T32:
-      sym: 🔧
-      text: '2026-11-11 night: IVDC direct mode (#301, #348): channel 0 hands frames to the encoder over the IVDC line buffer like vendor libimp 2.2.0 (H.264 5/5 and JPEG 3/3 streams decode in QEMU, ioctl sequence and HERA lists equal to the vendor except addresses); OpenIMP T32 also runs on the vendor tx-isp ko. Earlier: planned: H.264 on HERA, decodable I+P stream in QEMU, command lists equal to vendor libimp 2.2.0 except addresses, fixed QP (#293); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); H.264 P pictures as small as vendor 2.2.0 after #882 / #885 (padding rows repeat the last row), GetFrame packed NV12 like the vendor (#880). 2026-11-11 night: IVDC direct mode (#301, #348): channel 0 hands frames to the encoder over the IVDC line buffer like vendor libimp 2.2.0 (H.264 5/5 and JPEG 3/3 streams decode in QEMU, ioctl sequence and HERA lists equal to the vendor except addresses); OpenIMP T32 also runs on the vendor tx-isp ko. Earlier: planned: H.264 on HERA, decodable I+P stream in QEMU, command lists equal to vendor libimp 2.2.0 except addresses, fixed QP (#293); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 293
       - 295
@@ -1106,7 +1106,7 @@ features:
       - 604
     T32:
       sym: 🔧
-      text: '2026-11-21: H.265 rate-control registers added to the HERA list (revision 6 slice block, #720). No symbol change. Earlier: in development (T32, not a release gate): H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: H.265 has no T32 device run of its own yet. 2026-11-21: H.265 rate-control registers added to the HERA list (revision 6 slice block, #720). No symbol change. Earlier: in development (T32, not a release gate): H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 294
       - 295
@@ -1157,8 +1157,8 @@ features:
       sym: ✅
       text: HW JPEG, own MJPEG channel ok (24 B/5 s, before 0 bytes)
     T32:
-      sym: 🔧
-      text: '2026-11-21 (QEMU, #743): encoder stream buffers on the heap and sized like vendor 2.2.0 (T32 JPEG 10/10, H.264 30/30 pictures); no T32 device. No symbol change. Earlier: in development (T32, not a release gate): JPEG on the JPEG v1.2 engine bound to FrameSource in QEMU, pictures decode and look right (#292). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); JPEG channel cells dev, snapshots valid (HTTP 200) on every device run. 2026-11-21 (QEMU, #743): encoder stream buffers on the heap and sized like vendor 2.2.0 (T32 JPEG 10/10, H.264 30/30 pictures); no T32 device. No symbol change. Earlier: in development (T32, not a release gate): JPEG on the JPEG v1.2 engine bound to FrameSource in QEMU, pictures decode and look right (#292). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 292
       - 743
@@ -1205,8 +1205,8 @@ features:
       sym: ✅
       text: cam-A 25 fps ch0+ch1 4.5 h
     T32:
-      sym: 🔧
-      text: '2026-11-21: SetAutoZoom applies the MSCA crop (#721); MSCA channel start via the vendor chx_cfg_load (#730). No symbol change. Earlier: in development (T32, not a release gate): FrameSource channels 0-2 (1920x1080, 1280x720, 640x360) in QEMU (#290). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); ch1 sub-stream runs with timps on the module. 2026-11-21: SetAutoZoom applies the MSCA crop (#721); MSCA channel start via the vendor chx_cfg_load (#730). No symbol change. Earlier: in development (T32, not a release gate): FrameSource channels 0-2 (1920x1080, 1280x720, 640x360) in QEMU (#290). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 290
       - 721
@@ -1253,7 +1253,7 @@ features:
       text: '2026-11-22 (#604, vendor 1.1.6 objdump + T31L capture): CBR IDR distance rounded to whole seconds, HWRC IDR / P target words and EP3 tables equal to the vendor capture, start QP from the bits-per-pixel table (H.264 1080p 40 / H.265 33 / 360p 28); host tests. No symbol change. all modes via the vendor Allegro core (default): CBR 1210 kbit/s at 1200 target and 2973 at 3000 (legacy controller 1511 / 3786, +26 % with large peaks); VBR 1163, CappedVBR 1177, CappedQuality 1174 at 1200; decode clean, 0 oops [claude/t31-allegro-cbr]. CappedVBR/CappedQuality set at CreateChn now keep their mode and cap (were VBR with max = target): cap 38 dB at 3000/4000 → 507 kbit/s at encoder PSNR 38.5 (VBR 3108), SSIM 0.963 vs FixQP 12 [claude/capped-rc-followup]. No filler NAL is written (filler=0 in the logs also at 3000), so in practice there was no difference.'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): rate control on HERA (#295, partial): CBR/VBR/SMART/CVBR/AVBR/QVBR channels get a per-picture QP from the T23 eprc revision; against the vendor 2.2.0 controller (Unicorn) CBR/VBR/CVBR are within 12 % of the vendor rate, mean QP difference <= 3; CBR H.264 and H.265 streams decode clean in QEMU. Open: T33 controller port, re-encoding, macroblock QP, device proof. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: CBR / VBR A/B against the vendor is still open (#295). in development (T32, not a release gate): rate control on HERA (#295, partial): CBR/VBR/SMART/CVBR/AVBR/QVBR channels get a per-picture QP from the T23 eprc revision; against the vendor 2.2.0 controller (Unicorn) CBR/VBR/CVBR are within 12 % of the vendor rate, mean QP difference <= 3; CBR H.264 and H.265 streams decode clean in QEMU. Open: T33 controller port, re-encoding, macroblock QP, device proof. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 295
     T33:
@@ -1304,7 +1304,7 @@ features:
       text: T31 defaults like the vendor (max QP 48, max bitrate 4/3, ...) [-all-13] (claude/rc-modes-2)
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the rate-control attributes are mapped onto the same eprc channels (#295, partial; maxIQp/minIQp bound the IDR QP, SetChnAttrRcMode restarts at the next IDR). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: RC parameters partly device-proven, #295 still open. in development (T32, not a release gate): the rate-control attributes are mapped onto the same eprc channels (#295, partial; maxIQp/minIQp bound the IDR QP, SetChnAttrRcMode restarts at the next IDR). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 295
     T33:
@@ -1342,8 +1342,8 @@ features:
       sym: ✅
       text: 'IPU OSD; lines/rectangles; rotation: no OSD clamp in timps'
     T32:
-      sym: 🔧
-      text: 'in development (T32, not a release gate): IPU OSD in QEMU (#297): BGRA text picture, cover, rectangle and 2-bit picture through FS -> OSD -> encoder; the /dev/ipu requests equal vendor libimp 2.2.0 except buffer addresses, the text and the rectangle checked in the H.264 picture (QEMU''s IPU model draws no covers and no 2-bit pictures); the ISP-drawn OSD (`IMP_OSD_*_ISP`, #336): 20/20 ISP OSD requests equal vendor libimp 2.2.0 and the final MSCA OSD register state is identical (QEMU draws no T32 lines/ranges: register proof only). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); OSD and ISP OSD device cells (openimp next 9de99f71), two IVS groups decision #883 unrelated. in development (T32, not a release gate): IPU OSD in QEMU (#297): BGRA text picture, cover, rectangle and 2-bit picture through FS -> OSD -> encoder; the /dev/ipu requests equal vendor libimp 2.2.0 except buffer addresses, the text and the rectangle checked in the H.264 picture (QEMU''s IPU model draws no covers and no 2-bit pictures); the ISP-drawn OSD (`IMP_OSD_*_ISP`, #336): 20/20 ISP OSD requests equal vendor libimp 2.2.0 and the final MSCA OSD register state is identical (QEMU draws no T32 lines/ranges: register proof only). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 297
       - 336
@@ -1388,7 +1388,7 @@ features:
       text: 'sub-stream default: ~85 % less IVS CPU (compared with vendor libimp)'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: 18 IVS cells dev, but no detected-motion run yet. in development (T32, not a release gate): IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 299
     T33:
@@ -1429,7 +1429,7 @@ features:
       text: 'device-tested: concurrent streams ok'
     T32:
       sym: 🔧
-      text: '2026-11-11 night: direct mode (IVDC, `IMP_FrameSource_GetDirectMode/SetDirectMode/SetIvdcMemLine`, #301) in QEMU; direct channel 0 refuses SetFrameDepth like the vendor has no picture in memory. Earlier: planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: Joint / copy-type calls cache-only, no device result. 2026-11-11 night: direct mode (IVDC, `IMP_FrameSource_GetDirectMode/SetDirectMode/SetIvdcMemLine`, #301) in QEMU; direct channel 0 refuses SetFrameDepth like the vendor has no picture in memory. Earlier: planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 290
       - 299
@@ -1491,8 +1491,8 @@ features:
       - 131
       - 592
     T32:
-      sym: 🔧
-      text: '2026-11-11 night: AI with the vendor 2.x semantics (software volume, SetGain the only codec ioctl, algo order NS/AGC/HPF then DRC/EQ, LPF; DMIC effects) in QEMU, PCM equal to vendor libimp 2.2.0 (#329, #330; the DMIC oops was the audio.ko default dmic_enable=0, the T32 record thread now passes a capture timestamp). Earlier: planned: AI on the OSS3 /dev/dsp ABI, a tone recorded in QEMU (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: —
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> —: the PRJ007 module has no microphone (hardware does not have it, like the T33L / T41 boards); the software path runs, apitest audio PASS. 2026-11-11 night: AI with the vendor 2.x semantics (software volume, SetGain the only codec ioctl, algo order NS/AGC/HPF then DRC/EQ, LPF; DMIC effects) in QEMU, PCM equal to vendor libimp 2.2.0 (#329, #330; the DMIC oops was the audio.ko default dmic_enable=0, the T32 record thread now passes a capture timestamp). Earlier: planned: AI on the OSS3 /dev/dsp ABI, a tone recorded in QEMU (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
     T33:
@@ -1549,8 +1549,8 @@ features:
       issues:
       - 592
     T32:
-      sym: 🔧
-      text: '2026-11-11 night: AO like vendor libimp 2.x (40 ms block queue, cache on by default, Flush/Clear, soft mute ramp, QueryChnStat) in QEMU, wav levels equal to the vendor (#329); the Flush/Clear tail and attribute write-back differ from the vendor (beyond vendor, user-approved 2026-11-11, not counted). Earlier: planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: —
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> —: the PRJ007 module has no speaker (hardware does not have it); the software path runs. 2026-11-11 night: AO like vendor libimp 2.x (40 ms block queue, cache on by default, Flush/Clear, soft mute ramp, QueryChnStat) in QEMU, wav levels equal to the vendor (#329); the Flush/Clear tail and attribute write-back differ from the vendor (beyond vendor, user-approved 2026-11-11, not counted). Earlier: planned: AO in QEMU with silence only (#298). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
     T33:
@@ -1594,8 +1594,8 @@ features:
       sym: ✅+
       text: '2026-11-17 (#666, OpenIMP next 1330ca18): the AEC is now the installed `libaudioProcess.so` AEC as in the vendor libimp (old AECM = fallback `OPENIMP_AEC=aecm`); device-proven on the T30X only (ERLE within 3 dB of the vendor), not re-run on this SoC. No symbol change. real AECM: echo −18 dB, ERLE 44 dB (loopback); before: fake success'
     T32:
-      sym: 🔧
-      text: '2026-11-21: #667: NS / AGC / HPF also run after the AEC (beyond vendor, as T10-T31; host test t32-audio2x-test); AEC reference path as T33 (#712). No symbol change. Earlier: 2026-11-11 night: the 20 audio extras of vendor 2.0.0 (NS/AGC/HPF/LPF/DRC/EQ switches, algo order) are exported and verified against the vendor in QEMU (#329, #330, T32 exports now AI 47, AO 37, DMIC 28). Earlier: planned: the vendor 2.x software volume / gain / AEC extras are #329. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: —
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> —: no microphone and no speaker on the PRJ007 module; AEC software path host-tested. 2026-11-21: #667: NS / AGC / HPF also run after the AEC (beyond vendor, as T10-T31; host test t32-audio2x-test); AEC reference path as T33 (#712). No symbol change. Earlier: 2026-11-11 night: the 20 audio extras of vendor 2.0.0 (NS/AGC/HPF/LPF/DRC/EQ switches, algo order) are exported and verified against the vendor in QEMU (#329, #330, T32 exports now AI 47, AO 37, DMIC 28). Earlier: planned: the vendor 2.x software volume / gain / AEC extras are #329. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 298
       - 329
@@ -1995,7 +1995,7 @@ features:
       text: 'removed. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''No libalog / libsysutils in the open image'' (user OK 2026-11-14).'
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: SU_* cells are aud (static audit), no device test. in development (T32, not a release gate): SU_* are in the vendor libsysutils on T32 (not libimp), checked in QEMU (#299); the OpenIMP T32 libimp has its own IMP_Log. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 299
     T33:
@@ -2040,7 +2040,7 @@ features:
       - 118
     T32:
       sym: 🔧
-      text: 'in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: tuning getters partly dev (33 dev, 22 aud, 10 miss in the ISP tuning area). in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
