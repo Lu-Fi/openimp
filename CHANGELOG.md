@@ -10,6 +10,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T10 AEC locks at every start (libaudioProcess-neo fork, #640)
+
+- Cause: libaudioProcess-neo starts the WebRTC AEC in its startup phase with a reported delay of 0, which rewinds the far end by 12 ms on the first frame (`echo_cancellation.c:779-797`). The Ingenic OSS2 driver pairs mic and reference in whole 10 ms fragments, so the reference lead is either ~0-2 ms or ~10-12 ms per session; with the rewind the first case leaves the filter non-causal and the AEC never locks (flat ~20 dB). Both stacks use the same library, so both were affected (box: open 5 of 7, vendor 2 of 7 sessions).
+- Fix (beyond vendor, user decision 2026-11-25): the image pins the fork Lu-Fi/libaudioProcess-neo (branch aperto 9f71acc), which clears `startup_phase` after the filter set-up (thingino-firmware branch claude/640-neo-aec-pin). No OpenIMP code change, no added latency.
+- Evidence: T10 .31 light box 3000 K, fixed library on both stacks via /tmp, 5 runs per stack: converged pattern in 10 of 10 halves (33-41 dB per-second windows, dips only in the two speech pauses); speech-like ERLE median open 41.0 dB, vendor 42.0 dB (within 3 dB). docs/OPENIMP_BEYOND_VENDOR.md section 6.
+
+
 ## 2026-11-25: T23 FrameSource keeps capturing when the encoder stops reading (#905)
 
 - Cause: when a streamer stops a channel's encoder (on-demand idle, StopRecvPic), the T23 FrameSource left the captured buffers in its ready queue and gave them back to the driver only after `VBM_PULL_IDLE_MS` (1 s, src/kernel_interface.c) without a reader (select-timeout branch, src/framesource/framesource_tseries.c). With one buffer at the encoder and the newest kept for the reader the driver held a single buffer and completed nothing: one 933 ms capture gap at every channel restart, and the first frame after it was from before the gap. A streamer saw an encoder pack timestamp jump of exactly +1 s (timps ptsdiag). The vendor libimp 1.3.0 shows no gap (Tapo T23 .23, 19 restarts, 0 gaps).
