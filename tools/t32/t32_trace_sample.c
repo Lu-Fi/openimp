@@ -1062,6 +1062,11 @@ again:
                             { "mq1", "IMP_Encoder_SetMotionQuality", 1, { 1, 1 } },
                             { "mq3", "IMP_Encoder_SetMotionQuality", 1, { 1, 3 } },
                             { "mqoff", "IMP_Encoder_SetMotionQuality", 1, { 0, 2 } },
+                            /* #784 MapRoi: left half of the 16x16 blocks gets byte w[1] (DIRECT) or table
+                             * index 1 -> w[1] (DEVIOUS, w[0] = 1), right half 0 */
+                            { "maproi", "IMP_Encoder_SetChnMapRoi", 4, { 0, 0x2a } },
+                            { "maproiq", "IMP_Encoder_SetChnMapRoi", 4, { 0, 0x29 } },
+                            { "maproid", "IMP_Encoder_SetChnMapRoi", 4, { 1, 0x2a } },
                         };
                         unsigned xi;
                         for (xi = 0; xi < sizeof(xt) / sizeof(xt[0]); xi++) {
@@ -1073,7 +1078,21 @@ again:
                                 r = ((int (*)(int, int))fp)(0, w[0]);
                             else if (xt[xi].kind == 1)
                                 r = ((int (*)(int, void *))fp)(0, w);
-                            else if (xt[xi].kind == 2)
+                            else if (xt[xi].kind == 4) {
+                                static uint8_t mrmap[(4096 / 16) * (2304 / 16)], mrtab[16];
+                                struct { uint8_t *map; uint32_t size; int type; int32_t res; } mc;
+                                struct { uint8_t *data; uint32_t len; } ml;
+                                int mw = ((getenv("T32_ENC_W") ? atoi(getenv("T32_ENC_W")) : 1920) + 15) / 16;
+                                int mh = ((getenv("T32_ENC_H") ? atoi(getenv("T32_ENC_H")) : 1080) + 15) / 16;
+                                for (int y = 0; y < mh; y++)
+                                    for (int x = 0; x < mw; x++)
+                                        mrmap[y * mw + x] = x < mw / 2 ? (uint8_t)(w[0] ? 1 : w[1]) : 0;
+                                memset(mrtab, 0, sizeof(mrtab));
+                                mrtab[1] = (uint8_t)w[1];
+                                mc.map = mrmap; mc.size = (uint32_t)(mw * mh); mc.type = w[0]; mc.res = 0;
+                                ml.data = mrtab; ml.len = 16;
+                                r = ((int (*)(int, void *, void *))fp)(0, &mc, &ml);
+                            } else if (xt[xi].kind == 2)
                                 r = ((int (*)(int, uint32_t, int))fp)(0, (uint32_t)w[0], w[1]);
                             else
                                 r = ((int (*)(int))fp)(0);
