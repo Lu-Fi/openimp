@@ -13071,7 +13071,7 @@
           "t†"
         ]
       },
-      "note": "audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2); group 1 move/base-move device-tested on T20/T21. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #19): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (group 0).",
+      "note": "audit: userspace implementation; all: two IVS groups as every vendor libimp (CreateGroup checks group < 2) except T32: vendor libimp 2.2.0 allows only group 0 (IVSInit sets the limit to 1), OpenIMP keeps two on T32 as a documented extension (#883, user decision 2026-11-25); group 1 move/base-move device-tested on T20/T21. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #19): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (group 0).",
       "ref": {
         "T10": "apitest rc3gaps2 2026-10-27 .31",
         "T20": "apitest rc3gaps2 2026-10-27 .107",

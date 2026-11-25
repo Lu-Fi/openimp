@@ -195,6 +195,7 @@ Vendor semantics (the vendor AE itself computes the statistics and runs the face
 | Feature | SoC | API | Default | How a streamer uses it | Detect / disable | Status |
 |---|---|---|---|---|---|---|
 | IVS channel already in use returns **EBUSY** (user decision) | all | IVS channel create/register | on | Handle EBUSY: another consumer owns the channel; do not retry blindly | return code | per matrix |
+| **Two IVS groups on T32** (vendor libimp 2.2.0 refuses `IMP_IVS_CreateGroup(1)`: `IVSInit` stores a group limit of 1; user decision 2026-11-25, #883) | T32 | `IMP_IVS_CreateGroup` / `DestroyGroup`, bind FS -> IVS group 1 | on | Use group 1 for a second IVS consumer (for example custom algorithm next to move); code written for the vendor library only uses group 0 and is unaffected | `IMP_IVS_CreateGroup(1)` returns 0 (vendor -1) | apitest group 0/1 move, base-move, custom PASS on the T32 PRJ007 module (vendor A/B #855) |
 | Real frame-diff motion detection (vendor T20/T21/T30 reported "always no motion") | T20, T21, T30 | `IMP_IVS_*` move interface | on | Use the standard move IVS | 6/6 events, 0 false alarms (cam-C) | `claude/tseries-ivs` |
 | Motion keeps working after the sub-stream goes idle; frames recycled for callback-backed pools | T23 | internal | on | Nothing | web grid not empty | cam-B |
 | Sub-stream default for IVS: about 85 % less IVS CPU than the vendor libimp | T31 | internal | on | Prefer the sub-stream as IVS source | n/a | cam-A |
