@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T23 FrameSource keeps capturing when the encoder stops reading (#905)
+
+- Cause: when a streamer stops a channel's encoder (on-demand idle, StopRecvPic), the T23 FrameSource left the captured buffers in its ready queue and gave them back to the driver only after `VBM_PULL_IDLE_MS` (1 s, src/kernel_interface.c) without a reader (select-timeout branch, src/framesource/framesource_tseries.c). With one buffer at the encoder and the newest kept for the reader the driver held a single buffer and completed nothing: one 933 ms capture gap at every channel restart, and the first frame after it was from before the gap. A streamer saw an encoder pack timestamp jump of exactly +1 s (timps ptsdiag). The vendor libimp 1.3.0 shows no gap (Tapo T23 .23, 19 restarts, 0 gaps).
+- Fix: `VBMFeedDriverIdle` feeds the driver from the ready queue in that branch, keeping the newest frame only for a reader that pulled within 100 ms; capture never stops.
+- Device (Tapo C500 T23 .23, timps ptsdiag, 40 on-demand chn0 restarts, DQBUF trace): before 40 / 40 restarts with a 933 ms gap, after 0 gaps on both channels, 0 ptsdiag timestamp anomalies, snapshot 200. T21/T30/T31 use the same 1 s rule (not changed here).
+
 ## 2026-11-25: T32 rate control proven on the PRJ007 module against vendor 2.2.0; FixQP H.264 IDR keeps the MB QP range (#295, #906)
 
 - Device A/B (module .136, same ko, vendor libimp 2.2.0 vs OpenIMP, H.264 + H.265, main 2560x1440 and sub 640x360): FixQP / CBR / VBR / SMART / CVBR / AVBR equal (bit rate within 2 %, QP min/mean/max the same, decode clean), RC parameters (QP windows, I window, IPfrmQPDelta, changePos, iBiasLvl, qualityLvl, run-time bit-rate change) equal. Matrix T32 rows 26 and 27 -> ✅ (static scene only). Details: docs/T32_RC.md.

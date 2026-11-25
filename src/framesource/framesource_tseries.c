@@ -1206,6 +1206,18 @@ static void *frame_pooling_thread(void *arg)
                 if (FS_TRYLOCK()) {
                     if (FS_FLAG_LOAD(ctx->running) && fs_chan_get_state(chn) == 2) {
                         FS_STEP(chn, FS_STEP_IDLE_RECYCLE);
+#if defined(PLATFORM_T23)
+                        /* #905: a reader that stopped (encoder idle, StopRecvPic)
+                         * left the buffers in the ready queue, so no capture
+                         * completed until VBM_PULL_IDLE_MS (1 s) had passed: one
+                         * ~1 s capture gap per streamer channel restart, and the
+                         * first frame after it was from before the gap.  Like
+                         * T20/T30 (#374/#405), give the oldest ready frames back
+                         * until the driver holds two buffers, keeping the newest
+                         * for an active reader; with no pull for 100 ms the
+                         * newest goes back too (the vendor never stops capture). */
+                        VBMFeedDriverIdle(chn, 100u);
+#endif
                         VBMRecycleIdleFrames(chn);
                     }
                     FS_UNLOCK();

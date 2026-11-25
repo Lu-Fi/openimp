@@ -2100,6 +2100,25 @@ int OpenIMP_FrameSource_DebugBuffers(int chn, int out[4])
  * reader that races in can never receive a frame that is being recycled. */
 static int vbm_recycle_ready(int chn);
 
+#if defined(PLATFORM_T23)
+/*
+ * #905: a reader that stopped (encoder idle) keeps the newest ready frame, and
+ * with a buffer at the encoder the driver is then left with one: no frame
+ * completes until VBM_PULL_IDLE_MS.  Once nobody pulled for @idle_ms, the
+ * ready frames feed the driver too (the vendor never stops capture); a later
+ * reader gets the next, fresh capture.  Returns the buffers the driver lacks.
+ */
+int VBMFeedDriverIdle(int chn, uint32_t idle_ms)
+{
+    uint32_t last;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return -1;
+    last = __atomic_load_n(&vbm_last_pull_ms[chn], __ATOMIC_RELAXED);
+    return VBMFeedDriver(chn, vbm_now_ms() - last >= idle_ms ? 0 : 1);
+}
+#endif
+
 int VBMRecycleIdleFrames(int chn)
 {
     if (chn < 0 || chn >= MAX_VBM_POOLS || !vbm_pull_idle(chn))
