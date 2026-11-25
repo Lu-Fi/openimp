@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-25: feature matrix, T33 column re-judged against the closed issues
+
+- Row 2 (reload / error handling) 🔧 -> ✅: #806 and #830 fixed, #625 closed as vendor-equal, 10 of 10 reload cycles on the T33L. Row 11 (IR cut / IR LED) 🔧 -> —: the T33L module has no such hardware. Rows 23, 26 and 41 stay 🔧 with updated reasons (#793 / #790 fixed in QEMU only, #797 open, no long soak). The picture-quality rows stay 🔧 until a T33 light-box run. Docs only.
+
 ## 2026-11-25: T23 IMP_System_Init runs IMP_OSD_Init_ISP like the vendor OSDInit; apitest isposdflip_t23 (#810, #811)
 
 - Stock T23 1.3.0 `OSDInit` (the "OSD" entry of `sys_funcs`, 0xa9c84) calls `IMP_OSD_Init_ISP` at 0xa9df4 and fails the system init when it returns < 0; `OSDExit` (0xaa0d4) calls `IMP_OSD_Exit_ISP` at 0xaa140. OpenIMP never called it, so `IMP_ISP_Tuning_CreateOsdRgn` / `IMP_OSD_CreateRgn_ISP` returned -1 until the caller ran `IMP_OSD_Init_ISP` itself (found by the timps #808 port on the QC3). The OSD root of `IMP_System_Init` / `IMP_System_Exit` (`src/t40/openimp_p0.c`, PLATFORM_T23) now does both. `IMP_OSD_Init_ISP` stays idempotent, so callers that still call it (timps fallback, apitest) keep their regions.
