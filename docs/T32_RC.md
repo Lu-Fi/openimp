@@ -210,3 +210,12 @@ picture 9. At 640x368 (one picture well inside the frame interval; on silicon a 
 measured: no T33 camera at hand) the vendor acts on the same picture as OpenIMP: IDR at 10, masks 20-24 (QEMU v5s / o5s, `T32_ENC_W=640
 T32_ENC_H=368`), skipped picture 8 (v5pss). OpenIMP keeps the synchronous path: the request rule is the vendor's
 (the first picture whose type is decided after the call), only the overlap of two pictures is not modelled.
+
+## H.264 source padding rows (#882, 2026-11-25)
+
+HERA H.264 reads the source down to the 16-aligned height (360 -> 368). Vendor 2.2.0 hands it the capture buffer with
+the last picture row repeated into those rows (luma and chroma); the capture driver does not write them. Without the
+copy the rows hold stale memory that differs per capture buffer and every P picture codes the last macroblock row
+again (QP 40: 411 B instead of 38 B a P picture at 640x360). OpenIMP `enc_pad_rows()` (openimp_t32_encoder.c) does the
+same copy before the list is built; command lists were already equal to the vendor's (device tracer
+`audit/issue882/tools/heratrace.c`: lists, maps, WOR_VPU_REG, REQBUFS, frame format, padding rows at DQBUF / RUN).

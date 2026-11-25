@@ -14,6 +14,28 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Stock T23 1.3.0 `OSDInit` (the "OSD" entry of `sys_funcs`, 0xa9c84) calls `IMP_OSD_Init_ISP` at 0xa9df4 and fails the system init when it returns < 0; `OSDExit` (0xaa0d4) calls `IMP_OSD_Exit_ISP` at 0xaa140. OpenIMP never called it, so `IMP_ISP_Tuning_CreateOsdRgn` / `IMP_OSD_CreateRgn_ISP` returned -1 until the caller ran `IMP_OSD_Init_ISP` itself (found by the timps #808 port on the QC3). The OSD root of `IMP_System_Init` / `IMP_System_Exit` (`src/t40/openimp_p0.c`, PLATFORM_T23) now does both. `IMP_OSD_Init_ISP` stays idempotent, so callers that still call it (timps fallback, apitest) keep their regions.
 - apitest case `isposdflip_t23`: an ISP picture region created after `IMP_System_Init` alone (no caller `IMP_OSD_Init_ISP`), then live ISP mirror toggles, each followed at once by the mirrored picture; every step is compared pixel by pixel with the pattern at its place (scrambled rows after a toggle, #811, drop the match). `APITEST_OSDFLIP_CH=1` uses the sub channel (channel 0 is IVDC in direct mode), `APITEST_SNAPDIR` keeps the region of every step as PGM.
 - `tools/apitest/run_swap.sh`: `ISPARGS_X="key=val ..."` replaces/adds arguments for the test ko only (e.g. `direct_mode=1` on a 64 MB T23N); the stock module is restored with its own arguments.
+- #811 device proof (.30 T23N sc1a4t, runtime ko swap, ch0 JPEG via the streamer): with `direct_mode=0` the open-tx-isp next ko and the installed ko show the same clean ISP OSD after 4 live hflip toggles. With `direct_mode=1` ch0 is corrupt on this sensor (ISP OSD digits ghosted, green/scrambled bands) with every ko back to 18601ae44, also without a flip: separate direct-mode issue, #811 stays open.
+
+## 2026-11-25: kernel 3.10 IPU holds the AHB1 gate during an op (beyond vendor, #875)
+
+- Thingino kernel patch 0011 (T21/T30): the IPU enables the AHB1 clock gate around each op, like the vendor does on T31. Before, the first OSD blend of a stream with no encoder open stalled until the IPU timeout (2 to 4 per cold start on T21). T21 device test: 0 timeouts in 5 cold starts, first stream 0.2 s faster; T30 compile-checked. Listed in docs/OPENIMP_BEYOND_VENDOR.md section 6.15.
+
+## 2026-11-25: T32 keeps two IVS groups (documented extension, #883)
+
+- The vendor libimp 2.2.0 on T32 allows only IVS group 0 (`IVSInit` sets the group limit to 1, `IMP_IVS_CreateGroup(1)` returns -1). OpenIMP keeps two groups on T32 like on every other SoC (user decision); listed in docs/OPENIMP_BEYOND_VENDOR.md section 4, matrix text corrected. Code that uses only group 0 is unaffected.
+
+## 2026-11-25: T32 H.264 P pictures as small as vendor 2.2.0: the padding rows below the picture repeat its last row (#882, #885)
+
+- Cause (#882): at 640x360 the HERA codes 368 rows; the capture driver writes 360, the 8 rows below held stale memory (0x80 fill or an older picture, different in each capture buffer), so every P picture coded the last macroblock row again. HERA command lists were equal to the vendor's (LD_PRELOAD tracer on the device, every word but buffer addresses); the source dumps at the HERA RUN showed the difference: vendor rows 360..367 = row 359 (luma and chroma), OpenIMP 128 / stale. At DQBUF the vendor buffer still holds the old rows, so the vendor library fills them before the encode.
+- Fix: the T32/T33 H.264 path copies the last picture row (luma, chroma) into the rows up to the 16-aligned height and writes the cache lines back before the list is built (not for YuvEncode frames, not for IVDC direct frames; H.265 does not read below 360). Also (#885) FrameSource REQBUFS asks for nrVBs + max delay like vendor 2.2.0 EnableChn (0x1452d0), capped at the driver's 8. Guard `tests/t32/check_enc_pad.sh`; apitest `APITEST_QPB_DUMP` / `APITEST_QPB_HI` dump the SetChnQpBounds streams.
+- Device (.136, runtime LD_LIBRARY_PATH, no flash, same open ko, apitest enc), mean P picture: QP 40 (40..48) vendor 38 B / OpenIMP 39 B (before 411 B), QP 45 34 / 30 B, QP 30 165 / 171 B, QP 15..20 4098 / 3884 B (before 5704 B); apitest means 15..20 5053 / 5068 B, 40..48 246 / 245 B (before 6979 / 621 B). Pictures equal (SSIM vendor~fix 0.96 like vendor~before), decode clean.
+
+## 2026-11-25: T32 GetFrame hands out packed NV12 like vendor 2.2.0, IMP_System_GetVersion says IMP-2.2.0 (#855, #880, #881)
+
+- Vendor-library A/B on the T32 PRJ007 module: the vendor libimp 2.2.0 runs on the open tx-isp ko (the vendor ko does not load on the thingino kernel), apitest all areas with both libraries on the same ko, plus picture cases. Found: with a capture buffer padded to ALIGN16(height) (640x360 -> 368 rows) OpenIMP's GetFrame copy kept the UV plane after 368 rows while `size` and the vendor layout say `width * height`, so the chroma was shifted down by 8 chroma rows for every consumer; the vendor library delivers packed NV12.
+- Fix (T32 only, T33 keeps its aligned layout): the depth-copy path packs through `fs_pack_nv12` when stride or height are padded; `IMP_System_GetVersion` returns "IMP-2.2.0" (T33 keeps its text). Guard `tests/t32/check_fs_packed.sh`.
+- Device (.136, runtime LD_LIBRARY_PATH, no flash): UV rows 0.. = 178/144 179/144 180/145 like the vendor library (before: first 8 rows padding), saturation 0 = 128/128 from row 0.
+- Other A/B differences filed: #882 (H.264 size at equal QP), #883 (vendor T32 has one IVS group), #884 (vendor lib on open ko: frame time stamps).
 
 ## 2026-11-25: T21 first main picture 140 ms after StartRecvPic instead of 430 ms: no OSD blend repeats on the video path (#873)
 
@@ -84,22 +106,6 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-24: T32 apitest waits for the IDR before reading back SuperFrameCfg (#99)
 
 - Test only. `tools/apitest/at_enc.c`: the T32 library takes a new super-frame configuration at the next IDR, like vendor 2.0.2.1 on the T33. The IDR wait before the read-back was guarded by `APITEST_T33` only, so the T32 build read the old values and reported FAIL. It is now guarded by `APITEST_T32`, which the T33 build also defines. QEMU -M ingenic-t32 (PRJ007 image): `IMP_Encoder_SetSuperFrameCfg` FAIL -> PASS on H.264 and H.265, enc area otherwise unchanged. Related: #851 (the T32 apitest builds against the 1.0.6 headers).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html` (GATE PASS, better 43 (incl. 30 beyond vendor) / equal 105 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 5000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html` (GATE PASS, better 42 (incl. 30 beyond vendor) / equal 107 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html` (GATE PASS, better 43 (incl. 30 beyond vendor) / equal 105 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 5000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html` (GATE PASS, better 42 (incl. 30 beyond vendor) / equal 107 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
 
 ## 2026-11-24: start page shows the release-gate verdict of light-box runs (#230)
 

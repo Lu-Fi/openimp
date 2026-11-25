@@ -744,6 +744,15 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
     pthread_mutex_unlock(&fs_lock);
 
     if (slot) {
+#ifndef PLATFORM_T33
+        /* T32 (#855): the vendor 2.2.0 library hands GetFrame a packed NV12 frame (UV at width * height; device A/B on
+         * the same driver, 640x360: vendor chroma aligned with the luma, ours shifted down by 8 chroma rows because the
+         * UV plane followed ALIGN16(height) = 368 luma rows).  IMPFrameInfo has no stride, so pack when the capture
+         * buffer is padded. */
+        if (!c->i2d_on && (c->stride != c->width || ALIGN_UP(c->height, 16) != c->height))
+            fs_pack_nv12(c, b, (uint8_t *)(uintptr_t)slot->dma.virt_addr);
+        else
+#endif
         /* NV12 as captured: Y, then UV after ALIGN16(height) rows */
         memcpy((void *)(uintptr_t)slot->dma.virt_addr,
                (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : b->dma.virt_addr),
@@ -1161,7 +1170,13 @@ int IMP_FrameSource_EnableChn(int chnNum)
     if (FS_IOCTL(c->fd, SET_FRAME_FORMAT, &fmt) < 0)
         goto fail;
     memset(&rq, 0, sizeof(rq));
-    rq.count = (uint32_t)c->attr.nrVBs;
+    /* vendor libimp 2.2.0 IMP_FrameSource_EnableChn: REQBUFS count = nrVBs + max delay when a max delay is set
+     * (0x144e18 lw s0,780(chn) = max delay; 0x144eb8 bnez s0 -> 0x1452d0 addu v0,s0,nrVBs), so the delay FIFO /
+     * SetChnFifoAttr frames do not starve the capture ring (#882: 3 instead of 5 buffers dropped sensor frames, the
+     * H.264 P pictures grew 2x); the driver grants at most T32_FS_MAX_BUFS */
+    rq.count = (uint32_t)c->attr.nrVBs + (c->maxdelay > 0 ? (uint32_t)c->maxdelay : 0u);
+    if (rq.count > T32_FS_MAX_BUFS)
+        rq.count = T32_FS_MAX_BUFS;
     rq.type = T32_BUF_TYPE_CAPTURE;
     rq.memory = T32_BUF_MEMORY_USERPTR;
     if (FS_IOCTL(c->fd, REQBUFS, &rq) < 0)

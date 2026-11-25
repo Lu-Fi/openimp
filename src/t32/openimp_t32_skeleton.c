@@ -72,7 +72,11 @@ static __attribute__((unused)) void t32_missing(const char *fn, int *logged)
 /* ---- System ------------------------------------------------------------ */
 int IMP_System_GetVersion(IMPVersion *pstVersion)
 {
+#ifdef PLATFORM_T33
     static const char text[] = "libimp.so T32 openimp (skeleton)";
+#else
+    static const char text[] = "IMP-2.2.0";   /* vendor T32 2.2.0 string (device A/B, #855) */
+#endif
 
     if (!pstVersion)
         return -1;
