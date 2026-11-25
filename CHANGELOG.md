@@ -16,6 +16,9 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - Fix (beyond vendor, user decision 2026-11-25): the image pins the fork Lu-Fi/libaudioProcess-neo (branch aperto 9f71acc), which clears `startup_phase` after the filter set-up (thingino-firmware branch claude/640-neo-aec-pin). No OpenIMP code change, no added latency.
 - Evidence: T10 .31 light box 3000 K, fixed library on both stacks via /tmp, 5 runs per stack: converged pattern in 10 of 10 halves (33-41 dB per-second windows, dips only in the two speech pauses); speech-like ERLE median open 41.0 dB, vendor 42.0 dB (within 3 dB). docs/OPENIMP_BEYOND_VENDOR.md section 6.
 
+## 2026-11-25: T21 FrameSource keeps capturing when the encoder stops reading (#908)
+
+- Same cause as #905 on T21: a stopped reader (streamer channel idle) left the buffers in the ready queue until `VBM_PULL_IDLE_MS` (1 s), so capture stopped for 1 s at every channel restart. `VBMFeedDriverIdle` now also runs on T21. Device (Victure PC420 T21 .24, installed timps, 20 on-demand chn0 restarts, DQBUF trace): before 20 / 20 restarts with a 1000 ms dequeue gap on ch0, after 0 gaps on both channels, snapshot 200. T31: same code path, compiles with the change, not enabled until a device run; T30: its DQBUF path already feeds a dry driver (#405), not changed.
 
 ## 2026-11-25: T23 FrameSource keeps capturing when the encoder stops reading (#905)
 
