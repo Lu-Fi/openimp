@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-25: T33 super-frame re-encode / discard: nothing to port, the vendor has none (#797)
+
+- `IMP_Encoder_SetSuperFrameCfg` on T33 already reaches the controller thresholds at the next IDR (#784). The re-encode / discard pass after the picture is not in the vendor either: in libimp 2.0.2.1 `JZ_VPU_RC_FRAME_REPEATE_JUDGE_H264_T33` (0x1947fc, called by `i264e_ratecontrol_is_reenc`) and `JZ_VPU_RC_FRAME_REPEATE_JUDGE_T33` (0x1a9068, called by the H.265 `I265eRatectrl::rcReEncode`) are `jr ra; move v0,zero`, so the re-encode loop in the vendor encoder never runs and no picture is dropped; the same two stubs are in the T32 libimp 2.2.0 (0x19d44c, 0x1b1cb8). OpenIMP's skipped judge (F+0x4c = -1) gives the same result. No code change; matrix T33 rate-control text updated.
+
 ## 2026-11-25: IMP_OSD_SetRgnAttrWithTimestamp takes only RECT/COVER regions like the vendor (#889)
 
 - Vendor rule (disassembly): `IMP_OSD_SetRgnAttrWithTimestamp` checks the region type first and takes only RECT (3) and COVER (6): T23 1.3.0 (0xae81c), T32 2.2.0 (0x17cd88) and T41 1.2.5 return 0x80020040 for any other type, T40 1.3.1 returns -1; T31 1.1.6 (0xc4ebc) takes LINE, RECT and COVER (1/2/4), else -1. Then the vendor queues attribute + time stamp per region (`fifo_put`) and calls `IMP_OSD_SetRgnAttr` at once, returning its result.
