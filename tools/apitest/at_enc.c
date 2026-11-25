@@ -850,10 +850,18 @@ static void live_common(int chn, int codec)
 # endif
             { mn0 = rc->attrH264Cbr.minQp; mx0 = rc->attrH264Cbr.maxQp; }
         }
+        /* APITEST_QPB_DUMP=<prefix>: the two pulled streams as <prefix>-<codec>-lo / -hi (slice QP check off the camera, #882) */
+        if (getenv("APITEST_QPB_DUMP")) { char fn[256]; snprintf(fn, sizeof fn, "%s-%s-lo", getenv("APITEST_QPB_DUMP"), cname[codec]); g_dump = fopen(fn, "wb"); }
         r = IMP_Encoder_SetChnQpBounds(chn, 15, 20);
         RB_IDR(chn, codec); IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &sl, 3000);
-        r2 = IMP_Encoder_SetChnQpBounds(chn, 40, 48);
+        if (g_dump) { char fn[256]; fclose(g_dump); snprintf(fn, sizeof fn, "%s-%s-hi", getenv("APITEST_QPB_DUMP"), cname[codec]); g_dump = fopen(fn, "wb"); }
+        {   /* APITEST_QPB_HI=min,max: other high bounds for the size check off the camera (#882; the verdict wants 40..48) */
+            int hmn = 40, hmx = 48;
+            if (getenv("APITEST_QPB_HI")) sscanf(getenv("APITEST_QPB_HI"), "%d,%d", &hmn, &hmx);
+            r2 = IMP_Encoder_SetChnQpBounds(chn, hmn, hmx);
+        }
         RB_IDR(chn, codec); IMP_Encoder_RequestIDR(chn); pull(chn, codec, 30, 0, 0, &sh, 3000);
+        if (g_dump) { fclose(g_dump); g_dump = NULL; }
         r3 = IMP_Encoder_GetChnAttrRcMode(chn, rc); gchk(rc);
 # ifdef HAVE_H265
         if (codec == CODEC_H265) { mn = rc->attrH265Cbr.minQp; mx = rc->attrH265Cbr.maxQp; } else

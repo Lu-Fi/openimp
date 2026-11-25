@@ -446,6 +446,34 @@ static int vpu_test_mode(void)
 /* NV12 as FrameSource lays it out (UV after ALIGN16(height) rows), or, for a
  * frame over IVDC (#301), the IVDC's addresses; the soc_vpu node says which
  * (the kernel's radix / helix driver starts the IVDC reader for the job) */
+/*
+ * H.264 codes whole macroblocks, so the engine reads the source down to the
+ * 16-aligned height (360 -> 368).  The capture driver writes only the picture
+ * rows; the rows below hold whatever the buffer held before (#882: on the T32
+ * module 0x80 fill or an older picture, different in each capture buffer, so
+ * every P picture coded the last macroblock row again: 1.7-2.5x the vendor's
+ * P sizes at the same QP).  Vendor libimp 2.2.0 hands the engine the buffer
+ * with the last picture row repeated into those rows, luma and chroma
+ * (device dump .136: at DQBUF rows 360..367 still hold the buffer's previous
+ * content, at the HERA RUN they equal row 359 of the new picture).  Done here
+ * the same way: copy the last row down, write the cache lines back.
+ */
+static void enc_pad_rows(const IMPFrameInfo *f, uint32_t stride)
+{
+    uint32_t h = f->height, h16 = ALIGN16(f->height), r;
+    uint8_t *y = (uint8_t *)(uintptr_t)f->virAddr, *uv;
+
+    if (!y || h < 2u || h == h16 || !stride)
+        return;
+    uv = y + stride * h16;
+    for (r = h; r < h16; r++)
+        memcpy(y + r * stride, y + (h - 1u) * stride, stride);
+    for (r = h / 2u; r < h16 / 2u; r++)
+        memcpy(uv + r * stride, uv + (h / 2u - 1u) * stride, stride);
+    OpenIMP_T32_VpuFlush(y + h * stride, (h16 - h) * stride, OI_T32_VPU_FLUSH_WBACK);
+    OpenIMP_T32_VpuFlush(uv + h / 2u * stride, (h16 / 2u - h / 2u) * stride, OI_T32_VPU_FLUSH_WBACK);
+}
+
 static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y, uint32_t *c,
                        uint32_t *stride)
 {
@@ -461,6 +489,8 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
         /* a caller's NV12 (YuvEncode / InputJpege, #752): UV after the even height, vendor 2.0.2.1
          * YuvEncode 0x104b4c job +0x64 = ((h + 1) & ~1) * ALIGN16(w) + Y, InputJpege 0x105430 C = Y + w * h */
         *c = f->phyAddr + *stride * (e->yuv ? (f->height + 1u) & ~1u : ALIGN16(f->height));
+        if (e->h264 && !e->yuv)
+            enc_pad_rows(f, *stride);
     }
     e->vpu.node.frame_type = ivdc ? OI_T32_FRAME_TYPE_IVDC : 0;
     e->vpu.node.sensor_id = 0;          /* one sensor (direct mode 1) */

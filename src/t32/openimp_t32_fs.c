@@ -1170,7 +1170,13 @@ int IMP_FrameSource_EnableChn(int chnNum)
     if (FS_IOCTL(c->fd, SET_FRAME_FORMAT, &fmt) < 0)
         goto fail;
     memset(&rq, 0, sizeof(rq));
-    rq.count = (uint32_t)c->attr.nrVBs;
+    /* vendor libimp 2.2.0 IMP_FrameSource_EnableChn: REQBUFS count = nrVBs + max delay when a max delay is set
+     * (0x144e18 lw s0,780(chn) = max delay; 0x144eb8 bnez s0 -> 0x1452d0 addu v0,s0,nrVBs), so the delay FIFO /
+     * SetChnFifoAttr frames do not starve the capture ring (#882: 3 instead of 5 buffers dropped sensor frames, the
+     * H.264 P pictures grew 2x); the driver grants at most T32_FS_MAX_BUFS */
+    rq.count = (uint32_t)c->attr.nrVBs + (c->maxdelay > 0 ? (uint32_t)c->maxdelay : 0u);
+    if (rq.count > T32_FS_MAX_BUFS)
+        rq.count = T32_FS_MAX_BUFS;
     rq.type = T32_BUF_TYPE_CAPTURE;
     rq.memory = T32_BUF_MEMORY_USERPTR;
     if (FS_IOCTL(c->fd, REQBUFS, &rq) < 0)
