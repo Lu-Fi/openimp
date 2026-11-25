@@ -550,8 +550,9 @@ def main():
     cards = []
     for soc, nf, nd, pct, status in st:
         passed = status.lower().startswith("rc3 gate")   # README status "RC3 gate" = passed the RC3 release gate
+        label = status.split(" (")[0]   # short chip text; the full status (device, open items) is the tooltip
         chip = '<span class="chip %s" title="%s">%s%s</span>' % ("ok" if passed else "warn", esc(status),
-                                                                 "&#10003; " if passed else "", esc(status))
+                                                                 "&#10003; " if passed else "", esc(label))
         cards.append('<div class="soc"><div class="n">%s%s</div><div class="bar"><i style="width:%.1f%%"></i></div>'
                      '<div class="p">%.1f %% &middot; %d of %d</div></div>' % (esc(soc), chip, pct, pct, nd, nf))
     have = {x[0] for x in st}
