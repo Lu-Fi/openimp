@@ -96,22 +96,6 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Test only. `tools/apitest/at_enc.c`: the T32 library takes a new super-frame configuration at the next IDR, like vendor 2.0.2.1 on the T33. The IDR wait before the read-back was guarded by `APITEST_T33` only, so the T32 build read the old values and reported FAIL. It is now guarded by `APITEST_T32`, which the T33 build also defines. QEMU -M ingenic-t32 (PRJ007 image): `IMP_Encoder_SetSuperFrameCfg` FAIL -> PASS on H.264 and H.265, enc area otherwise unchanged. Related: #851 (the T32 apitest builds against the 1.0.6 headers).
 
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html` (GATE PASS, better 43 (incl. 30 beyond vendor) / equal 105 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 5000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html` (GATE PASS, better 42 (incl. 30 beyond vendor) / equal 107 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 3000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-3000.html` (GATE PASS, better 43 (incl. 30 beyond vendor) / equal 105 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
-## 2026-11-24: Light box, Victure PC420, T21N jxf23 full run 5000 K (#230)
-
-- Re-generated report `docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html` (GATE PASS, better 42 (incl. 30 beyond vendor) / equal 107 / worse 0 / invalid 0; open-tx-isp a604173c + OpenIMP libimp 989db341), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
-
 ## 2026-11-24: start page shows the release-gate verdict of light-box runs (#230)
 
 - `tools/gen_site_index.py`: a protocol whose result is `GATE PASS` / `GATE FAIL` (vendor-relative verdict, since 2026-11-23) now gets chips (gate pass/fail, better, equal, worse, invalid) on the light-box card and the verdict in the history list; before, such cards had no chips because only `N pass / M fail` was parsed.
