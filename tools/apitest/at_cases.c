@@ -4801,11 +4801,130 @@ static void cs_isppicupd_t23(void)
         free(white); free(black);
     }
 }
+
+/* openimp #810 + #811: ISP picture region WITHOUT an IMP_OSD_Init_ISP call of the caller (stock OSDInit in IMP_System_Init does it),
+ * then live ISP mirror toggles, each followed AT ONCE by a new picture (the mirrored content, as a streamer redraws after a flip).
+ * Each picture is compared pixel by pixel with the requested pattern (either orientation) at its expected place: scrambled rows
+ * after a toggle (#811) drop the match.  APITEST_SNAPDIR: the region (+16 px margin) of every step as PGM. */
+static double flip_match(int ch, const uint32_t *pat, int pw, int ph, int x, int y, int fl, int step, int shot, double *mirr)
+{
+    IMPFrameInfo *fr = NULL;
+    double best = -1, sm = 0, sn = 0;
+    int f, i, j, c = 0;
+
+    for (f = 0; f < 6 && !fr; f++) {
+        if (IMP_FrameSource_GetFrame(ch, &fr) < 0 || !fr) { fr = NULL; continue; }
+        if (f < 3) { IMP_FrameSource_ReleaseFrame(ch, fr); fr = NULL; }     /* frames of the FIFO from before */
+    }
+    if (!fr) { *mirr = -1; return -1; }
+    {
+        const unsigned char *py = (const unsigned char *)(uintptr_t)fr->virAddr;
+        int w = fr->width, h = fr->height;
+        int mx = (fl & 4) ? w - x - pw : x, my = (fl & 8) ? h - y - ph : y;     /* the picture is placed before the ISP mirror/flip */
+        const char *d = getenv("APITEST_SNAPDIR");
+
+        if (mx >= 0 && my >= 0 && mx + pw <= w && my + ph <= h) {
+            for (j = 2; j < ph - 2; j++) for (i = 2; i < pw - 2; i++) {
+                int on = py[(size_t)(my + j) * w + mx + i] >= 128;
+                sn += on == ((pat[j * pw + i] & 0xffffff) != 0);
+                sm += on == ((pat[j * pw + pw - 1 - i] & 0xffffff) != 0);
+                c++;
+            }
+            best = sn / c; *mirr = sm / c;
+        } else {
+            *mirr = -1;
+        }
+        if (d) {
+            char path[256];
+            FILE *o;
+            int x0 = mx - 16 < 0 ? 0 : mx - 16, y0 = my - 16 < 0 ? 0 : my - 16;
+            int x1 = mx + pw + 16 > w ? w : mx + pw + 16, y1 = my + ph + 16 > h ? h : my + ph + 16;
+
+            snprintf(path, sizeof(path), "%s/isposdflip-s%d-%d.pgm", d, step, shot);
+            if (x1 > x0 && y1 > y0 && (o = fopen(path, "wb"))) {
+                fprintf(o, "P5\n%d %d\n255\n", x1 - x0, y1 - y0);
+                for (j = y0; j < y1; j++) fwrite(py + (size_t)j * w + x0, 1, (size_t)(x1 - x0), o);
+                fclose(o);
+            }
+        }
+    }
+    IMP_FrameSource_ReleaseFrame(ch, fr);
+    return best;
+}
+
+static void cs_isposdflip_t23(void)
+{
+    NEED(IMP_OSD_CreateRgn_ISP) NEED(IMP_OSD_SetRgnAttr_PicISP) NEED(IMP_OSD_ShowRgn_ISP) NEED(IMP_OSD_DestroyRgn_ISP)
+    NEED(IMP_ISP_Tuning_SetISPHflip) NEED(IMP_ISP_Tuning_GetISPHflip) {
+        enum { PW = 128, PH = 64 };
+        uint32_t *pat = (uint32_t *)malloc(PW * PH * 4), *mir = (uint32_t *)malloc(PW * PH * 4);
+        T23IspPic a;
+        IMPISPTuningOpsMode oh = IMPISP_TUNING_OPS_MODE_DISABLE;
+        int ch = getenv("APITEST_OSDFLIP_CH") ? atoi(getenv("APITEST_OSDFLIP_CH")) : 0;      /* 1: sub channel (ch0 is IVDC in direct mode) */
+        int hdl, x = ch ? 64 : 256, y = ch ? 64 : 128, i, j, step, noframe = 0, n = getenv("APITEST_FLIP_N") ? atoi(getenv("APITEST_FLIP_N")) : 4, rset = 0, rflip = 0, bad = 0;
+        double worst = 2, s, sm;
+        char det[700];
+        int dn = 0;
+
+        if (!pat || !mir) { rep(LBL("IMP_OSD_SetRgnAttr_PicISP(after live hflip)"), -1, V_SKIP, "no memory"); free(pat); free(mir); return; }
+        /* asymmetric pattern: a white left bar, white stripes (8 rows) over the left 3/4, the rest black */
+        for (j = 0; j < PH; j++) for (i = 0; i < PW; i++) {
+            pat[j * PW + i] = (i < 24 || (((j >> 3) & 1) && i < 96)) ? 0xffffffffU : 0xff000000U;
+        }
+        for (j = 0; j < PH; j++) for (i = 0; i < PW; i++) mir[j * PW + i] = pat[j * PW + PW - 1 - i];
+        IMP_ISP_Tuning_GetISPHflip(&oh);
+        hdl = IMP_OSD_CreateRgn_ISP(0, NULL);        /* no IMP_OSD_Init_ISP here: IMP_System_Init did it (stock OSDInit 0xa9df4) */
+        rep(LBL("IMP_OSD_CreateRgn_ISP(no caller Init_ISP)"), hdl, hdl >= 0 ? V_PASS : V_FAIL,
+            "handle %d after IMP_System_Init only (stock T23 1.3.0 OSDInit calls IMP_OSD_Init_ISP, #810)", hdl);
+        if (hdl < 0) { free(pat); free(mir); return; }
+        memset(&a, 0, sizeof(a));
+        a.type = 1; a.chx = ch; a.sensornum = 0;
+        a.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888; a.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+        a.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+        a.pic.pinum = (uint8_t)hdl; a.pic.osd_enable = 1; a.pic.osd_left = x; a.pic.osd_top = y;
+        a.pic.osd_width = PW; a.pic.osd_height = PH; a.pic.osd_stride = PW * 4;
+        for (step = 0; step <= n; step++) {
+            const uint32_t *p = (step & 1) ? mir : pat;
+            int fl, shot;
+
+            if (step > 0)
+                rflip |= IMP_ISP_Tuning_SetISPHflip((step & 1) ? (IMPISPTuningOpsMode)!oh : oh);
+            a.pic.osd_image = (char *)p;                 /* right after the toggle, no wait */
+            rset |= IMP_OSD_SetRgnAttr_PicISP(0, hdl, &a);
+            if (step == 0) rset |= IMP_OSD_ShowRgn_ISP(0, hdl, 1);
+            usleep(900000);
+            fl = t23_isp_flip_bits();
+            for (shot = 0; shot < 2; shot++) {
+                double b;
+
+                s = flip_match(ch, p, PW, PH, x, y, fl, step, shot, &sm);
+                b = s > sm ? s : sm;
+                if (s < 0 && sm < 0) { noframe++; continue; }
+                if (b < worst) worst = b;
+                if (b < 0.95) bad++;
+                if (dn < (int)sizeof(det) - 40) dn += snprintf(det + dn, sizeof(det) - dn, " s%d.%d fl%d %.3f/%.3f", step, shot, fl, s, sm);
+                usleep(300000);
+            }
+        }
+        IMP_ISP_Tuning_SetISPHflip(oh);
+        usleep(500000);
+        rset |= IMP_OSD_ShowRgn_ISP(0, hdl, 0) | IMP_OSD_DestroyRgn_ISP(0, hdl);
+        if (noframe == 2 * (n + 1) || getenv("APITEST_NOEFFECT"))      /* QEMU (no MSCA draw) or no frame access on the channel */
+            rep(LBL("IMP_OSD_SetRgnAttr_PicISP(after live hflip)"), rset | rflip, (!rset && !rflip && flow()) ? V_PASS : V_FAIL,
+                "%d live ISP mirror toggles, picture re-set at once after each: set ret %d, flip ret %d, picture not checked (%d shots without frame)", n, rset, rflip, noframe);
+        else
+            rep(LBL("IMP_OSD_SetRgnAttr_PicISP(after live hflip)"), rset | rflip, (!rset && !rflip && !bad && !noframe && worst >= 0.95 && flow()) ? V_PASS : V_FAIL,
+                "ch%d: %d live ISP mirror toggles, picture re-set at once after each; pixel match (as set/mirrored) worst %.3f, %d of %d shots < 0.95, %d without frame:%s%s",
+                ch, n, worst, bad, 2 * (n + 1), noframe, det, t23_drv_info());
+        free(pat); free(mir);
+    }
+}
 #else
 static void cs_ispcover_t23(void) {}
 static void cs_ispcover1_t23(void) {}
 static void cs_ispdraw_t23(void) {}
 static void cs_isppicupd_t23(void) {}
+static void cs_isposdflip_t23(void) {}
 #endif
 
 /* ISP_Tuning_Set/GetMaskBlock on T23 (control 0x8000183, one block of one scaler channel, no sensor number): a solid white block is
@@ -7734,7 +7853,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7869,6 +7988,7 @@ void t_cases(void)
     if (cs_on("ispcover_t23")) cs_ispcover_t23(); wdog("cases", 60);
     if (cs_on("ispdraw_t23")) cs_ispdraw_t23(); wdog("cases", 60);
     if (cs_on("isppicupd_t23")) cs_isppicupd_t23(); wdog("cases", 60);
+    if (cs_on("isposdflip_t23")) cs_isposdflip_t23(); wdog("cases", 60);
     if (cs_on("maskblock_t23")) cs_maskblock_t23(); wdog("cases", 60);
     if (cs_on("drawblock_t23")) cs_drawblock_t23(); wdog("cases", 60);
     if (cs_on("ispcover1_t23")) cs_ispcover1_t23(); wdog("cases", 60);

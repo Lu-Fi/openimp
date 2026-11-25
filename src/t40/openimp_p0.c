@@ -232,6 +232,18 @@ static void prepare_state(void)
         state.dsystem.pools[i].pool_id = -1;
 }
 
+#if defined(PLATFORM_T31)
+extern void openimp_t31_osd_pool_reset(void) __attribute__((weak));
+#endif
+#if defined(PLATFORM_T23)
+/* src/t23/openimp_t23_isp_osd.c.  Stock T23 1.3.0 OSDInit (sys_funcs entry
+ * "OSD", 0xa9c84) calls IMP_OSD_Init_ISP at 0xa9df4 and fails the system init
+ * when it returns < 0; OSDExit (0xaa0d4) calls IMP_OSD_Exit_ISP at 0xaa140
+ * (#810). */
+extern int IMP_OSD_Init_ISP(void) __attribute__((weak));
+extern void IMP_OSD_Exit_ISP(void) __attribute__((weak));
+#endif
+
 static int root_init(enum openimp_root_id root)
 {
     int i;
@@ -265,6 +277,10 @@ static int root_init(enum openimp_root_id root)
             state.osd.regions[i].handle = -1;
             state.osd.regions[i].group_id = -1;
         }
+#if defined(PLATFORM_T23)
+        if (IMP_OSD_Init_ISP && IMP_OSD_Init_ISP() < 0)
+            return -1;
+#endif
         state.osd.initialized = 1;
         break;
     case OPENIMP_ROOT_ENCODER:
@@ -297,9 +313,6 @@ static int root_init(enum openimp_root_id root)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
-extern void openimp_t31_osd_pool_reset(void) __attribute__((weak));
-#endif
 
 static void root_exit(enum openimp_root_id root)
 {
@@ -323,6 +336,10 @@ static void root_exit(enum openimp_root_id root)
         /* stock OSDExit frees the per-group MemPoolRequest table */
         if (openimp_t31_osd_pool_reset)
             openimp_t31_osd_pool_reset();
+#endif
+#if defined(PLATFORM_T23)
+        if (IMP_OSD_Exit_ISP)
+            IMP_OSD_Exit_ISP();
 #endif
         break;
     case OPENIMP_ROOT_ENCODER:

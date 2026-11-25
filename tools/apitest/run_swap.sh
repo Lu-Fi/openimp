@@ -6,7 +6,7 @@
 #
 #   AREAS=cases CASES=isposd tools/apitest/run_swap.sh <cam-ip> T41 path/tx-isp-t41.ko path/libimp.so OUT
 #
-# env: AREAS (default sys,fs,enc,osd,ivs,audio,isp,su,cases)  CASES (APITEST_CASES)  TOPIC (STATUS tag)  BIN (apitest dir, default ./build)
+# env: ISPARGS_X (test ko arguments, see below)  AREAS (default sys,fs,enc,osd,ivs,audio,isp,su,cases)  CASES (APITEST_CASES)  TOPIC (STATUS tag)  BIN (apitest dir, default ./build)
 #      PUSHF="local[:name] ..." (extra files into /tmp/rsw)  PULLF="name ..." (files of /tmp/rsw copied to OUT after the run)
 #      SENSOR I2C W H (override the per-SoC table of run_cam.sh)  NOIMG=1 (default here; set NOIMG=0 for the picture area)
 # libimp-only (KO = "-"): the kernel modules are never touched, also not in the restore (the Eufy T40 panics/hangs on rmmod).
@@ -45,10 +45,14 @@ SENS=$(grep -oE "^sensor_[a-z0-9_]*" "$OUT/before.txt" | awk '!seen[$0]++' | tr 
 # a bare modprobe would bring the sensor up in another mode (T30X: 2304x1536 instead of 2048x1536)
 SENSLOAD=$(for m in $SENS; do a=$(grep -E "^$m( |$)" "$OUT/before.txt" | grep -vE "^$m +[0-9]+ +[0-9]" | head -1 | cut -s -d' ' -f2-); printf 'modprobe %s %s || echo FAIL-sensor; ' "$m" "$a"; done)
 SENSLOAD=${SENSLOAD%; }      # no trailing "; ": the remote shell refuses the ";;" it makes in front of the next "; cmd"
+# ISPARGS_X="key=val ..." (test module only): replaces/adds these arguments for the TEST ko insmod, e.g. direct_mode=1 (T23 IVDC
+# on a 64 MB board, openimp #811); the restore always loads the stock module with the stock arguments of /etc/modules.d
+TESTARGS=$ISPARGS
+for kv in $ISPARGS_X; do TESTARGS="$(echo " $TESTARGS " | sed -E "s/ ${kv%%=*}=[^ ]*/ /g; s/  +/ /g; s/ $//") $kv"; done
 STREAMER=$(grep -oE "^S[0-9]+(timps|prudynt|raptor)[A-Za-z0-9_-]*" "$OUT/before.txt" | grep -v -E "motion|onvif|webui" | head -1)
 KR=$(grep -E "^[0-9]+\.[0-9]+\.[0-9]+" "$OUT/before.txt" | head -1)
 STOCK=$($SSH "find /lib/modules /usr/lib/modules -name '${ISPMOD//_/-}.ko' 2>/dev/null | head -1")
-echo "isp=$ISPMOD args=[$ISPARGS] sensor=$SENS streamer=$STREAMER stock=$STOCK" | tee "$OUT/run.log"
+echo "isp=$ISPMOD args=[$ISPARGS] testargs=[$TESTARGS] sensor=$SENS streamer=$STREAMER stock=$STOCK" | tee "$OUT/run.log"
 [ -n "$ISPMOD" ] && [ -n "$SENS" ] && [ -n "$STREAMER" ] && [ -n "$STOCK" ] || { echo "cannot determine the module setup"; exit 6; }
 MD5=$($SSH "md5sum $STOCK")
 
@@ -66,7 +70,7 @@ cat "$BIN/apitest_$lc" | $SSH 'cat > /tmp/rsw/apitest; chmod 755 /tmp/rsw/apites
 $SSH 'last=; same=0; n=0; while [ $n -lt 300 ] && [ $same -lt 20 ]; do cur="$(grep -h -m1 Runing /proc/jz/isp/isp_info /proc/jz/isp/isp-m0 2>/dev/null)|$(cat /tmp/ircutmode.txt 2>/dev/null)"; if [ "$cur" = "$last" ]; then same=$((same+1)); else same=0; last="$cur"; fi; n=$((n+1)); sleep 2; done; echo "precheck stable=$same/20 after $((n*2))s: $last"' >> "$OUT/precheck.txt" 2>&1
 $SSH "/etc/init.d/$STREAMER stop >/dev/null 2>&1; sleep 3; dmesg -c >/dev/null"
 if [ "$KO" != - ]; then
-  $SSH "for m in $SENS; do rmmod \$m || echo FAIL-rmmod-sensor; done; rmmod $ISPMOD || echo FAIL-rmmod-stock; insmod /tmp/rsw/test.ko $ISPARGS || echo FAIL-insmod-ours; $SENSLOAD; sleep 1; lsmod | grep -E 'tx_isp|sensor_'; echo osd_commits=\$(cat /sys/module/${ISPMOD}/parameters/osd_commits 2>/dev/null)" >> "$OUT/run.log" 2>&1
+  $SSH "for m in $SENS; do rmmod \$m || echo FAIL-rmmod-sensor; done; rmmod $ISPMOD || echo FAIL-rmmod-stock; insmod /tmp/rsw/test.ko $TESTARGS || echo FAIL-insmod-ours; $SENSLOAD; sleep 1; lsmod | grep -E 'tx_isp|sensor_'; echo osd_commits=\$(cat /sys/module/${ISPMOD}/parameters/osd_commits 2>/dev/null)" >> "$OUT/run.log" 2>&1
   grep -q FAIL- "$OUT/run.log" && { echo "swap failed, see $OUT/run.log"; exit 7; }
 fi
 for f in $PUSHF; do cat "${f%%:*}" | $SSH "cat > /tmp/rsw/$(basename "${f##*:}")"; done
