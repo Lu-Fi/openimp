@@ -541,13 +541,10 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     EMIT(0x8003c, 0);
     EMIT(0x800d8, 0);
     EMIT(0x800dc, 0);
-#if defined(T21_HELIX_T23_DELTAS)
-    /* T23 1.3.0: 0x55004304 at 720p and 360p (SliceInit L12426-12429,
-     * slice +0x162 = 0x43, not the last row; equal to it only at 1080p) */
+    /* the vendor T21 1.0.33 writes 0x55004304 at 720p and 360p (device
+     * capture, #825) and at 1080p: slice +0x174 is copied from the RC
+     * context, not computed from the picture height */
     EMIT(0x800fc, 0x55004304u);
-#else
-    EMIT(0x800fc, 0x55000004u | ((uint32_t)config->last_mby << 8));
-#endif
     EMIT(0x80114, ((uint32_t)config->qp * 2u << 16) | 0x11u);
     EMIT(0x80118, 0);
     EMIT(0x8011c, 0);

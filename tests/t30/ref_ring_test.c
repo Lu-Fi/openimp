@@ -597,6 +597,7 @@ static void test_vendor_t21_825(void)
         assert(T21_H264_BuildDescriptor(&c, &pairs) == 0);
         assert(get(pairs, 0x10010) == v[k].r10010);
         assert(get(pairs, 0x801cc) == 0x00430000u);
+        assert(get(pairs, 0x800fc) == 0x55004304u);
     }
 }
 
