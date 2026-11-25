@@ -15,7 +15,7 @@ from string import Template
 
 REPO = "https://github.com/Lu-Fi"
 BOARD = "https://github.com/users/Lu-Fi/projects/1"
-PLANNED = ("T32", "T33")
+PLANNED = ()   # T32/T33 joined the Release 1 gate on 2026-11-25
 
 
 def esc(s):
@@ -549,7 +549,7 @@ def main():
     st = soc_status()
     cards = []
     for soc, nf, nd, pct, status in st:
-        passed = "gate" in status.lower()   # README status "RC3 gate" = passed the RC3 release gate
+        passed = status.lower().startswith("rc3 gate")   # README status "RC3 gate" = passed the RC3 release gate
         chip = '<span class="chip %s" title="%s">%s%s</span>' % ("ok" if passed else "warn", esc(status),
                                                                  "&#10003; " if passed else "", esc(status))
         cards.append('<div class="soc"><div class="n">%s%s</div><div class="bar"><i style="width:%.1f%%"></i></div>'

@@ -3,9 +3,9 @@
 # Do not weaken a threshold here without a decision of the maintainers.
 version: 1
 
-# SoCs the gates apply to (T32 and T33 are not part of RC3 / Release 1; T30 joined RC3 on 2026-11-03, user decision:
+# SoCs the gates apply to (T32 and T33 joined Release 1 on 2026-11-25, user decision: both run the open stack on hardware, PRJ007 / T33L module; T30 joined RC3 on 2026-11-03, user decision:
 # the T30 lab camera exists now, every matrix cell must be verified on the device)
-socs: [T10, T20, T21, T23, T30, T31, T40, T41]
+socs: [T10, T20, T21, T23, T30, T31, T32, T33, T40, T41]
 
 # Fleet cameras by shorthand (".N" = last octet of the LAN address) -> SoC. Used by tools/status_soak.py.
 fleet:
@@ -27,6 +27,9 @@ fleet:
   ".151": T31
   ".224": T31
   ".184": T40
+  ".136": T32   # PRJ007 module (T32NQ, gc4653)
+  ".122": T33   # T33L module
+  ".234": T23   # O-KAM QC3 (32 MB)
   ".32": T41
   ".34": T41
 

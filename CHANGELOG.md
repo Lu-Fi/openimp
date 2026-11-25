@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T32 and T33 join the Release 1 gate (user decision)
+
+- `docs/status/release.yaml`: gate SoCs now include T32 (PRJ007 module, .136) and T33 (T33L module, .122); fleet map also lists the QC3 (.234, T23). RC3 streamer functions: 258/258 on both. Open for Release 1 on T32/T33: one green light-box run each and >= 72 h without an unplanned reset. README status and the start page updated.
+
 ## 2026-11-25: start page shows T32 / T33 device coverage
 
 - README completeness table: T32 343/610 works (56.2 %), T33 489/571 (85.6 %), from the coverage summary of the feature matrix; both run on hardware (PRJ007 / T33L module). `tools/gen_site_index.py` shows them with their bar instead of "QEMU only"; the release-gate count and the mean use only the gate SoCs.
