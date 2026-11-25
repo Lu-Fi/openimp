@@ -203,6 +203,7 @@ struct t32_enc_chn {
     int size_logged;
     int ivdc;                           /* fed by the IVDC direct channel (#301) */
     int yuv;                            /* stand-alone context (YuvInit / InputJpege, #752): no channel number */
+    int yuv_mq;                         /* #784: MotionQuality_Yuv on for the next picture (H.265 P lists) */
 #ifdef PLATFORM_T33
     /* IMP_Encoder_Query of vendor 2.0.2.1 (#738): the encoder thread writes
      * the channel's status words after every picture (0xdd6bc / 0xdebf4:
@@ -1384,7 +1385,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
     p.chroma_qp_offset = a->seq5.chroma_qp_offset;
-    p.motion_quality = a->mq;
+    p.motion_quality = e->yuv ? e->yuv_mq : a->mq;
     p.width = w;
     p.height = h;
     p.p_frame = !idr;
@@ -3014,6 +3015,17 @@ void *OpenIMP_T32_EncYuvOpen(const T32YuvCfg *c)
 fail:
     yuv_free(e, 1);
     return NULL;
+}
+
+/* #784: vendor 2.0.2.1 YuvEncode (0x104b4c) sets the picture's motion-quality flag (+0x1ec) from the
+ * SetMotionQuality_Yuv global, and YuvInit (0x1040c4) the encoder's (+0x35c) from SetMotionQualityEnable_Yuv;
+ * QEMU 0731: only both together change the H.265 P lists (the batch 2 registers), H.264 nothing */
+void OpenIMP_T32_EncYuvSetMq(void *ctx, int on)
+{
+    struct t32_enc_chn *e = ctx;
+
+    if (e && e->yuv)
+        e->yuv_mq = on != 0;
 }
 
 int OpenIMP_T32_EncYuvFrame(void *ctx, const void *y_va, uint32_t y_pa, uint32_t w, uint32_t h, int64_t ts,

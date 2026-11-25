@@ -33,5 +33,6 @@ int OpenIMP_T32_EncYuvFrame(void *ctx, const void *y_va, uint32_t y_pa, uint32_t
                             void *out, uint32_t cap, uint32_t *len);
 
 void OpenIMP_T32_EncYuvClose(void *ctx);
+void OpenIMP_T32_EncYuvSetMq(void *ctx, int on);   /* #784 MotionQuality_Yuv */
 
 #endif

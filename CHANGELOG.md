@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T33 stand-alone H.265 MotionQuality_Yuv like the vendor (#784)
+
+- Vendor 2.0.2.1: YuvInit latches `SetMotionQualityEnable_Yuv`, YuvEncode takes `SetMotionQuality_Yuv(2)` per picture; only both together change the stand-alone H.265 P lists (the channel MotionQuality registers of batch 2), H.264 nothing (QEMU 0731, yuv_devtest flags `m` / `M`).
+- OpenIMP stored both only; YuvInit now latches the enable, YuvEncode sets the picture flag (`OpenIMP_T32_EncYuvSetMq`), and the H.265 list uses it. QEMU: P lists equal to the vendor in all six cases. Cells MotionQuality_Yuv and MotionQualityEnable_Yuv T33 cache -> qemu.
+- Found on the way: the stand-alone H.265 IDR list differs from the vendor with or without MQ (#912).
+
 ## 2026-11-25: T33 Fisheye cell no-op; MapRoi analysed (#784)
 
 - Vendor 2.0.2.1 `IMP_Encoder_SetFisheyeEnableStatus` (before CreateChn) only feeds a create parameter: QEMU 0731 H.264 and H.265 at FIXQP show 0 HERA register differences; T33 cell cache -> no-op. `t32_trace_sample` T32_ENC_PRE=fisheye.

@@ -20753,15 +20753,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "QEMU 0731 yuv_devtest A/B 2026-11-25 (#784, audit/issue784/qy v*/o* hb/hm/hM/hmM/ab/amM, HERA capture)"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): global +0x17e8 read by IMP_Encoder_YuvInit -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): global +0x17e8 read by IMP_Encoder_YuvInit -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (#784, 2026-11-25, QEMU 0731, vendor 2.0.2.1): YuvInit (0x1040c4) latches SetMotionQualityEnable_Yuv (param +0x35c), YuvEncode (0x104b4c) sets the picture flag from SetMotionQuality_Yuv(2) (+0x1ec/+0x1ed). Only both together change the stand-alone H.265 P lists, the same registers as the channel MotionQuality (0x20000 bit 14, 0x30000 bit 27, 0x30040, 0x301c4..0x301e8); either alone or H.264: nothing. OpenIMP does the same (openimp_t32_enc_e3.c, OpenIMP_T32_EncYuvSetMq); QEMU vhmM vs ohmM: equal P lists (the remaining job-0 difference is the same without MQ, #912)."
     },
     "Encoder_SetMotionQuality_Yuv": {
       "area": "Encoder",
@@ -20773,15 +20773,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "QEMU 0731 yuv_devtest A/B 2026-11-25 (#784, audit/issue784/qy v*/o* hb/hm/hM/hmM/ab/amM, HERA capture)"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): global +0x17e0/0x17e4 read by IMP_Encoder_YuvEncode -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): global +0x17e0/0x17e4 read by IMP_Encoder_YuvEncode -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (#784, 2026-11-25, QEMU 0731, vendor 2.0.2.1): YuvInit (0x1040c4) latches SetMotionQualityEnable_Yuv (param +0x35c), YuvEncode (0x104b4c) sets the picture flag from SetMotionQuality_Yuv(2) (+0x1ec/+0x1ed). Only both together change the stand-alone H.265 P lists, the same registers as the channel MotionQuality (0x20000 bit 14, 0x30000 bit 27, 0x30040, 0x301c4..0x301e8); either alone or H.264: nothing. OpenIMP does the same (openimp_t32_enc_e3.c, OpenIMP_T32_EncYuvSetMq); QEMU vhmM vs ohmM: equal P lists (the remaining job-0 difference is the same without MQ, #912)."
     },
     "Encoder_SetPadFrameAttr": {
       "area": "Encoder",

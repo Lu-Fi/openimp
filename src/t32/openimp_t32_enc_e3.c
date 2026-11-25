@@ -344,12 +344,15 @@ struct t32_yuv_handle {
     uint32_t qpg_w, qpg_h, qpg_cap;
     uint8_t qpg_fb, qpg_lvl;
     int qpg_set;
+    int mq_on;                          /* SetMotionQualityEnable_Yuv at YuvInit (vendor param +0x35c, #784) */
 };
 
 _Static_assert(sizeof(IMPEncoderYuvIn) == 80, "IMPEncoderYuvIn: vendor YuvInit copies 80 bytes");
 _Static_assert(offsetof(struct t32_yuv_handle, in) == 0, "the codec word leads the handle (vendor ctx[0])");
 
 int OpenIMP_T32_EncQpgAIYuvOn(void);    /* openimp_t32_fs_enc_ext.c: SetChnQpgAIEnable_Yuv */
+int OpenIMP_T32_EncMqYuvOn(void);       /* SetMotionQualityEnable_Yuv */
+int OpenIMP_T32_EncMqYuvMode(void);     /* SetMotionQuality_Yuv(2) seen */
 
 static int yuv_check(const void *h)
 {
@@ -378,6 +381,7 @@ int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight, IMPEncoderYuvIn *en
     y->w = (uint32_t)inWidth;
     y->h = (uint32_t)inHeight;
     y->qpg_ai_on = OpenIMP_T32_EncQpgAIYuvOn();
+    y->mq_on = OpenIMP_T32_EncMqYuvOn();
     memset(&c, 0, sizeof(c));
     c.codec = encIn->type == PT_H265 ? T32_YUV_H265 : T32_YUV_H264;
     c.width = y->w;
@@ -421,6 +425,7 @@ int IMP_Encoder_YuvEncode(void *h, IMPFrameInfo frame, IMPEncoderYuvOut *encOut)
         IMP_LOG_ERR(TAG, "YuvEncode: frame 0x%x is not in rmem", frame.virAddr);
         return YUVRC_E_ENC;
     }
+    OpenIMP_T32_EncYuvSetMq(y->enc, y->mq_on && OpenIMP_T32_EncMqYuvMode());
     r = OpenIMP_T32_EncYuvFrame(y->enc, (const void *)(uintptr_t)frame.virAddr, pa, y->w, y->h,
                                 frame.timeStamp, encOut->outAddr, encOut->outLen, &len);
     if (r == T32_YUV_E_ROOM)

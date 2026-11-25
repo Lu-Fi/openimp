@@ -24,6 +24,8 @@
 /* exported by vendor 2.0.2.1 / 2.2.0 (0x1048ac), not in their header */
 int IMP_Encoder_SetChnQpgAI_Yuv(void *h, IMPEncoderQpgAICfg *q);
 void IMP_Encoder_SetChnQpgAIEnable_Yuv(int encChn, int enable);
+void IMP_Encoder_SetMotionQualityEnable_Yuv(int encChn, int enable);
+int IMP_Encoder_SetMotionQuality_Yuv(int *mode);
 #endif
 
 static void pattern(uint8_t *buf, int w, int h, int n)
@@ -245,6 +247,9 @@ int main(int argc, char **argv)
     const char *fl = argc > 6 ? argv[6] : "";
     if (strchr(fl, 'q'))
         IMP_Encoder_SetChnQpgAIEnable_Yuv(0, 1);
+    /* #784: 'm' SetMotionQualityEnable_Yuv(0, 1) before YuvInit, 'M' SetMotionQuality_Yuv(2) after it */
+    if (strchr(fl, 'm'))
+        IMP_Encoder_SetMotionQualityEnable_Yuv(0, 1);
     memset(&in, 0, sizeof(in));
     in.type = !strcmp(mode, "hevc") ? PT_H265 : PT_H264;
     if (arg >= 0) {
@@ -267,6 +272,11 @@ int main(int argc, char **argv)
     fprintf(stderr, "YuvInit %s %dx%d: 0x%x\n", mode, w, h, (unsigned)r);
     if (r)
         return 1;
+    if (strchr(fl, 'M')) {
+        int mqm = 2;
+
+        fprintf(stderr, "SetMotionQuality_Yuv(2) 0x%x\n", (unsigned)IMP_Encoder_SetMotionQuality_Yuv(&mqm));
+    }
     if (strchr(fl, 'q')) {
         static uint8_t qmap[(1920 / 16) * (1088 / 16)];
         IMPEncoderQpgAICfg q;

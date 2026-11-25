@@ -450,8 +450,19 @@ void IMP_Encoder_SetMotionQualityEnable_Yuv(int encChn, int enable)
 int IMP_Encoder_SetMotionQuality_Yuv(int *mode)
 {
     if (mode && *mode == 2)
-        enc_glob.mq_yuv_mode = 3;
+        enc_glob.mq_yuv_mode = 3;       /* vendor: +0x17e0 = 3, +0x17e4 = 1 (only mode 2; nothing turns it off) */
     return 0;
+}
+
+/* #784: the flags YuvInit / YuvEncode take (vendor +0x17e8 at YuvInit, +0x17e4 per picture) */
+int OpenIMP_T32_EncMqYuvOn(void)
+{
+    return enc_glob.mq_yuv;
+}
+
+int OpenIMP_T32_EncMqYuvMode(void)
+{
+    return enc_glob.mq_yuv_mode != 0;
 }
 
 /* table remap of a map: in = pointer to {uint8_t *map, uint32_t len}, out = {uint8_t *table,
