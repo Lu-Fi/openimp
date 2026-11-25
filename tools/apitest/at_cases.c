@@ -4891,9 +4891,10 @@ static void cs_isposdflip_t23(void)
                 rflip |= IMP_ISP_Tuning_SetISPHflip((step & 1) ? (IMPISPTuningOpsMode)!oh : oh);
             a.pic.osd_image = (char *)p;                 /* right after the toggle, no wait */
             rset |= IMP_OSD_SetRgnAttr_PicISP(0, hdl, &a);
-            if (step == 0) rset |= IMP_OSD_ShowRgn_ISP(0, hdl, 1);
+            rset |= IMP_OSD_ShowRgn_ISP(0, hdl, 1);      /* a new picture is hidden until shown again (as the OEM; a streamer shows it at once) */
             usleep(900000);
             fl = t23_isp_flip_bits();
+            { char tag[32]; snprintf(tag, sizeof(tag), "isposdflip-full-s%d", step); snap_y0(tag); }      /* whole frame (1/4): where is the picture */
             for (shot = 0; shot < 2; shot++) {
                 double b;
 

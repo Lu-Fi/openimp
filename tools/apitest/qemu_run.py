@@ -9,7 +9,7 @@ Console driver for a QEMU guest booted with a root shell on tcp PORT (boot-t2x.s
 (gzip+base64 over the console), stops the streamer, then per case: `APITEST_CASES=<case> apitest ... cases`, followed by a health check
 (plain `fs` area: a fresh FrameSource EnableChn must work and frames must flow, dmesg without Oops).  A case that panics/reboots the guest or
 breaks the health check is a BUG and stops the run.  Output: OUTDIR/<case>.log and a summary line per case
-  QEMU <SOC> <case>: <ok|HEALTH-FAIL|CRASH> (apitest rc, FAIL lines)
+  QEMU <SOC> <case>: <ok|HEALTH-FAIL|SETUP-FAIL|CRASH> (apitest rc, FAIL lines)
 What QEMU proves: return codes, set/get round trips, oops/crash, frame flow afterwards.  It cannot prove picture effects."""
 import base64, gzip, os, re, socket, sys, time
 
@@ -116,6 +116,10 @@ for c in cases:
     fails = [l for l in out.splitlines() if l.startswith("[A]") and " FAIL " in l]
     open(os.path.join(outdir, c + ".health"), "w").write(hc)
     st = "ok" if healthy else "HEALTH-FAIL"
+    # guard (2026-11-25, #810): an ISP that never came up (guest modules.d emptied by S10isp-guard, wrong -device sensor model)
+    # gave "ok" with 0 FAIL lines although no case row ran: no [A] line or the apitest setup error is a SETUP-FAIL, never "ok"
+    if healthy and (re.search(r"ISP open/add/enable sensor failed", out) or not re.search(r"^\[A\] ", out, re.M)):
+        st = "SETUP-FAIL"; healthy = False
     res.append((c, st, fails))
     print("QEMU %s %s: %s (health counts %s; %d FAIL lines)" % (soc, c, st, nums[:2], len(fails)))
     for l in fails:
