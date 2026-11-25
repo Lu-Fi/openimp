@@ -129,8 +129,8 @@ features:
       sym: ✅+
       text: 10x reload with kill -9; vmalloc leak of 252 KB/cycle fixed; residual drift ~45 KB/cycle
     T32:
-      sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no counted reload / stop-start cycle series on the module yet (runtime insmod swaps in the #884 / #892 runs only). in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 device series, .136, #99; libimp d39c4cee, timpsd 7a5892db, tx-isp-t32.ko 92b3b236): 🔧 -> ✅: 10 of 10 streamer stop / start cycles and 10 of 10 module reload cycles (timps stopped, rmmod sensor + tx_isp_t32, insmod, timps start), each followed by a valid 2560x1440 snapshot (HTTP 200, luma 75 night / 127 day, no purple), 0 oops, lsmod identical afterwards. Open item outside this row: the first streamer session after a reboot stalls (#897). Earlier: 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no counted reload / stop-start cycle series on the module yet (runtime insmod swaps in the #884 / #892 runs only). in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -172,7 +172,7 @@ features:
       text: 'S10isp-guard + isp_open=auto: optional package in upstream thingino `aperto` (#1749, default off); active on the test cameras'
     T32:
       sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no boot-guard test on the module yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 device check, .136, #99): stays 🔧: the T32 image has no boot guard (no S10isp-guard, no isp_open variable, the guard package is opt-in and not in this image), so the documented guard behaviour cannot be tested without a new image. Two planned reboots: the stack comes up (modules at 5 s / 19 s, 0 oops) but the first streamer session of each boot delivers almost no frames until timps is restarted (#897), which a guard would not catch either. 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no boot-guard test on the module yet. in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
     T33:
@@ -661,7 +661,7 @@ features:
       text: sc4336p vflip no longer reports an error [-all-13]; MSCA flip takes effect only at the next channel start, as with the vendor
     T32:
       sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no mirror / flip A/B against the vendor on the module yet. 2026-11-21: LSC mesh follows sensor mirror / flip (hvflip glue, #722). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-25 (T32 device A/B, .136, #99): stays 🔧: timps image.hflip / vflip (sensor flip, 4 toggles each, ch0 and ch1) change no pixel on the module although the driver applies the request (#898); library A/B with the vendor libimp 2.2.0 on the same ko is equal (ISP vflip flips the picture on both, SetISPHflip -4090 on both, sensor flip no effect on both). 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: no mirror / flip A/B against the vendor on the module yet. 2026-11-21: LSC mesh follows sensor mirror / flip (hvflip glue, #722). No symbol change. Earlier: in development (T32, not a release gate): the IMP_ISP_Tuning_* layer is in OpenIMP (88 entry points, #296 partial): 97 tuning API steps equal vendor libimp 2.2.0 in QEMU; open-tx-isp driver/t32 serves only the sensor frame rate id so far, the other ids answer ENOTTY, so this row''s behaviour is not proven. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 296
       - 722
@@ -1105,8 +1105,8 @@ features:
       issues:
       - 604
     T32:
-      sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: H.265 has no T32 device run of its own yet. 2026-11-21: H.265 rate-control registers added to the HERA list (revision 6 slice block, #720). No symbol change. Earlier: in development (T32, not a release gate): H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 device run, .136, #99): 🔧 -> ✅: apitest enc H.265 stream on the module: 100 frames, VPS/SPS/PPS/IDR present, the dump decodes clean with ffmpeg (hevc Main 640x360, 100 of 100 frames), 234297 bytes against 233914 bytes of the vendor libimp 2.2.0 on the same ko (0.2 %), apitest enc 128/2 = 128/2 (the 2 GetPool fails are APITEST_NOPOOL on both). Not run through timps (codec h265). Earlier: 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: H.265 has no T32 device run of its own yet. 2026-11-21: H.265 rate-control registers added to the HERA list (revision 6 slice block, #720). No symbol change. Earlier: in development (T32, not a release gate): H.265 on HERA in QEMU, lists and headers equal to vendor 2.2.0, fixed QP (#294); rate control is #295. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 294
       - 295
@@ -1387,8 +1387,8 @@ features:
       sym: ✅+
       text: 'sub-stream default: ~85 % less IVS CPU (compared with vendor libimp)'
     T32:
-      sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: 18 IVS cells dev, but no detected-motion run yet. in development (T32, not a release gate): IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅
+      text: '2026-11-25 (T32 device run, .136, #99): 🔧 -> ✅: timps native IMP_IVS move interface (5x5 grid, sensitivity 200) logged /events while the picture was changed by 4 day/night (running_mode) and IR-cut toggles: static scene 0 active cells, then 79 events, 67 with active cells (up to 18 of 25), 61 with objects; 0 oops. Earlier: 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: 18 IVS cells dev, but no detected-motion run yet. in development (T32, not a release gate): IVS move on the FrameSource sink in QEMU, ivsdirect equal to vendor 2.2.0 (#299). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 299
     T33:

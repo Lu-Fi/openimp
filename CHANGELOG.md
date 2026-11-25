@@ -19,6 +19,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - OpenIMP accepted any type. Now the shared OSD (T23/T32/T33/T40/T41) and T31 refuse other types with the vendor code. The frame-matched queue is not reproduced: the attribute applies from the next frame on, which matches the vendor's immediate `SetRgnAttr` call. T33: vendor library not available locally, same rule as T32 assumed (same 2.x OSD). T10/T20/T21/T30 unchanged (not checked).
 - Tests: host test `tests/t41/osd_ts_test.c` (T41 and T40 builds, all 14 types; fails without the check), apitest osd case: RECT -> 0, PIC -> the vendor code. Device T32 PRJ007: osd area 48 PASS / 0 FAIL (`PIC -> 0x80020040`), 10 reloads + kill -9, 0 oops.
 
+## 2026-11-25: feature matrix, T32 device series on the PRJ007 module (rows 2, 3, 13, 23, 29; #99)
+
+- 🔧 -> ✅: row 2 (10 of 10 streamer stop / start and 10 of 10 module reload cycles, valid snapshot after each, 0 oops), row 23 (H.265 stream on the module decodes clean, size equal to vendor libimp 2.2.0 within 0.2 %), row 29 (IVS move events while day/night and IR cut change the picture: 67 of 80 events with active cells, static scene none).
+- Stays 🔧: row 3 (the T32 image has no boot guard; two planned reboots show that the first streamer session after a boot stalls, #897) and row 13 (timps hflip / vflip change no pixel although the driver applies the request, #898; library A/B with the vendor libimp 2.2.0 is equal).
+- Installed stack for all runs: libimp d39c4cee, timpsd 7a5892db, tx-isp-t32.ko 92b3b236 (image `claude/t32-openimp+0b40308`); pictures stay local.
+
 ## 2026-11-25: feature matrix, T32 column re-judged against the PRJ007 device evidence
 
 - Same rule as the T33 re-judge of 2026-11-22. 🔧 -> ✅: rows 1 (ISP core), 11 (IR cut; the board has no IR LED), 22 (H.264), 24 (JPEG), 25 (sub-stream), 28 (OSD), backed by the device apitest (258 of 258 streamer functions) and the vendor 2.2.0 A/B. 🔧 -> —: rows 31-33 (no microphone or speaker on the module). The picture-quality rows stay 🔧 until a T32 light-box run; the other 🔧 rows name what is missing. Docs only.
