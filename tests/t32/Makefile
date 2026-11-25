@@ -32,6 +32,7 @@ RC33_HERA := $(PROJECT_DIR)/src/t32/openimp_t32_hera.c $(PROJECT_DIR)/src/t30/h2
 	$(PROJECT_DIR)/src/t30/h264enc/common.c
 # IMP attributes -> i264e parameters and SetDefaultParam (#295) vs vendor 2.2.0
 RC_IMP_BIN := $(BUILD)/t32-rc-imp-test
+YUVRC_BIN := $(BUILD)/t32-yuvrc-test
 # eprc T33 H.265 port + i265e glue (#295): parameters and QP of every picture vs vendor 2.2.0
 RC65_BIN := $(BUILD)/t32-rc65-test
 # IMP frame rate / GOP glue (#295) vs vendor 2.2.0 encoder_get_fps_mask
@@ -74,7 +75,8 @@ ENCQ_BIN := $(BUILD)/t32-encq-test
 ENCQ_DEPS := encq_test.c $(PROJECT_DIR)/src/t32/openimp_t32_encq.h
 
 .PHONY: check check-drv
-check: $(ENCQ_BIN) $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+check: $(YUVRC_BIN) $(ENCQ_BIN) $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(RC33_BIN) $(RC_IMP_BIN) $(RC65_BIN) $(GOP33_BIN) $(AUDIO_BIN) $(ACODEC_BIN) $(DEC_BIN)
+	$(YUVRC_BIN)
 	sh check_fs_packed.sh
 	sh check_enc_pad.sh
 	$(ENCQ_BIN)
@@ -159,6 +161,11 @@ $(RC_IMP_BIN): rc_imp_test.c $(RC_DEPS)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
 		-I$(PROJECT_DIR)/src -o $@ rc_imp_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
+
+$(YUVRC_BIN): yuvrc_test.c $(RC_DEPS)
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off -DPLATFORM_T32 '-D_Static_assert(c,m)=' -I$(PROJECT_DIR)/include \
+		-I$(PROJECT_DIR)/src -o $@ yuvrc_test.c $(filter-out rc_test.c,$(RC_SRC)) -lm
 
 $(RC65_BIN): rc65_test.c $(RC_DEPS)
 	@mkdir -p $(BUILD)

@@ -2965,6 +2965,8 @@ void *OpenIMP_T32_EncYuvOpen(const T32YuvCfg *c)
     a->rcAttr.maxGop = c->gop;
     if (c->codec != T32_YUV_JPEG)
         memcpy(&a->rcAttr.attrRcMode, c->rc, sizeof(a->rcAttr.attrRcMode));
+    if (c->codec == T32_YUV_H264)
+        t32_rc_yuv_h264_defaults(&a->rcAttr.attrRcMode);
     else
         a->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)jpeg_qp_of(c->jpeg_qp);
     e->h264 = c->codec != T32_YUV_JPEG;

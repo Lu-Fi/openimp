@@ -1112,3 +1112,29 @@ int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p)
     memset(p, 0, sizeof(*p));
     return r;
 }
+
+/* #899: the vendor YuvInit (2.0.2.1 IMP_Encoder_YuvInit 0x1040c4 -> 0xe780c, H.264 case table
+ * at 0xd78a0..) takes a QP byte of the rate-control head only when it is below 52 and the bit
+ * rate only when it is not 0; otherwise the i264e_param_default value stays (initial QP 35,
+ * max QP 45, min QP 15, max / min I QP 45 / 15, 2000 kbit/s).  The bound channel instead clamps
+ * (a SetDefaultParam initial QP of -1 = 0xff becomes 51), so the stand-alone encoder maps these
+ * fields itself before the shared channel set-up.  FIXQP has no head. */
+void t32_rc_yuv_h264_defaults(IMPEncoderAttrRcMode *m)
+{
+    IMPEncoderAttrH264CBR *h = &m->attrH264Cbr;      /* the common head of every rate-controlled mode */
+
+    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP || m->rcMode > IMP_ENC_RC_MODE_AVBR)
+        return;
+    if (h->maxQp >= 52)
+        h->maxQp = 45;
+    if (h->minQp >= 52)
+        h->minQp = 15;
+    if (h->initialQp >= 52)
+        h->initialQp = 35;
+    if (h->maxIQp >= 52)
+        h->maxIQp = 45;
+    if (h->minIQp >= 52)
+        h->minIQp = 15;
+    if (!h->outBitRate)                             /* CBR outBitRate / VBR .. maxBitRate: same place */
+        h->outBitRate = 2000;
+}

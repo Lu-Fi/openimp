@@ -74,6 +74,8 @@ uint32_t t32_rc_vendor_bufsize(uint32_t width, uint32_t height, uint32_t bufsize
 /* IMP_Encoder_SetDefaultParam's rate-control defaults for rc->rcMode
  * (vendor 2.2.0); @type the payload (PT_JPEG: the FIXQP JPEG QP). */
 void t32_rc_default_attr(IMPEncoderAttrRcMode *rc, IMPPayloadType type, int initqp, uint32_t kbps);
+/* #899: vendor YuvInit H.264: out-of-range QP bytes / bit rate 0 keep the i264e defaults */
+void t32_rc_yuv_h264_defaults(IMPEncoderAttrRcMode *m);
 
 /* Start (or restart, after IMP_Encoder_SetChnAttrRcMode) the controller.
  * 0 with rc->on 0 for FIXQP, 0 with rc->on 1 for a rate-controlled mode,
