@@ -1112,17 +1112,16 @@ static void *frame_pooling_thread(void *arg)
     snprintf(name, sizeof(name), "FS(%d)-tick", chn);
     prctl(PR_SET_NAME, name);
 #if defined(PLATFORM_T20)
-    /* #896, beyond vendor (user OK 2026-11-25): with the push model this
-     * thread captures and encodes; at SCHED_FIFO 1 a CPU burst of
-     * higher-priority normal tasks (the diag sampler at nice -20) can no
-     * longer hold a capture buffer past the next DMA bank.  It sleeps in
-     * DQBUF / usleep between frames.  OPENIMP_T20_FS_RT=0: normal policy
-     * like vendor libimp 3.12.0 (pthread_create with attr NULL). */
+    /* #896, beyond vendor, opt-in (user 2026-11-25): OPENIMP_FS_RT=1 runs
+     * this capture + encode thread at SCHED_FIFO 1, so a burst of nice -20
+     * tasks cannot hold a capture buffer past the next DMA bank.  Off by
+     * default: vendor libimp 3.12.0 creates frame_pooling_thread with attr
+     * NULL (normal policy), and so does OpenIMP. */
     {
-        const char *rt = getenv("OPENIMP_T20_FS_RT");
+        const char *rt = getenv("OPENIMP_FS_RT");
         const char *push = getenv("OPENIMP_T20_PUSH");
 
-        if (!(rt && rt[0] == '0') && !(push && push[0] == '0')) {
+        if (rt && rt[0] == '1' && !(push && push[0] == '0')) {
             struct sched_param sp = { .sched_priority = 1 };
 
             if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp) != 0)
