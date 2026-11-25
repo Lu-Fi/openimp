@@ -9,6 +9,10 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-25: T33 stand-alone H.264 P lists clear 0x30000 bit 14 like the vendor YuvEncode (#904)
+
+- With the HERA ODMA read-back modelled (QEMU build-0731, README-0731.md) the vendor 2.0.2.1 stand-alone lists can be compared without read-back zeros: the only remaining difference was 0x30000 = 0x04042081 on the vendor's YuvEncode P jobs against 0x04046081 (the bound-channel value, which the vendor's channel lists keep). `t33_main_field` (src/t32/openimp_t33_hera.c) now clears bit 14 for the stand-alone (Main, no8x8) lists. Host test `tests/t33/yuvp904_test.c` (make check); QEMU T33 fresh boot: 10 jobs, 0 register differences to the vendor, stream byte-identical (378a3424).
+
 ## 2026-11-25: T32/T33 H.264 slice header turns deblocking off below QP 16 like the vendor (#899, part 2)
 
 - The vendor `i264e_slice_init` (2.0.2.1 0x78ab4, the x264 rule) sets disable_deblocking_filter_idc 1 when qp + 2 x min(alpha, beta offset) < 16, where the filter would change nothing; OpenIMP always wrote 0, 0, 0 (`t32_h264_slice_head`, src/t32/openimp_t32_h264.c). Now the same; host test `tests/t32/h264dbk_test.c` (make check).

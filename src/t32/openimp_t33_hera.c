@@ -296,6 +296,8 @@ static uint32_t t33_main_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v
         return v & ~(1u << 5);
     case 0x70000u:
         return v & ~(1u << 20);
+    case 0x30000u:                      /* #904: vendor YuvEncode P lists 0x04042081 (bit 14 clear) */
+        return v & ~(1u << 14);
     default:
         return v;
     }
