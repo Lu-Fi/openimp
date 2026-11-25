@@ -138,7 +138,7 @@ int VBMExpireReady(int chn, uint32_t max_age_ms, int query);
  * back until the driver holds two buffers; returns how many it still
  * lacks (0 enough, -1 untracked pool). */
 int VBMFeedDriver(int chn, int keep_ready);
-#if defined(PLATFORM_T23) || defined(PLATFORM_T21)
+#if defined(PLATFORM_T23) || defined(PLATFORM_T21) || defined(PLATFORM_T31)
 int VBMFeedDriverIdle(int chn, uint32_t idle_ms);   /* #905, #908 */
 #endif
 int VBMDelayGetTimedFrame(int chn, int64_t target, int block,
