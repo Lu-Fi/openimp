@@ -255,9 +255,9 @@ the debug-level log messages in.
 | `OPENIMP_T23_NATIVE_FALLBACK` | `0` = off | Fallback to the native encoder. | T23 | internal |
 | `OPENIMP_T23_PACE_STATS` | seconds | Pacing statistics interval. | T23 | internal |
 | `OPENIMP_T23_SHARED_BS` | set | Attach the shared bitstream area. | T23 | internal |
-| `OPENIMP_T23_EMC` | `t23` / `vendor` | EMC scratch layout: default T21 layout (#799), `t23` the earlier 24/64/16/64 B/MB one, `vendor` the stock 1.3.0 one (research, #774). | T23 | internal |
+| `OPENIMP_T23_EMC` | `vendor` / `t21` / `t23` | EMC scratch layout: default the stock 1.3.0 one in every mode (#774), `t21` the T21 layout (#799 default before), `t23` the earlier 24/64/16/64 B/MB one. | T23 | internal |
 | `OPENIMP_T23_EMC_EXTENT` | `1` / `2` | Report per EMC buffer how far the VPU writes (scratch filled with 0x00 / 0xa5; #799 device check). | T23 | internal |
-| `OPENIMP_T23_EMC_CANARY` | `1` | With `OPENIMP_T23_EMC=vendor`: fill what lies past the vendor-layout tail with a pattern and report bytes the VPU writes there (research, #774). | T23 | debug only |
+| `OPENIMP_T23_EMC_CANARY` | `1` | With the vendor layout (default): fill what lies past the vendor-layout tail with a pattern and report bytes the VPU writes there (research, #774). | T23 | debug only |
 | `OPENIMP_T23_SKIP_HELIX` | set | Skip the Helix encoder (bring-up). | T23 | internal |
 
 ## JPEG

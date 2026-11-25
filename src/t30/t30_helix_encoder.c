@@ -672,7 +672,8 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
-/* #799 step 1a: the T21 EMC layout by default (24/64/16/20 bytes per
+/* #799 step 1a: the T21 EMC layout (the default before #774, now
+ * OPENIMP_T23_EMC=t21; 24/64/16/20 bytes per
  * macroblock and one page, 996 KiB at 1080p instead of 2 MiB, 468 KiB
  * at 720p instead of 936 KiB).  Tapo C500 (T23N), 1080p + 360p, 500+
  * pictures each, scratch filled with 0x00 and with 0xa5
@@ -685,17 +686,17 @@ static void t30_chroma_qp_idr(T30HelixEncoder *encoder)
 #endif
 
 #if defined(PLATFORM_T23)
-/* Vendor-sized EMC scratch and reference ring by default in the IVDC
- * direct mode (#799 step 4, #774): with the command list made equal to
- * the vendor 1.3.0 one (QEMU A12 diff, audit issue799 FINDINGS step 4.1:
- * 0x50000 wrap bits, 0x10010, 0x800fc, 0x801cc, 0x801c0, 0x80198) the
- * stock layout and the unrounded ring are used as the vendor does, so
- * main + sub + JPEG fit the vendor rmem budget.  Normal capture keeps the
- * T21 layout and the 64-line ring.  A/B switches: OPENIMP_T23_EMC=vendor|
- * t21|t23 and OPENIMP_T23_RING=vendor|64. */
+/* Vendor-sized EMC scratch and reference ring by default in every mode
+ * (#799 step 4 for the IVDC direct mode, #774 for normal capture): with
+ * the command list made equal to the vendor 1.3.0 one (QEMU A12 diff,
+ * audit issue799 FINDINGS step 4.1: 0x50000 wrap bits, 0x10010, 0x800fc,
+ * 0x801cc, 0x801c0, 0x80198) the stock layout and the unrounded ring are
+ * used as the vendor h264_api_enc @0xd3930 does in every mode, so main +
+ * sub + JPEG fit the vendor rmem budget.  A/B switches:
+ * OPENIMP_T23_EMC=vendor|t21|t23 and OPENIMP_T23_RING=vendor|64. */
 static int t23_vendor_sizing_default(void)
 {
-    return OpenIMP_T23_IvdcMode() != 0;
+    return 1;
 }
 
 static int t23_emc_vendor_layout(void)
@@ -717,9 +718,9 @@ static int t23_ring_exact(void)
     return t23_vendor_sizing_default();
 }
 
-/* EMC scratch layout of a T23 channel: the stock 1.3.0 one in direct mode
- * or with OPENIMP_T23_EMC=vendor, else T23_EMC_DEFAULT (T21 layout, also
- * OPENIMP_T23_EMC=t21); OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88)
+/* EMC scratch layout of a T23 channel: the stock 1.3.0 one by default
+ * (also OPENIMP_T23_EMC=vendor); OPENIMP_T23_EMC=t21 the T21 layout
+ * (T23_EMC_DEFAULT), OPENIMP_T23_EMC=t23 the earlier 24/64/16/64 (+88)
  * bytes per macroblock layout. */
 static uint32_t t23_emc_layout(uint32_t mbw, uint32_t mbh,
                                uint32_t offsets[4])
@@ -1357,7 +1358,7 @@ static void helix_watermark(const T30HelixEncoder *encoder,
 
 #if defined(PLATFORM_T23)
 #define T23_EMC_CANARY_BYTE 0xa5u
-/* #774 device check (vendor layout only, OPENIMP_T23_EMC=vendor and
+/* #774 device check (vendor layout only, the default, and
  * OPENIMP_T23_EMC_CANARY=1): the stock 1.3.0 layout ends 0xa00 bytes
  * after 0x30054; fill what lies beyond it in our allocation with a pattern
  * and report any byte the core writes there.  In the T21 layout these
@@ -3603,8 +3604,8 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
      * all-I_PCM picture fits; at least 256 KiB, at most the 1 MiB of the
      * T21 layout). */
 #if defined(PLATFORM_T23)
-    /* T23: t23_emc_layout (#799 1a); the vendor 1.3.0 one only on
-     * request (OPENIMP_T23_EMC=vendor, #774: corrupt on a real T23N) */
+    /* T23: t23_emc_layout: the vendor 1.3.0 one (#774, after the #799
+     * command list fix), OPENIMP_T23_EMC=t21|t23 for the older ones */
     encoder->scratch_size = t23_emc_layout(
         (params->width + 15u) / 16u, (params->height + 15u) / 16u,
         encoder->scratch_offset);

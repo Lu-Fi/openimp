@@ -359,7 +359,7 @@ static void start(void)
  * EMC scratch directly below it and the shared bitstream area (2 MiB +
  * 4 KiB, one per process) directly below the first EMC - as logged on the
  * camera (bs 0x0374b000 + 0x201000 = emc 0x0394c000, emc + 0x200000 = ring
- * 0x03b4c000, ring 0x3b1100 bytes).  The second channel (360p) only
+ * 0x03b4c000, ring 0x3b1100 bytes; before #774).  The second channel (360p) only
  * borrows the bitstream area. */
 typedef struct { uint32_t phys, size; } TagBlock;
 
@@ -412,20 +412,25 @@ static void check_ring_layout(int main_first)
     assert(find_tag("t23-helix-ref", main_idx, &r));
     assert(find_tag("t23-helix-emc", main_idx, &e));
     assert(find_tag("t23-helix-bs", 0, &b));
-    /* 1080p ring + chroma gap, page-rounded by the allocator */
-    assert(ring->size >= 0x3b1100u && ring->size <= 0x3b2000u);
-    /* the T21 EMC layout (#799 1a): 24/64/16/20 bytes per macroblock
-     * and one page, 996 KiB at 1080p */
-    assert(emc->size == 1019904u);
+    /* 1080p ring: 1088 + 256 lines (0x3b1000 bytes; 1088 is already a
+     * multiple of 64, so the exact vendor ring of #774 is the same size)
+     * + the 0x100 chroma gap */
+    assert(ring->size == 0x3b1100u);
+    /* the vendor 1.3.0 EMC layout (#774, h264_api_enc @0xd3930: base,
+     * +mbs, +2*mbs, 0xa00 tail) plus one spare page: 32 KiB at 1080p
+     * instead of the 996 KiB of the T21 layout */
+    assert(emc->size == 32768u);
     assert(bs->size == (2u << 20) + 4096u);
     assert(emc->phys + emc->size == ring->phys);  /* EMC directly below */
     if (main_first)
         assert(bs->phys + bs->size == emc->phys); /* bs directly below EMC */
     assert(find_tag("t23-helix-ref", main_idx ^ 1u, &r2));
     assert(find_tag("t23-helix-emc", main_idx ^ 1u, &e2));
-    /* 360p ring: picture part rounded up to 64 lines (640 lines) since the
-     * sub-stream reference fix, + chroma gap, page-rounded */
-    assert(ring2->size >= 614656u && ring2->size <= 617472u);
+    /* 360p exact ring (#774: 368 + 256 lines, 599040 bytes, as the
+     * vendor; before 640 lines) + the 0x100 chroma gap; vendor EMC layout
+     * 12 KiB */
+    assert(ring2->size == 599296u);
+    assert(emc2->size == 12288u);
     assert(emc2->phys + emc2->size == ring2->phys);
     if (!main_first)
         assert(bs->phys + bs->size == emc2->phys);

@@ -142,7 +142,7 @@ int main(void)
     CHECK(OpenIMP_T23_IvdcLead(10u << 16, 0x8000u | 290u, 300u) == 20u);
 
     /* direct_mode=0: GET_DIRECT 0, nothing else changes (no ring, no
-     * IVDC frames, the T21 EMC layout stays: IvdcMode 0) */
+     * IVDC frames: IvdcMode 0) */
     fake_mode = 0;
     CHECK(OpenIMP_T23_IvdcCreateChn(0) == 0 && ioctls == 1);
     CHECK(OpenIMP_T23_IvdcMode() == 0 && !OpenIMP_T23_IvdcChnDirect(0));
