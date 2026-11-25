@@ -488,6 +488,10 @@ Vendor `IMP_Encoder_PollingStream` (T33 2.0.2.1, T32 2.2.0) switches the calling
 
 With the AE at its exposure limit (night), the vendor libimp T33 2.0.2.1 face AE window has no visible effect: target 10 gives Y 57.3, the same as without the window (57.3), measured on the T33L module after a dm0 boot. On the open stack the metered window is applied and the picture follows it (Y 36.5 against 69.3 without the window). Proven by the apitest face AE case (b87cbace) and the A/B on the T33L module. No switch.
 
+### 6.15 IPU holds the AHB1 clock gate during each op (kernel 3.10, T21/T30, user OK 2026-11-25, #875)
+
+The IPU (`jz_ipu_v13`, used by the OSD blend) reaches memory through the AHB1 clock gate (CLKGR1 bit 6). The vendor kernel enables it in the IPU driver only on T31; on T21 and T30 only the Helix/Radix encoder switches it on while an encoder channel is open. With no encoder open (streamer idle, first frame of a new stream) the first IPU op stalled until the timeout. Thingino kernel patch `0011-ipu-hold-ahb1-gate-during-op.patch` takes the gate on every SoC that has it (NULL where absent: T10/T20/T23) and enables it around each op, like the vendor T31 path; it also fixes the vendor probe check that tested the wrong clock pointer. Between ops the gate is released, so the idle clock state stays as before. Measured on the T21 test camera, 5 cold stream starts after a streamer restart: 0 IPU timeouts and 0 abandoned ops (before: 2 to 4 timeouts per cold start), first-stream TTFB 0.37 to 0.49 s (before 0.65 to 0.70 s), snapshot OK, 0 oops. T30: same gate bit, compile-checked, no device test yet. No switch.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**
