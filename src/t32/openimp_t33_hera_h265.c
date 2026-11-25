@@ -439,6 +439,36 @@ static uint32_t t33_h265_field(const T33HeraH265Pic *t, uint32_t reg, uint32_t v
     return v;
 }
 
+/*
+ * IMP_Encoder_SetMotionQuality (enable 1, after SetMotionQualityEnable before CreateChn), vendor
+ * 2.0.2.1 H.265 P lists from the next IDR on (QEMU 0731 v5mq1 vs v5mq0, levels 0..3 and 1080p / 720p
+ * alike): 0x20000 bit 14 set, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8 written
+ * (the table's 0 there otherwise), 0x90000 bit 7 set; the level changes nothing in the lists.
+ */
+static uint32_t t33_h265_mq(const T32HeraH265Pic *p, uint32_t reg, uint32_t v)
+{
+    static const uint32_t mce[10] = { 0x00920000u, 0x01b60124u, 0x00201008u, 0x00000208u, 0x00202010u,
+                                      0x00000208u, 0x00404020u, 0x00000410u, 0x00808040u, 0x00000820u };
+
+    if (!p->motion_quality || !p->p_frame)
+        return v;
+    switch (reg) {
+    case 0x20000u:
+        return v | 1u << 14;
+    case 0x30000u:
+        return v & ~(1u << 27);
+    case 0x30040u:
+        return 0x073a5049u;
+    case 0x301c4u: case 0x301c8u: case 0x301ccu: case 0x301d0u: case 0x301d4u:
+    case 0x301d8u: case 0x301dcu: case 0x301e0u: case 0x301e4u: case 0x301e8u:
+        return mce[(reg - 0x301c4u) / 4u];
+    case 0x90000u:
+        return v | 1u << 7;
+    default:
+        return v;
+    }
+}
+
 size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
 {
     static const size_t ents = sizeof(t33_hera_h265_tab) / sizeof(t33_hera_h265_tab[0]);
@@ -469,6 +499,7 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
 
             if (t33_rc_slice5(t))
                 v = t33_h265_skip_bits(t33_rc_slice5(t), e->reg, v);
+            v = t33_h265_mq(p, reg, v);
 
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
                 return 0;

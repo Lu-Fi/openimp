@@ -136,6 +136,7 @@ struct t32_enc_slot {
 };
 
 struct t32_h264 {                       /* H.264 / H.265 channel state */
+    uint8_t mq;                         /* #784: H.265 MotionQuality from the last IDR on */
     T32VpuBuf list, ring, ebs, aux[T32_HERA5_AUX];
     T32H264Seq seq;
     T32H265Seq seq5;
@@ -387,6 +388,7 @@ static void e1_at_idr(struct t32_enc_chn *e)
             a->seq5.chroma_qp_offset = hd.chroma265;
             a->pps_len = t32_h265_pps(&a->seq5, a->pps);
         }
+        a->mq = hd.motion_quality;      /* #784: P lists from this IDR on (vendor QEMU v5mq1 / v5mq0) */
     } else {
         if (a->seq.crop != hd.crop || a->seq.crop_x != hd.crop_x || a->seq.crop_y != hd.crop_y ||
             a->seq.crop_w != hd.crop_w || a->seq.crop_h != hd.crop_h) {
@@ -1380,6 +1382,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         e1_at_idr(e);   /* deferred settings: this IDR's headers and list (chroma QP offset, #784) */
     memset(&p, 0, sizeof(p));
     p.chroma_qp_offset = a->seq5.chroma_qp_offset;
+    p.motion_quality = a->mq;
     p.width = w;
     p.height = h;
     p.p_frame = !idr;

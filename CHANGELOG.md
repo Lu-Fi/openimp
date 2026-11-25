@@ -9,6 +9,14 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-25: T33 H.265 SetMotionQuality applied like the vendor (#784 batch 2)
+
+- Vendor 2.0.2.1 applies `IMP_Encoder_SetMotionQuality` (enable 1, after `SetMotionQualityEnable` before `CreateChn`) to every H.265 P list from the next IDR: 0x20000 bit 14 set, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8 written, 0x90000 bit 7 (QEMU 0731: the level and the picture size change nothing in the lists; H.264: no effect). OpenIMP stored the setting only; it now latches it at the IDR (openimp_t32_enc_e1.c) and `t33_h265_mq` (src/t32/openimp_t33_hera_h265.c) writes the same registers. Host test `tests/t33/mq784_test.c`; QEMU o5mq1b vs vendor v5mq1: 0 motion-quality-specific register differences. Cells Set/GetMotionQuality, SetMotionQualityEnable T33 cache -> qemu; the two `_Yuv` variants stay cache.
+
+## 2026-11-25: T32/T33 multi-process server: failed YuvInit answered "failed" (beyond vendor, user OK, #782)
+
+- Kept as implemented in #782 (user decision 2026-11-25): the vendor answers a failed `YuvInit` in the server with success; OpenIMP answers "failed" and keeps the encoder free. Listed in docs/OPENIMP_BEYOND_VENDOR.md section 6.16.
+
 ## 2026-11-25: T32/T33 multi-process server serves the stand-alone encoder like the vendor (#782)
 
 - The `_Ex` server threads (src/t32/openimp_t32_enc_e3.c) answered every `IMP_Encoder_YuvInit_Ex` / `YuvEncode_Ex` / `YuvExit_Ex` / `InputJpege_Ex` request "failed". Like vendor 2.0.2.1 `__jz_enc_msg_process` (0xd1ecc) and `__jz_inputJpege_msg_process` (0xd27cc) they now call `IMP_Encoder_YuvInit` / `YuvEncode` / `YuvExit` / `InputJpege`, the client's physical addresses mapped with `IMP_Encoder_VbmP2V`; one client holds the encoder at a time (its handle is slot 0), and a watcher releases it when the client process is gone (vendor: a thread per client). Not as the vendor: a failed `YuvInit` is answered "failed" (the vendor overwrites that status with its watcher thread's start).

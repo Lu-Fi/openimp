@@ -51,6 +51,7 @@ typedef struct {
     const uint8_t *rc_slice;            /* NULL (FIXQP), or the H.265 controller's slice block
                                          * (T65_SLICE_BYTES, vendor layout; revision 6, #720) */
     int chroma_qp_offset;               /* T33: SetH265TransCfg (#784), -12..12, cb = cr */
+    int motion_quality;                 /* T33: SetMotionQuality enable latched at the last IDR (#784) */
 } T32HeraH265Pic;
 
 /* sizes of the analysis buffers the engine reads and writes */

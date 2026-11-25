@@ -32,6 +32,7 @@ typedef struct {
     int chroma265;                      /* H.265: one offset for cb and cr (vendor) */
     uint8_t crop;
     uint32_t crop_x, crop_y, crop_w, crop_h;
+    uint8_t motion_quality;             /* #784: H.265 SetMotionQuality enable, from this IDR on */
 } T32E1Hdr;
 void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h);
 

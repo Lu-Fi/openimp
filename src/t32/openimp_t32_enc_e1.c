@@ -68,6 +68,7 @@ struct t32_e1 {
     uint8_t roi_rec[IMP_ENC_ROI_WIN_COUNT][9];  /* the vendor's set_param(2) records (#726) */
     int roi_new;
     IMPEncoderMotionQuality mq;
+    uint8_t mq_on;                      /* #784: SetMotionQuality enable latched at the IDR */
     uint32_t ud_cnt, ud_size, ud_head, ud_n, ud_len[T32_E1_UD_MAX];
     uint8_t ud[T32_E1_UD_MAX][T32_E1_UD_BYTES];
 };
@@ -155,6 +156,7 @@ int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui)
     x->crop = x->crop_pend;
     x->qpg = x->qpg_pend;
     x->srd = x->srd_pend;
+    x->mq_on = x->mq.enable ? 1 : 0;   /* #784: vendor takes MotionQuality at the next IDR */
     memcpy(x->roi, x->roi_pend, sizeof(x->roi));
     pthread_mutex_unlock(&e1_lock);
     return v;
@@ -169,6 +171,7 @@ void OpenIMP_T32_E1Hdr(int encChn, T32E1Hdr *h)
     h->chroma264 = E1.trans264;
     h->chroma265 = E1.trans265.chroma_cr_qp_offset;
     h->crop = E1.crop.enable ? 1 : 0;
+    h->motion_quality = E1.mq_on;
     if (h->crop) {
         h->crop_x = E1.crop.x;
         h->crop_y = E1.crop.y;

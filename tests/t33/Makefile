@@ -47,6 +47,8 @@ PSK5_SRC := pskip793_test.c $(filter-out pskip784_test.c,$(PSK_SRC)) $(filter-ou
 MS_BIN := $(BUILD)/t33-ms784-test
 YP_BIN := $(BUILD)/t33-yuvp904-test
 YP_SRC := yuvp904_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
+MQ_BIN := $(BUILD)/t33-mq784-test
+MQ_SRC := mq784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 MS_SRC := ms784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 
 .PHONY: check
@@ -54,7 +56,7 @@ MS_SRC := ms784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 ALGO_BIN := $(BUILD)/t33-algo805-test
 ALGO_SRC := algo805_test.c $(PROJECT_DIR)/src/t40/openimp_p1_algo.c algo805_inc/imp/imp_isp.h
 
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(PSK5_BIN) $(RC_BIN) $(MS_BIN) $(YP_BIN) $(ALGO_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(PSK5_BIN) $(RC_BIN) $(MS_BIN) $(YP_BIN) $(MQ_BIN) $(ALGO_BIN)
 	$(ALGO_BIN)
 	$(YUV_BIN)
 	$(HDR_BIN)
@@ -64,6 +66,7 @@ check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(PSK5
 	$(RC_BIN)
 	$(MS_BIN)
 	$(YP_BIN)
+	$(MQ_BIN)
 	gzip -dc vendor-2.0.2.1-hera-h264.txt.gz vendor-2.0.2.1-hera-h265.txt.gz > $(BUILD)/t33-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t33-hera-lists.txt
 	gzip -dc vendor-2.0.2.1-osd-sw.txt.gz > $(BUILD)/t33-osd-sw.txt
@@ -113,6 +116,10 @@ $(MS_BIN): $(MS_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t33_sections.h
 $(YP_BIN): $(YP_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t33_sections.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(INC) -o $@ $(YP_SRC) -lm
+
+$(MQ_BIN): $(MQ_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t33_sections.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) $(INC) -o $@ $(MQ_SRC) -lm
 
 $(ALGO_BIN): $(ALGO_SRC)
 	@mkdir -p $(BUILD)

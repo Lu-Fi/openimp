@@ -492,6 +492,10 @@ With the AE at its exposure limit (night), the vendor libimp T33 2.0.2.1 face AE
 
 The IPU (`jz_ipu_v13`, used by the OSD blend) reaches memory through the AHB1 clock gate (CLKGR1 bit 6). The vendor kernel enables it in the IPU driver only on T31; on T21 and T30 only the Helix/Radix encoder switches it on while an encoder channel is open. With no encoder open (streamer idle, first frame of a new stream) the first IPU op stalled until the timeout. Thingino kernel patch `0011-ipu-hold-ahb1-gate-during-op.patch` takes the gate on every SoC that has it (NULL where absent: T10/T20/T23) and enables it around each op, like the vendor T31 path; it also fixes the vendor probe check that tested the wrong clock pointer. Between ops the gate is released, so the idle clock state stays as before. Measured on the T21 test camera, 5 cold stream starts after a streamer restart: 0 IPU timeouts and 0 abandoned ops (before: 2 to 4 timeouts per cold start), first-stream TTFB 0.37 to 0.49 s (before 0.65 to 0.70 s), snapshot OK, 0 oops. T30: same gate bit, compile-checked, no device test yet. No switch.
 
+### 6.16 Multi-process server: a failed YuvInit is answered "failed" (T32/T33, user OK 2026-11-25, #782)
+
+The multi-process server (`IMP_Encoder_MultiProcessInit`) serves `IMP_Encoder_YuvInit_Ex` like vendor 2.0.2.1 `__jz_enc_msg_process` (0xd1ecc), with one difference. When `IMP_Encoder_YuvInit` fails in the server, OpenIMP answers the client "failed" (`YuvInit_Ex` returns -1) and keeps the encoder free. The vendor overwrites that status with the result of starting its client-watcher thread, so the client gets 0 and a handle with no encoder behind it; its later `YuvEncode_Ex` calls fail, and the encoder slot stays taken until the client exits. A successful init behaves the same as the vendor. No switch.
+
 ## 7. Environment variables
 
 User-facing = safe for a streamer to set in production. Debug-only = diagnostics or A/B rollback; do **not**

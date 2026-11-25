@@ -1058,6 +1058,10 @@ again:
                             { "resize", "IMP_Encoder_SetChnResizeMode", 0, { 1 } },
                             { "mqen", "IMP_Encoder_SetMotionQualityEnable", 0, { 1 } },
                             { "mq", "IMP_Encoder_SetMotionQuality", 1, { 1, 2 } },
+                            { "mq0", "IMP_Encoder_SetMotionQuality", 1, { 1, 0 } },
+                            { "mq1", "IMP_Encoder_SetMotionQuality", 1, { 1, 1 } },
+                            { "mq3", "IMP_Encoder_SetMotionQuality", 1, { 1, 3 } },
+                            { "mqoff", "IMP_Encoder_SetMotionQuality", 1, { 0, 2 } },
                         };
                         unsigned xi;
                         for (xi = 0; xi < sizeof(xt) / sizeof(xt[0]); xi++) {

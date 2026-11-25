@@ -20169,14 +20169,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "QEMU 0731 2026-11-25 audit/issue784/qx v5mq*/o5mq1b (#784 batch 2)"
       },
-      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (0x80048000 without SetMotionQualityEnable, struct untouched); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads chn+0x1510/0x1514 (SetMotionQuality) -> the vendor applies it; still cache in OpenIMP (port open in #784). Reader search (2026-11-22, #784 part 4, objdump addresses): the H.264 loop writes pic+0x234/0x235 (0xde4c4..0xde4e4, H.265 loop: none); i264e_update_fenc copies the picture block only in bulk (0x70138..0x701b8, 0x238 bytes to h[0x4158]+0x1008 and +0x1240) and no code loads those offsets (+0x123c/0x123d/0x1474/0x1475); QEMU vmq: no HERA change. No consumer in 2.0.2.1 found: stays cache (the vendor has no visible effect either)."
+      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (0x80048000 without SetMotionQualityEnable, struct untouched); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads chn+0x1510/0x1514 (SetMotionQuality) -> the vendor applies it; still cache in OpenIMP (port open in #784). Reader search (2026-11-22, #784 part 4, objdump addresses): the H.264 loop writes pic+0x234/0x235 (0xde4c4..0xde4e4, H.265 loop: none); i264e_update_fenc copies the picture block only in bulk (0x70138..0x701b8, 0x238 bytes to h[0x4158]+0x1008 and +0x1240) and no code loads those offsets (+0x123c/0x123d/0x1474/0x1475); QEMU vmq: no HERA change. No consumer in 2.0.2.1 found: stays cache (the vendor has no visible effect either). T33 H.265 (#784 batch 2, 2026-11-25): vendor 2.0.2.1 applies SetMotionQuality (enable 1, after SetMotionQualityEnable before CreateChn) from the next IDR to every H.265 P list: 0x20000 bit 14, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8, 0x90000 bit 7 (QEMU 0731 v5mq1 vs v5mq0; levels 0..3 and 1080p / 720p give the same lists); OpenIMP does the same (openimp_t33_hera_h265.c t33_h265_mq, host test tests/t33/mq784_test.c); QEMU o5mq1b vs v5mq1: 0 motion-quality-specific register differences. H.264: no effect (vendor logs an error at CreateChn)."
     },
     "Encoder_GetPskipCfg": {
       "area": "Encoder",
@@ -20714,14 +20714,14 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "QEMU 0731 2026-11-25 audit/issue784/qx v5mq*/o5mq1b (#784 batch 2)"
       },
-      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (0x80048000 without SetMotionQualityEnable); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x1510/0x1514, read per picture by the encode loop (0xee4d0) into the picture request -> the vendor applies it; still cache in OpenIMP (port open in #784). QEMU (#784, vmq, enabled before CreateChn): no HERA change in a static FIXQP scene. Reader search (2026-11-22, #784 part 4, objdump addresses): the H.264 loop writes pic+0x234/0x235 (0xde4c4..0xde4e4, H.265 loop: none); i264e_update_fenc copies the picture block only in bulk (0x70138..0x701b8, 0x238 bytes to h[0x4158]+0x1008 and +0x1240) and no code loads those offsets (+0x123c/0x123d/0x1474/0x1475); QEMU vmq: no HERA change. No consumer in 2.0.2.1 found: stays cache (the vendor has no visible effect either)."
+      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (0x80048000 without SetMotionQualityEnable); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x1510/0x1514, read per picture by the encode loop (0xee4d0) into the picture request -> the vendor applies it; still cache in OpenIMP (port open in #784). QEMU (#784, vmq, enabled before CreateChn): no HERA change in a static FIXQP scene. Reader search (2026-11-22, #784 part 4, objdump addresses): the H.264 loop writes pic+0x234/0x235 (0xde4c4..0xde4e4, H.265 loop: none); i264e_update_fenc copies the picture block only in bulk (0x70138..0x701b8, 0x238 bytes to h[0x4158]+0x1008 and +0x1240) and no code loads those offsets (+0x123c/0x123d/0x1474/0x1475); QEMU vmq: no HERA change. No consumer in 2.0.2.1 found: stays cache (the vendor has no visible effect either). T33 H.265 (#784 batch 2, 2026-11-25): vendor 2.0.2.1 applies SetMotionQuality (enable 1, after SetMotionQualityEnable before CreateChn) from the next IDR to every H.265 P list: 0x20000 bit 14, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8, 0x90000 bit 7 (QEMU 0731 v5mq1 vs v5mq0; levels 0..3 and 1080p / 720p give the same lists); OpenIMP does the same (openimp_t33_hera_h265.c t33_h265_mq, host test tests/t33/mq784_test.c); QEMU o5mq1b vs v5mq1: 0 motion-quality-specific register differences. H.264: no effect (vendor logs an error at CreateChn)."
     },
     "Encoder_SetMotionQualityEnable": {
       "area": "Encoder",
@@ -20733,15 +20733,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "QEMU 0731 2026-11-25 audit/issue784/qx v5mq*/o5mq1b (#784 batch 2)"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): only before CreateChn (created: 0x80040004), chn+0x1518 read by CreateChn and the encode loop -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): only before CreateChn (created: 0x80040004), chn+0x1518 read by CreateChn and the encode loop -> the vendor applies it; still cache in OpenIMP (port open in #784). T33 H.265 (#784 batch 2, 2026-11-25): vendor 2.0.2.1 applies SetMotionQuality (enable 1, after SetMotionQualityEnable before CreateChn) from the next IDR to every H.265 P list: 0x20000 bit 14, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8, 0x90000 bit 7 (QEMU 0731 v5mq1 vs v5mq0; levels 0..3 and 1080p / 720p give the same lists); OpenIMP does the same (openimp_t33_hera_h265.c t33_h265_mq, host test tests/t33/mq784_test.c); QEMU o5mq1b vs v5mq1: 0 motion-quality-specific register differences. H.264: no effect (vendor logs an error at CreateChn)."
     },
     "Encoder_SetMotionQualityEnable_Yuv": {
       "area": "Encoder",
