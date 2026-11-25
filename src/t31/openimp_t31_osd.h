@@ -17,6 +17,12 @@ int openimp_t31_osd_apply(int group, void *frame);
  * after the IPU blend is skipped.  Without it the bands are invalidated as
  * openimp_t31_osd_apply() always did. */
 #define OPENIMP_T31_OSD_DMA_ONLY 1u
+/* OPENIMP_T31_OSD_NO_RETRY (#873): the T21 idle-wake check still probes the
+ * blend and returns -1 when it did not take, but does not repeat the op.  For
+ * the video encoder path: each repeat after an idle gap is one more 100 ms
+ * kernel IPU timeout (4 x ~110 ms before the first main picture), while the
+ * vendor libimp blends once and encodes the picture. */
+#define OPENIMP_T31_OSD_NO_RETRY 2u
 int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags);
 
 #endif

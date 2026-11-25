@@ -328,7 +328,10 @@ static void t31_osd_draw_cpu(struct osd_canvas *cv, const struct t31_osd_region 
  * (cache invalidated) before and after the op; if memory did not change the
  * op is repeated (OSD_RETRY_MAX times).  If it still did not take, the apply
  * returns -1 so a JPEG caller can drop the frame instead of handing out a
- * snapshot without overlay.  OPENIMP_OSD_RETRY=0 disables, =1 forces on;
+ * snapshot without overlay.  A caller passing OPENIMP_T31_OSD_NO_RETRY (the
+ * video encoder path, #873) gets the probe and the -1 but no repeat: every
+ * repeat after the gap is one more 100 ms kernel IPU timeout, and the video
+ * picture is encoded either way.  OPENIMP_OSD_RETRY=0 disables, =1 forces on;
  * default on for T21 only.  OPENIMP_OSD_RETRY_IDLE_MS (1000) is the gap.
  */
 #define OSD_RETRY_WINDOW_MS 3000   /* verify this long after an idle gap */
@@ -633,7 +636,16 @@ int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
 
             ipu_ret = ioctl(osd_ipu_fd, T31_IPU_START, &p);
             osd_retry_ops++;
-            while (probing && ipu_ret >= 0 && !osd_probe_changed(&pr)) {
+            if (probing && (flags & OPENIMP_T31_OSD_NO_RETRY) &&
+                ipu_ret >= 0 && !osd_probe_changed(&pr)) {
+                /* #873: no repeat on the video path (one 100 ms kernel
+                 * timeout per repeat); the frame is flagged, the window
+                 * stays open for the next apply */
+                result = -1;
+                tries = OSD_RETRY_MAX + 1;
+            }
+            while (probing && !(flags & OPENIMP_T31_OSD_NO_RETRY) &&
+                   ipu_ret >= 0 && !osd_probe_changed(&pr)) {
                 static unsigned int retry_logs;
 
                 if (tries++ >= OSD_RETRY_MAX) {

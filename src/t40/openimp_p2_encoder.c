@@ -4380,7 +4380,9 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
         if (ch->osd_group >= 0 &&
             openimp_t31_osd_apply_ex(ch->osd_group, frame,
                                      ch->codec_type != IMP_ENC_TYPE_JPEG
-                                         ? OPENIMP_T31_OSD_DMA_ONLY : 0u) < 0) {
+                                         ? OPENIMP_T31_OSD_DMA_ONLY |
+                                               OPENIMP_T31_OSD_NO_RETRY
+                                         : 0u) < 0) {
             /* overlay not confirmed (T21 first op after idle): this frame
              * must not become a JPEG.  A snapshot is cut from the video
              * channel's frame by the fan-out copy below (the JPEG channel
