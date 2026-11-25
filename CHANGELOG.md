@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T10/T20 AEC without webrtc_profile.ini like the vendor (#911)
+
+- Cause: vendor libimp 3.12.0 `IMP_AI_EnableAec` calls `audio_process_aec_create(rate)` without a profile (0x75114; a1 not loaded after `pthread_mutex_lock` 0x75108) and has no `IMP_AI_Set_WebrtcProfileIni_Path`, so libaudioProcess-neo runs its defaults. OpenIMP passed `/etc/webrtc_profile.ini`, whose `aec_mode=user` switches neo to the Ingenic user mode: in the light box the modulated-noise residual was ~4 dB above the vendor (open median -8.1 dB, vendor -12.5 dB, 3000 K).
+- Fix (vendor-equal): the T20 build (T10/T20) passes no profile unless the application set one with `IMP_AI_Set_WebrtcProfileIni_Path`.
+- Evidence: T10 .31 light box, paired audio runs with the fix (2 at 3000 K, 2 at 5000 K): modulated-noise residual open -10.6 / -8.6 / -9.0 / -11.0 dB, vendor -8.5 / -9.5 / -11.2 / -9.8 dB; report rows worse 0 at both CTs.
+
 ## 2026-11-25: T10/T20 encode in the capture worker like the vendor, fewer lost frames under CPU load (#896)
 
 - Cause: with 2 capture buffers the ISP DMA ring has 2 banks; when the bank after the one being written has no buffer at the frame end, the ISR cancels the next frame write (same in the OEM ko, ISR 0x10370). OpenIMP encoded inside the application's PollingStream, so a capture buffer was held for the application thread's wake-up too; under a nice -20 CPU burst (the diag sampler) it missed the next bank: 3-7 frames lost per 120 s on the T10 main channel.

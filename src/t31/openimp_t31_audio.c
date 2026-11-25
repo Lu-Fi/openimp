@@ -1880,8 +1880,19 @@ static int t31_lib_aec_enable(void)
         t31_aec_log("EnableAec: libaudioProcess has no AEC, using AECM");
         return -1;
     }
+#if defined(PLATFORM_T20)
+    /* #911: T10/T20 libimp 3.12.0 IMP_AI_EnableAec calls the create with
+     * the rate only (0x75114, a1 not loaded after pthread_mutex_lock
+     * 0x75108, 0 on its fast path) and has no
+     * IMP_AI_Set_WebrtcProfileIni_Path: libaudioProcess-neo then runs its
+     * defaults.  The image's /etc/webrtc_profile.ini switches neo to the
+     * Ingenic user mode, which left ~4 dB more residual on modulated noise
+     * in the light box.  A path set by the application still applies. */
+    profile = t31_audio.aec_profile[0] ? t31_audio.aec_profile : NULL;
+#else
     profile = t31_audio.aec_profile[0] ? t31_audio.aec_profile
                                        : "/etc/webrtc_profile.ini";
+#endif
     handle = t31_audio.lib_aec_create(rate, profile);
     if (!handle) {
         t31_aec_log("EnableAec: audio_process_aec_create(%d) failed, "
