@@ -266,9 +266,15 @@ size_t t32_h264_slice_head(const T32H264Seq *s, const T32H264Slice *sl, uint8_t 
         put_ue(&b, 0);                  /* cabac_init_idc */
     }
     put_se(&b, sl->qp - s->init_qp);
-    put_ue(&b, 0);                      /* deblocking on */
-    put_se(&b, 0);
-    put_se(&b, 0);
+    /* #899: vendor i264e_slice_init (2.0.2.1 0x78ab4, x264 rule) turns the deblocking filter off when
+     * qp + 2 * min(alpha, beta offset) < 16, where it would filter nothing anyway (offsets 0 here) */
+    if (sl->qp < 16) {
+        put_ue(&b, 1);                  /* disable_deblocking_filter_idc 1: off */
+    } else {
+        put_ue(&b, 0);                  /* deblocking on */
+        put_se(&b, 0);
+        put_se(&b, 0);
+    }
     while (b.bits % 8u)                 /* cabac_alignment_one_bit */
         put(&b, 1, 1);
     *esc = 0;

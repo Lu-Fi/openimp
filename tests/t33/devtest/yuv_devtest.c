@@ -142,7 +142,11 @@ int main(int argc, char **argv)
         IMP_System_Exit();
         return 0;
     }
-    pic = IMP_Encoder_VbmAlloc(size, 256);
+    /* #899: 16 zeroed rows behind the picture: the encoder reads whole macroblock rows (a 360-line
+     * picture as 368), so what follows the buffer must not change between runs and libraries */
+    pic = IMP_Encoder_VbmAlloc(size + (uint32_t)w * 16u, 256);
+    if (pic)
+        memset(pic + size, 0, (size_t)w * 16u);
     out = IMP_Encoder_VbmAlloc(cap, 256);
     if (!pic || !out) {
         fprintf(stderr, "VbmAlloc failed\n");
