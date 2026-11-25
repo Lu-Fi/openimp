@@ -198,6 +198,10 @@ extern int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame,
 #else
 #define P2_DEFAULT_STREAM_COUNT 4
 #endif
+#if defined(PLATFORM_T20)
+#define P2_PUSH_RING_MAX 15  /* stream count limit 16, one held by the application */
+static int p2_push_env_on(void);
+#endif
 #define P2_PARAM_SIZE 0x794
 /* T40 1.3.1 ends IMPEncoderStream after isVI and pads it to 28 bytes. T31
  * 1.1.6 includes the streamInfo/jpegInfo union, matching the compatibility
@@ -465,6 +469,22 @@ typedef struct {
      * state of do_day_night_change (inStat.is_day, 0 at creation) */
     int gop_restart;
     int dn_is_day;
+#endif
+#if defined(PLATFORM_T20)
+    /* #896 push model (T10/T20, vendor libimp 3.12.0): the FrameSource
+     * capture worker encodes a bound channel's picture right after its
+     * DQBUF and gives the capture buffer back at once; finished streams wait
+     * here for PollingStream/GetStream. */
+    int push_on;
+    pthread_cond_t push_cond;
+    unsigned int push_head;
+    unsigned int push_count;
+    struct {
+        void *stream;
+        void *user;
+        void *frame;
+    } push_ring[P2_PUSH_RING_MAX];
+    uint32_t push_full;
 #endif
 } P2EncoderChannel;
 
@@ -2341,6 +2361,9 @@ int EncoderInit(void)
             openimp_cond_init_mono(&p2_channels[i].jpeg_frame_ready);
             pthread_cond_init(&p2_channels[i].poll_idle, NULL);
             pthread_mutex_init(&p2_channels[i].poll_serial, NULL);
+#if defined(PLATFORM_T20)
+            openimp_cond_init_mono(&p2_channels[i].push_cond);
+#endif
         }
         p2_initialized = 1;
         p2_startup_trace("openimp/P2 startup: EncoderInit channel locks initialized\n");
@@ -3365,6 +3388,9 @@ static void p2_fd_stop(P2EncoderChannel *ch)
 static void p2_wait_poll_idle(P2EncoderChannel *ch)
 {
     ch->closing++;
+#if defined(PLATFORM_T20)
+    pthread_cond_broadcast(&ch->push_cond);
+#endif
     while (ch->in_poll > 0)
         pthread_cond_wait(&ch->poll_idle, &ch->lock);
     ch->closing--;
@@ -3518,6 +3544,11 @@ int IMP_Encoder_StartRecvPic(int channel)
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
     ch->receiving = 1;
+#if defined(PLATFORM_T20)
+    __atomic_store_n(&ch->push_on,
+                     ch->codec_type != IMP_ENC_TYPE_JPEG && p2_push_env_on(),
+                     __ATOMIC_RELEASE);
+#endif
     pthread_mutex_unlock(&ch->lock);
     p2_trace("openimp/P2: StartRecv ch=%d source=%d%s\n",
              channel, ch->source_channel,
@@ -3557,12 +3588,105 @@ int IMP_Encoder_StopRecvPic(int channel)
      * this the first GetStream after StartRecvPic returned that old picture.
      * With receiving cleared the GetFd pump starts no new encode. */
     p2_wait_poll_idle(ch);
+#if defined(PLATFORM_T20)
+    __atomic_store_n(&ch->push_on, 0, __ATOMIC_RELEASE);
+#endif
     pthread_mutex_unlock(&ch->lock);
     p2_drop_unread_stream(ch);
     return 0;
 }
 
-static int p2_polling_stream(int channel, uint32_t timeout_ms);
+static int p2_polling_stream(int channel, uint32_t timeout_ms, int push);
+#if defined(PLATFORM_T20)
+/* Finished streams the push model may keep: the codec's stream buffers
+ * less the one the application holds. */
+static unsigned int p2_push_cap(const P2EncoderChannel *ch)
+{
+    int cap = ch->max_stream_count - 1;
+
+    if (cap < 1)
+        cap = 1;
+    if (cap > P2_PUSH_RING_MAX)
+        cap = P2_PUSH_RING_MAX;
+    return (unsigned int)cap;
+}
+
+static int p2_push_env_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T20_PUSH");
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+
+/* PollingStream in the push model: wait for a stream the capture worker
+ * finished (vendor 3.12.0: the poll only waits for a finished stream).
+ * Called with ch->lock held. */
+static int p2_push_wait(P2EncoderChannel *ch, uint32_t timeout_ms)
+{
+    struct timespec until;
+
+    openimp_deadline_mono(&until, (uint64_t)timeout_ms * 1000u);
+    for (;;) {
+        if (ch->raw_stream)
+            return 0;
+        if (ch->push_count) {
+            unsigned int slot = ch->push_head;
+
+            ch->raw_stream = ch->push_ring[slot].stream;
+            ch->codec_user = ch->push_ring[slot].user;
+            ch->source_frame = ch->push_ring[slot].frame;
+            ch->raw_stream_out = 0;
+            ch->push_head = (slot + 1u) % P2_PUSH_RING_MAX;
+            ch->push_count--;
+            return 0;
+        }
+        if (!ch->receiving || ch->closing > 0 || !timeout_ms)
+            return -1;
+        if (pthread_cond_timedwait(&ch->push_cond, &ch->lock, &until) ==
+            ETIMEDOUT && !ch->push_count && !ch->raw_stream)
+            return -1;
+    }
+}
+
+/* Called by the FrameSource capture worker after it published a frame of
+ * source_channel (framesource_tseries.c): encode it for every bound video
+ * channel in this thread, as the vendor's frame_pooling_thread does
+ * (on_encoder_group_data_update -> do_channel_process_h264e). */
+void OpenIMP_FS_PushEncode(int source_channel)
+{
+    int i;
+
+    for (i = 0; i < P2_ALL_CHANNELS; i++) {
+        P2EncoderChannel *ch = &p2_channels[i];
+        int ok;
+
+        if (!__atomic_load_n(&ch->push_on, __ATOMIC_ACQUIRE))
+            continue;
+        pthread_mutex_lock(&ch->lock);
+        ok = ch->push_on && ch->created && ch->registered && ch->receiving &&
+             !ch->closing && ch->codec &&
+             ch->source_channel == source_channel &&
+             ch->codec_type != IMP_ENC_TYPE_JPEG;
+        if (ok)
+            ch->in_poll++;
+        pthread_mutex_unlock(&ch->lock);
+        if (!ok)
+            continue;
+        if (pthread_mutex_trylock(&ch->poll_serial) == 0) {
+            (void)p2_polling_stream(i, 0u, 1);
+            pthread_mutex_unlock(&ch->poll_serial);
+        }
+        pthread_mutex_lock(&ch->lock);
+        if (--ch->in_poll == 0)
+            pthread_cond_broadcast(&ch->poll_idle);
+        pthread_mutex_unlock(&ch->lock);
+    }
+}
+#endif
 
 #if defined(PLATFORM_T23)
 /*
@@ -3940,6 +4064,16 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
         return -1;
     }
     __atomic_add_fetch(&ch->in_poll, 1, __ATOMIC_RELEASE);
+#if defined(PLATFORM_T20)
+    if (ch->push_on) {
+        ret = p2_push_wait(ch, timeout_ms);
+        __atomic_store_n(&ch->last_poll_us, p2_monotonic_us(), __ATOMIC_RELEASE);
+        if (--ch->in_poll == 0)
+            pthread_cond_broadcast(&ch->poll_idle);
+        pthread_mutex_unlock(&ch->lock);
+        return ret;
+    }
+#endif
     pthread_mutex_unlock(&ch->lock);
     /* Two threads polling one channel (an application thread next to the
      * GetFd pump, or a drain thread) must not both feed the encoder: the
@@ -3957,7 +4091,7 @@ int IMP_Encoder_PollingStream(int channel, uint32_t timeout_ms)
             spent_ms = (p2_monotonic_us() - start_us) / 1000u;
             ret = p2_polling_stream(channel,
                                     spent_ms >= timeout_ms ? 0u
-                                        : timeout_ms - (uint32_t)spent_ms);
+                                        : timeout_ms - (uint32_t)spent_ms, 0);
 #if defined(PLATFORM_T23)
             /* IMP_Encoder_Setframelossthd: a dropped picture is no stream,
              * not an error; wait for the next one within the timeout as the
@@ -4121,7 +4255,7 @@ static int p2_ivdc_pick(int channel, int source, void **frame,
 }
 #endif
 
-static int p2_polling_stream(int channel, uint32_t timeout_ms)
+static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
 {
     static unsigned int trace_count;
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
@@ -4182,11 +4316,22 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
                  channel, timeout_ms);
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
-    if (ch->raw_stream) {
+    if (ch->raw_stream && !push) {
         pthread_mutex_unlock(&ch->lock);
         openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
         return 0;
     }
+#if defined(PLATFORM_T20)
+    /* Push: every stream slot is taken (one by the application, the rest
+     * finished and unread). The picture stays in the ready queue, which
+     * hands it back to the driver (VBM_READY_MAX_AGE_MS). */
+    if (push && ch->push_count >= p2_push_cap(ch)) {
+        ch->push_full++;
+        pthread_mutex_unlock(&ch->lock);
+        openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
+        return -1;
+    }
+#endif
     if (!ch->created || !ch->registered || !ch->receiving || !ch->codec) {
         pthread_mutex_unlock(&ch->lock);
         openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
@@ -4214,6 +4359,11 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
     now_us = p2_monotonic_us();
     wait_us = ch->next_frame_due_us > now_us
         ? ch->next_frame_due_us - now_us : 0u;
+    /* Push: the capture worker comes once per sensor frame and cannot wait
+     * for the due time; a picture up to half an output interval early is
+     * due, an earlier one is skipped (output rate below the sensor rate). */
+    if (push && wait_us <= interval_us / 2u)
+        wait_us = 0;
 #if defined(PLATFORM_T23)
     /* #807: IVDC direct: kicked by the frame-start event, no timer */
     if (p2_ivdc_push_on() && ch->codec_type != IMP_ENC_TYPE_JPEG &&
@@ -4596,10 +4746,22 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms)
             memcpy(ch->eval_info, rec, sizeof(rec));
     }
 #endif
-    ch->source_frame = frame ? frame : &ch->synthetic_frame;
-    ch->raw_stream = stream;
-    ch->raw_stream_out = 0;
-    ch->codec_user = user;
+#if defined(PLATFORM_T20)
+    if (push) {
+        unsigned int slot = (ch->push_head + ch->push_count) % P2_PUSH_RING_MAX;
+        ch->push_ring[slot].stream = stream;
+        ch->push_ring[slot].user = user;
+        ch->push_ring[slot].frame = frame ? frame : &ch->synthetic_frame;
+        ch->push_count++;
+        pthread_cond_broadcast(&ch->push_cond);
+    } else
+#endif
+    {
+        ch->source_frame = frame ? frame : &ch->synthetic_frame;
+        ch->raw_stream = stream;
+        ch->raw_stream_out = 0;
+        ch->codec_user = user;
+    }
     {
         uint64_t t = p2_monotonic_us();
         uint64_t d = t > ch->enc_start_us ? t - ch->enc_start_us : 0;
@@ -5127,6 +5289,18 @@ int IMP_Encoder_Query(int channel, IMPEncoderCHNStat *stat)
         stat->leftStreamBytes = ((const P2HWStream *)ch->raw_stream)->length;
         stat->curPacks = 1u;
     }
+#if defined(PLATFORM_T20)
+    {
+        unsigned int k;
+
+        for (k = 0; k < ch->push_count; k++) {
+            const P2HWStream *hw = (const P2HWStream *)
+                ch->push_ring[(ch->push_head + k) % P2_PUSH_RING_MAX].stream;
+            stat->leftStreamFrames++;
+            stat->leftStreamBytes += hw ? hw->length : 0u;
+        }
+    }
+#endif
     stat->work_done = ch->in_poll > 0 ? 0u : 1u;
     pthread_mutex_unlock(&ch->lock);
 #endif
@@ -5574,6 +5748,25 @@ static void p2_drop_unread_stream(P2EncoderChannel *ch)
                  channel);
         (void)p2_return_stream(ch, raw, user, frame);
     }
+#if defined(PLATFORM_T20)
+    for (;;) {
+        unsigned int slot;
+
+        pthread_mutex_lock(&ch->lock);
+        if (!ch->push_count) {
+            pthread_mutex_unlock(&ch->lock);
+            break;
+        }
+        slot = ch->push_head;
+        raw = ch->push_ring[slot].stream;
+        user = ch->push_ring[slot].user;
+        frame = ch->push_ring[slot].frame;
+        ch->push_head = (slot + 1u) % P2_PUSH_RING_MAX;
+        ch->push_count--;
+        pthread_mutex_unlock(&ch->lock);
+        (void)p2_return_stream(ch, raw, user, frame);
+    }
+#endif
 }
 
 /* IMP_Encoder_SetbufshareChn(encChn, shareChn).

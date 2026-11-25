@@ -83,6 +83,9 @@ extern void   *video_vbm_malloc(int32_t size, int32_t align);
 
 /* Module/system helpers */
 extern int32_t notify_observers(Module *module, void *frame);
+#if defined(PLATFORM_T20)
+extern void OpenIMP_FS_PushEncode(int source_channel) __attribute__((weak));
+#endif
 extern int     add_observer_to_module(void *module, Observer *observer);
 extern int     remove_observer_from_module(void *src_module, void *dst_module);
 extern Subject *create_group(int32_t arg1, int32_t arg2, char *arg3, void *arg4);
@@ -1377,6 +1380,16 @@ static void *frame_pooling_thread(void *arg)
                     FS_STEP(chn, FS_STEP_NOTIFY);
                     framesource_publish_outputs(m, frame);
                     notify_observers(m, frame);
+#if defined(PLATFORM_T20)
+                    /* #896: encode the bound video channels here and give
+                     * the buffer back now (vendor 3.12.0 frame_pooling_thread
+                     * 0x63168 -> on_encoder_group_data_update): a picture
+                     * that waited for the application's PollingStream missed
+                     * the next bank under CPU load and the ISP dropped a
+                     * frame. */
+                    if (OpenIMP_FS_PushEncode)
+                        OpenIMP_FS_PushEncode(chn);
+#endif
                     if (*(int32_t *)((char *)m + 0x3c) == 0) {
                         fs_trace("libimp/FS: pooling ch=%d fd=%d module=%p frame=%p notify-empty direct-enc\n",
                                  chn, ctx->fd, m, frame);
