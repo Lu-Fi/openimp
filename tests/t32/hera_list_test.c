@@ -56,6 +56,7 @@ static int check_list(const char *name, const uint32_t *v, size_t pairs)
     p.width = size & 0xffffu;
     p.height = size >> 16;
     p.p_frame = has(v, pairs, 0x30060);
+    p.first = (find(v, pairs, 0x2001c, 0) >> 24) == (find(v, pairs, 0x2001c, 0) >> 16 & 0xffu);
     p.qp = (int)(find(v, pairs, 0x68018, 0) >> 8 & 0x3fu);
     p.src_y = find(v, pairs, 0x2000c, 0);
     p.src_c = find(v, pairs, 0x20010, 0);

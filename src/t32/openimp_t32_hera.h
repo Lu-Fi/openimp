@@ -33,6 +33,7 @@
 typedef struct {
     uint32_t width, height;             /* picture size, multiples of 16 */
     int p_frame;                        /* 0 I (IDR), 1 P (one reference) */
+    int first;                          /* the channel's first picture (an I): QP window QP..QP, later IDRs 1..51 (#295) */
     int qp;                             /* 0..51 */
     uint32_t src_y, src_c, src_stride;  /* NV12 source */
     uint32_t ring_y, ring_y_end;        /* reconstruction ring, luma: base, beyond */

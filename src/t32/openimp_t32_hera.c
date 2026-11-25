@@ -249,8 +249,8 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
         return p->src_c;
     case EFE_RAW_STRD:
         return p->src_stride << 16 | p->src_stride;
-    case EFE_FRM_QP:                    /* base QP, min, max (I: all the picture QP) */
-        return p->p_frame ? qp << 8 | 1u << 16 | 51u << 24 : qp << 8 | qp << 16 | qp << 24;
+    case EFE_FRM_QP:                    /* base QP, min, max (the first picture: all the picture QP; later IDRs as P, #295) */
+        return (p->p_frame || !p->first) ? qp << 8 | 1u << 16 | 51u << 24 : qp << 8 | qp << 16 | qp << 24;
     case EFE_CPLX_QP0:
         return t32_hera_cplx_qp(qp, 0);
     case EFE_CPLX_QP1:

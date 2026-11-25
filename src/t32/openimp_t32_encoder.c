@@ -143,7 +143,7 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint8_t vps[T32_H265_PARAM_MAX], sps[T32_H265_PARAM_MAX], pps[T32_H265_PARAM_MAX];
     size_t vps_len, sps_len, pps_len;
     int last_p;                         /* H.265: the last picture was a P */
-    uint32_t pictures;                  /* H.265: pictures coded */
+    uint32_t pictures;                  /* pictures coded (H.264 and H.265) */
     int qp_i, qp_p;
     uint32_t gop, gop_pos, idr_pic_id, section_kb;
     uint32_t bs_bytes;                  /* the section buffer: 2 x section_kb KiB, or one picture buffer at section_kb 0 (#784) */
@@ -1112,6 +1112,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.height = h;
     p.chroma_qp_offset = a->seq.chroma_qp_offset;
     p.p_frame = !idr;
+    p.first = a->pictures == 0;         /* #295: only the channel's first picture has the QP..QP window */
     p.qp = rc_picture_qp(e, idr);
     enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
     p.ring_y = t32_vpu_buf_pa(&a->ring);
@@ -1220,6 +1221,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     a->ref_y = p.recon_y;
     a->ref_c = p.recon_c;
     a->have_ref = 1;
+    a->pictures++;
     if (idr) {
         a->idr_req = 0;
         a->idr_pic_id = (a->idr_pic_id + 1u) & 0xffffu;

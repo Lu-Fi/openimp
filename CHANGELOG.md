@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+
+## 2026-11-25: T32 rate control proven on the PRJ007 module against vendor 2.2.0; FixQP H.264 IDR keeps the MB QP range (#295, #906)
+
+- Device A/B (module .136, same ko, vendor libimp 2.2.0 vs OpenIMP, H.264 + H.265, main 2560x1440 and sub 640x360): FixQP / CBR / VBR / SMART / CVBR / AVBR equal (bit rate within 2 %, QP min/mean/max the same, decode clean), RC parameters (QP windows, I window, IPfrmQPDelta, changePos, iBiasLvl, qualityLvl, run-time bit-rate change) equal. Matrix T32 rows 26 and 27 -> ✅ (static scene only). Details: docs/T32_RC.md.
+- Fix (#906): in FixQP every H.264 IDR after the first was coded at a flat QP; the vendor keeps the MB QP range (22..35 around the slice QP) except in the stream's first picture. `T32HeraH264Pic.first`, `src/t32/openimp_t32_hera.c` EFE_FRM_QP. IDR 67 kB -> 157 kB (vendor 157 kB).
+
 ## 2026-11-25: T33 H.265 SetMotionQuality applied like the vendor (#784 batch 2)
 
 - Vendor 2.0.2.1 applies `IMP_Encoder_SetMotionQuality` (enable 1, after `SetMotionQualityEnable` before `CreateChn`) to every H.265 P list from the next IDR: 0x20000 bit 14 set, 0x30000 bit 27 clear, 0x30040 0x073a5049, 0x301c4..0x301e8 written, 0x90000 bit 7 (QEMU 0731: the level and the picture size change nothing in the lists; H.264: no effect). OpenIMP stored the setting only; it now latches it at the IDR (openimp_t32_enc_e1.c) and `t33_h265_mq` (src/t32/openimp_t33_hera_h265.c) writes the same registers. Host test `tests/t33/mq784_test.c`; QEMU o5mq1b vs vendor v5mq1: 0 motion-quality-specific register differences. Cells Set/GetMotionQuality, SetMotionQualityEnable T33 cache -> qemu; the two `_Yuv` variants stay cache.

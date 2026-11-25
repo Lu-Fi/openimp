@@ -219,3 +219,32 @@ copy the rows hold stale memory that differs per capture buffer and every P pict
 again (QP 40: 411 B instead of 38 B a P picture at 640x360). OpenIMP `enc_pad_rows()` (openimp_t32_encoder.c) does the
 same copy before the list is built; command lists were already equal to the vendor's (device tracer
 `audit/issue882/tools/heratrace.c`: lists, maps, WOR_VPU_REG, REQBUFS, frame format, padding rows at DQBUF / RUN).
+
+## Device A/B against the vendor 2.2.0 library (#295, 2026-11-25)
+
+PRJ007 module (gc4653, ko 072794b4, sensor port a6f424e9), the same camera and kernel for both libraries. Tool:
+`rc32` (one encoder channel from FrameSource 0 = 2560x1440 or 1 = 640x360 at 25 fps, packet sizes and times to a CSV,
+the Annex B stream to the host; the bit rate is measured on the stream bytes). Vendor = libimp 2.2.0 with libalog +
+libsysutils preloaded, OpenIMP = `build/t32` of next. QP per picture from `ffmpeg -bsf trace_headers` (slice QP),
+MB QPs from `-debug qp`, decode with ffmpeg (0 errors in every run), picture quality as frame PSNR / SSIM.
+Static scene; the scene brightness drifted over hours, so every comparison that mattered was repeated as
+interleaved pairs (OpenIMP run, vendor run, 40 s each, minutes apart). Bit rate in kbit/s, vendor / OpenIMP:
+
+| mode | H.264 main | H.264 sub | H.265 main | H.265 sub | max 1 s window, H.264 main | QP mean I / P, H.264 main |
+|---|---|---|---|---|---|---|
+| FixQP 32 | 3979 / 3967 | 87 / 87 | 2984 / 2848 | 63 / 62 | 20528 / 20170 | 32.0 / 32.0 in both |
+| CBR 4000 / 500 | 4055 / 4067 | 509 / 507 | 4052 / 4046 | 449 / 447 | 7107 / 6987 | 29.6 / 32.3 vs 29.4 / 32.0 |
+| VBR | 3548 / 3560 | 427 / 426 | 3821 / 3816 | 434 / 429 | 5109 / 5316 | 29.8 / 32.3 in both |
+| SMART | 1230 / 1221 | 298 / 299 | 1134 / 1145 | 311 / 309 | 4830 / 4716 | 33.5 / 36.1 vs 33.5 / 36.0 |
+| CVBR | 3278 / 3273 | 410 / 408 | 3285 / 3290 | 408 / 406 | 5402 / 5166 | 30.4 / 32.7 vs 30.4 / 32.6 |
+| AVBR | 1135 / 1131 | 301 / 300 | 1235 / 1221 | 314 / 308 | 4806 / 4855 | 33.3 / 36.0 vs 33.3 / 36.1 |
+
+The first picture of every rate-controlled run is coded at QP 45 (initial QP) in both libraries. Parameters (H.264 main,
+CBR/VBR 4000 kbit/s): QP window 34..38, minQp 40, maxQp 30, IDR window 38..42, IPfrmQPDelta 0 / 10, changePos 50 / 100,
+iBiasLvl -8 / +8, qualityLvl 0 / 7, run-time bit-rate change: same QP range and bit rate in both (details in the
+matrix row 27); staticTime 1 / 30 and the other fields are not distinguished by a static scene.
+
+Difference found: FixQP H.264 IDRs after the first one were coded with the QP..QP window (flat MB QP): IDR 67 kB
+against 160 kB in the vendor, which keeps the QPG AI deltas (MB QP 22..35 around the slice QP 32) in every picture except
+the first of the stream (`first` flag as in the H.265 list). Fixed in `openimp_t32_hera.c` (EFE_FRM_QP), #906: IDR 157 / 157 kB.
+Raw data: audit/issue295/rc (not published).
