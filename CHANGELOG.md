@@ -32,6 +32,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - With the HERA ODMA read-back modelled (QEMU build-0731, README-0731.md) the vendor 2.0.2.1 stand-alone lists can be compared without read-back zeros: the only remaining difference was 0x30000 = 0x04042081 on the vendor's YuvEncode P jobs against 0x04046081 (the bound-channel value, which the vendor's channel lists keep). `t33_main_field` (src/t32/openimp_t33_hera.c) now clears bit 14 for the stand-alone (Main, no8x8) lists. Host test `tests/t33/yuvp904_test.c` (make check); QEMU T33 fresh boot: 10 jobs, 0 register differences to the vendor, stream byte-identical (378a3424).
 
+## 2026-11-25: T23 JPEG jobs take the shared Helix bitstream area in arrival order (#907)
+
+- Cause: the T23 shared bitstream area (`OpenIMP_T23_HelixBs_Lock`, src/t30/t30_helix_encoder.c) was a plain mutex held for a whole picture job. The H.264 channels unlock and lock it again right away for their next picture, so a waiting JPEG job lost the race for seconds. On the O-KAM QC3 (T23DL, main H.264 over IVDC + sub + fMP4 preview) JPEG jobs took 1.2 s (median) to 6.1 s and 1.4-2.8 % of the snapshots answered HTTP 503 "no frame" (4.5 s deadline in the streamer), silently.
+- Fix: a FIFO ticket in front of the area lock. Still one job at a time (the stock library holds its bitstream semaphore per picture), now in arrival order.
+- QC3 device proof (planned timps restart with `OPENIMP_HELIX_JPEG_STATS=1 OPENIMP_LOG_LEVEL=6`, RTSP ch0 + ch1 + fMP4 chn1 clients, snapshot every 3 s): before 417 JPEG jobs p50 1.20 s / p90 3.31 s / max 6.08 s, 4 of 297 snapshots 503; after 1417 jobs p50 79 ms / max 82 ms, 111 of 111 snapshots 200 (latency p50 0.26 s). make check rc 0 (except the FEATURE_MATRIX.md freshness check, out of date on origin/next already).
+
 ## 2026-11-25: T32/T33 H.264 slice header turns deblocking off below QP 16 like the vendor (#899, part 2)
 
 - The vendor `i264e_slice_init` (2.0.2.1 0x78ab4, the x264 rule) sets disable_deblocking_filter_idc 1 when qp + 2 x min(alpha, beta offset) < 16, where the filter would change nothing; OpenIMP always wrote 0, 0, 0 (`t32_h264_slice_head`, src/t32/openimp_t32_h264.c). Now the same; host test `tests/t32/h264dbk_test.c` (make check).

@@ -1004,13 +1004,48 @@ void OpenIMP_T23_HelixBs_Unprepare(void)
     pthread_mutex_unlock(&t23_bs.lock);
 }
 
+/* Picture jobs take the area in arrival order.  A plain mutex let the
+ * H.264 channels, which unlock and lock again right away for their next
+ * picture, win it over a waiting JPEG job for seconds: on the QC3 (main
+ * H.264 over IVDC + sub) a JPEG job waited 1.2 s (median) to 6 s, and
+ * snapshots with a 4.5 s deadline failed (HTTP 503, Lu-Fi/openimp#907).
+ * The stock library holds a semaphore (bsbufsem) per picture; the ticket
+ * keeps that one-job-at-a-time rule and adds FIFO order. */
+static struct {
+    pthread_mutex_t lock;
+    pthread_cond_t turn;
+    uint32_t next;             /* next ticket to hand out */
+    uint32_t serving;          /* ticket that may take the area */
+} t23_bs_queue = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0, 0 };
+
+static void t23_bs_queue_enter(void)
+{
+    uint32_t mine;
+
+    pthread_mutex_lock(&t23_bs_queue.lock);
+    mine = t23_bs_queue.next++;
+    while (mine != t23_bs_queue.serving)
+        pthread_cond_wait(&t23_bs_queue.turn, &t23_bs_queue.lock);
+    pthread_mutex_unlock(&t23_bs_queue.lock);
+}
+
+static void t23_bs_queue_leave(void)
+{
+    pthread_mutex_lock(&t23_bs_queue.lock);
+    t23_bs_queue.serving++;
+    pthread_cond_broadcast(&t23_bs_queue.turn);
+    pthread_mutex_unlock(&t23_bs_queue.lock);
+}
+
 int OpenIMP_T23_HelixBs_Lock(uint32_t size, IMPDMABufferInfo *dma)
 {
     if (!dma || !size)
         return -1;
+    t23_bs_queue_enter();
     pthread_mutex_lock(&t23_bs.lock);
     if (!t23_bs.dma.phys_addr || t23_bs.dma.size < size) {
         pthread_mutex_unlock(&t23_bs.lock);
+        t23_bs_queue_leave();
         return -1;
     }
     *dma = t23_bs.dma;
@@ -1020,6 +1055,7 @@ int OpenIMP_T23_HelixBs_Lock(uint32_t size, IMPDMABufferInfo *dma)
 void OpenIMP_T23_HelixBs_Unlock(void)
 {
     pthread_mutex_unlock(&t23_bs.lock);
+    t23_bs_queue_leave();
 }
 
 uint32_t OpenIMP_T23_HelixBs_Size(void)
