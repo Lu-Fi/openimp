@@ -89,6 +89,7 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
     return -1;
 }
 void VBMWakeReaders(int chn) { (void)chn; }
+void VBMNotePull(int chn) { (void)chn; }
 #endif
 int AL_Codec_Encode_InsertUserData(void *c, const void *d, unsigned int s, unsigned int n, unsigned int m)
 { (void)c; (void)d; (void)s; (void)n; (void)m; return 0; }

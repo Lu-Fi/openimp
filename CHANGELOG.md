@@ -10,6 +10,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-25: T10/T20 encode in the capture worker like the vendor, no lost frames under CPU load (#896)
+
+- Cause: with 2 capture buffers the ISP DMA ring has 2 banks; when the bank after the one being written has no buffer at the frame end, the ISR cancels the next frame write (same in the OEM ko, ISR 0x10370). OpenIMP encoded inside the application's PollingStream, so a capture buffer was held for the application thread's wake-up too; under a nice -20 CPU burst (the diag sampler) it missed the next bank: 3-7 frames lost per 120 s on the T10 main channel.
+- Fix (vendor flow, libimp 3.12.0 frame_pooling_thread 0x63168 -> on_encoder_group_data_update -> do_channel_process_h264e): the FrameSource worker calls `OpenIMP_FS_PushEncode()` after it published a frame; bound video channels encode there and release the buffer at once; finished streams wait in a per-channel ring (stream buffer count - 1); PollingStream waits for a finished stream and marks the source as read (`VBMNotePull`). `OPENIMP_T20_PUSH=0` restores the pull model. Beyond vendor (user OK 2026-11-25): the worker runs at SCHED_FIFO 1 (`OPENIMP_T20_FS_RT=0` = normal policy), docs/OPENIMP_BEYOND_VENDOR.md section 6.
+- Evidence: T10 .31 (light box, runtime insmod of open-tx-isp with the new `/proc/jz/isp/isp-frames` dma_cancel counter, diag sampler at nice -20, 3 x 120 s ch0 RTSP, ffprobe pts gaps > 60 ms): pull model 7 gaps / 120 s (dma_cancel 8); push 1 / 0 / 2 (dma_cancel 3); push + SCHED_FIFO 1 0 / 0 / 0 (3001 packets each, dma_cancel 0). Vendor stack for reference: 1 / 0 / 0. make check green.
 ## 2026-11-25: T33 stand-alone H.265 MotionQuality_Yuv like the vendor (#784)
 
 - Vendor 2.0.2.1: YuvInit latches `SetMotionQualityEnable_Yuv`, YuvEncode takes `SetMotionQuality_Yuv(2)` per picture; only both together change the stand-alone H.265 P lists (the channel MotionQuality registers of batch 2), H.264 nothing (QEMU 0731, yuv_devtest flags `m` / `M`).
