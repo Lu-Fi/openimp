@@ -744,6 +744,15 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
     pthread_mutex_unlock(&fs_lock);
 
     if (slot) {
+#ifndef PLATFORM_T33
+        /* T32 (#855): the vendor 2.2.0 library hands GetFrame a packed NV12 frame (UV at width * height; device A/B on
+         * the same driver, 640x360: vendor chroma aligned with the luma, ours shifted down by 8 chroma rows because the
+         * UV plane followed ALIGN16(height) = 368 luma rows).  IMPFrameInfo has no stride, so pack when the capture
+         * buffer is padded. */
+        if (!c->i2d_on && (c->stride != c->width || ALIGN_UP(c->height, 16) != c->height))
+            fs_pack_nv12(c, b, (uint8_t *)(uintptr_t)slot->dma.virt_addr);
+        else
+#endif
         /* NV12 as captured: Y, then UV after ALIGN16(height) rows */
         memcpy((void *)(uintptr_t)slot->dma.virt_addr,
                (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : b->dma.virt_addr),
