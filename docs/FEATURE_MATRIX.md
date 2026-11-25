@@ -22,7 +22,7 @@ Project board status of an open issue (https://github.com/users/Lu-Fi/projects/1
   - (a) streamer functions: 🟢 2017 of 2017 cells work, 0 missing
   - (b) no open issue with severity critical or high: 🔴 1 critical, 0 high
   - (c) no open issue in milestone RC3: 🟢 0 open
-- **Release 1: 🔴 RED** (0 of 8 SoCs have a green light-box run and 3 stable days; image –, soak as of 2026-11-24 06:52)
+- **Release 1: 🔴 RED** (0 of 8 SoCs have a green light-box run and 3 stable days; image –, soak as of 2026-11-25 05:47)
   - Not started: the 3-day counter starts when RC3 is published (tag v2026.11.07-rc3) and runs only on the image built from that tag.
 
 ### RC3: blocking issues
