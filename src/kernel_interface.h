@@ -122,6 +122,7 @@ int VBMPrimeKernelQueue(int chn, int fd, int limit);
  * is published this time */
 #define VBM_DQ_HELD (-4)
 int VBMKernelDequeue(int chn, int fd, void **frame_out);
+void VBMNotePull(int chn);
 
 /* Delay FIFO (vbm_delay.h, IMP_FrameSource_SetMaxDelay/SetDelay/
  * GetTimedFrame) */

@@ -1987,6 +1987,14 @@ static uint32_t vbm_now_ms(void)
     return (uint32_t)ts.tv_sec * 1000u + (uint32_t)(ts.tv_nsec / 1000000);
 }
 
+/* #896 T10/T20 push model: the encoder takes its frames inside the capture
+ * worker, so a polling application marks the channel as read. */
+void VBMNotePull(int chn)
+{
+    if (chn >= 0 && chn < MAX_VBM_POOLS)
+        __atomic_store_n(&vbm_last_pull_ms[chn], vbm_now_ms(), __ATOMIC_RELAXED);
+}
+
 static int vbm_pull_idle(int chn)
 {
     uint32_t last = __atomic_load_n(&vbm_last_pull_ms[chn], __ATOMIC_RELAXED);

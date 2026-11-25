@@ -3630,6 +3630,11 @@ static int p2_push_wait(P2EncoderChannel *ch, uint32_t timeout_ms)
     struct timespec until;
 
     openimp_deadline_mono(&until, (uint64_t)timeout_ms * 1000u);
+    /* The application reads this channel: without a pull the VBM treats
+     * the source as idle after VBM_PULL_IDLE_MS and hands every captured
+     * frame straight back (kernel_interface.c vbm_pull_idle). */
+    if (ch->source_channel >= 0)
+        VBMNotePull(ch->source_channel);
     for (;;) {
         if (ch->raw_stream)
             return 0;
