@@ -83,9 +83,31 @@ static void osd_flow(void)
         NEED(IMP_OSD_SetRgnAttrWithTimestamp) {
             G(IMPOSDRgnTimestamp, ts);
             ts->ts = (uint64_t)(IMP_System_GetTimeStamp ? IMP_System_GetTimeStamp() : 0); ts->minus = 100000; ts->plus = 100000;
+            /* #889: the vendor takes only RECT / COVER regions (T23 1.3.0 0xae81c, T32 2.2.0 0x17cd88,
+             * T40 1.3.1, T41 1.2.5: type 3 or 6; T31 1.1.6 0xc4ebc: LINE 1, RECT 2 or COVER 4), any
+             * other type is refused before the time stamp is looked at: 0x80020040, T40/T31 -1. */
+            IMPOSDRgnAttr rr;
+            int rp;
+
+            memset(&rr, 0, sizeof(rr));
+            rr.type = OSD_REG_RECT;
+            rr.rect.p0.x = 20; rr.rect.p0.y = 20; rr.rect.p1.x = 239; rr.rect.p1.y = 139;
+            rr.data.lineRectData.color = 0xFF00FF00;
+            rr.data.lineRectData.linewidth = 2;
+            r = IMP_OSD_SetRgnAttrWithTimestamp(h, &rr, ts);
             ra.data.picData.pData = pic2;
-            r = IMP_OSD_SetRgnAttrWithTimestamp(h2, &ra, ts); gchk(ts);
-            RET0(IMP_OSD_SetRgnAttrWithTimestamp, r, "ts now +-100 ms");
+            rp = IMP_OSD_SetRgnAttrWithTimestamp(h2, &ra, ts); gchk(ts);
+#if defined(PLATFORM_T23) || (defined(PLATFORM_T41) && !defined(APITEST_T40))
+#define AT_OSD_TS_BADTYPE ((int)0x80020040)
+#elif defined(APITEST_T40) || defined(PLATFORM_T31)
+#define AT_OSD_TS_BADTYPE (-1)
+#endif
+#ifdef AT_OSD_TS_BADTYPE
+            CHECK(IMP_OSD_SetRgnAttrWithTimestamp, r, r == 0 && rp == AT_OSD_TS_BADTYPE,
+                  "RECT ts now +-100 ms -> %d; PIC -> 0x%x (vendor 0x%x)", r, rp, AT_OSD_TS_BADTYPE);
+#else
+            RET0(IMP_OSD_SetRgnAttrWithTimestamp, r, "RECT ts now +-100 ms (PIC -> 0x%x, vendor rule not checked here)", rp);
+#endif
             gfree(ts);
         }
 #if HAS_IMP_OSD_GetRegionLuma

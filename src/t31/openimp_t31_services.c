@@ -996,6 +996,14 @@ int IMP_OSD_SetRgnAttrWithTimestamp(IMPRgnHandle handle,
                                     IMPOSDRgnAttr *attr, void *timestamp)
 {
     (void)timestamp;
+#if defined(PLATFORM_T31)
+    /* #889: vendor 1.1.6 (0xc4ebc) takes only LINE, RECT and COVER regions,
+     * checked first, else -1; the time stamp is queued there, here the
+     * attribute applies from the next frame on (vendor also applies at once) */
+    if (!attr || (attr->type != OSD_REG_LINE && attr->type != OSD_REG_RECT &&
+                  attr->type != OSD_REG_COVER))
+        return t31_fail(EINVAL);
+#endif
     return IMP_OSD_SetRgnAttr(handle, attr);
 }
 

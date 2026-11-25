@@ -9,6 +9,12 @@
 Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.MM.DD[-rcN]` in both repositories (same tag). Tags so far: RC1 `v2026.10.11-rc1`, RC2 `v2026.10.25-rc2`, RC3 `v2026.11.07-rc3` (2026-11-07, RC3 gate green). Gate SoCs of RC3 and Release 1: T10, T20, T21, T23, T30, T31, T40 and T41; T32 and T33 are planned (QEMU only). Release 1 needs, per gate SoC, one green light-box run and 3 days (72 h) without an unplanned reset or oops on the image built from the RC3 tag (at least one camera per gate SoC; decision 2026-11-21, #760). Branch names (`claude/...`) are historic: the topic branches were merged into `next` and deleted. Cameras are anonymised: cam-A (T31), cam-B (T23), cam-C (T20), cam-D (T21), cam-E (T10), cam-F (T41); cam-G and cam-H are further T23 cameras, cam-I a second T20, cam-J a second T21.
 
 
+## 2026-11-25: IMP_OSD_SetRgnAttrWithTimestamp takes only RECT/COVER regions like the vendor (#889)
+
+- Vendor rule (disassembly): `IMP_OSD_SetRgnAttrWithTimestamp` checks the region type first and takes only RECT (3) and COVER (6): T23 1.3.0 (0xae81c), T32 2.2.0 (0x17cd88) and T41 1.2.5 return 0x80020040 for any other type, T40 1.3.1 returns -1; T31 1.1.6 (0xc4ebc) takes LINE, RECT and COVER (1/2/4), else -1. Then the vendor queues attribute + time stamp per region (`fifo_put`) and calls `IMP_OSD_SetRgnAttr` at once, returning its result.
+- OpenIMP accepted any type. Now the shared OSD (T23/T32/T33/T40/T41) and T31 refuse other types with the vendor code. The frame-matched queue is not reproduced: the attribute applies from the next frame on, which matches the vendor's immediate `SetRgnAttr` call. T33: vendor library not available locally, same rule as T32 assumed (same 2.x OSD). T10/T20/T21/T30 unchanged (not checked).
+- Tests: host test `tests/t41/osd_ts_test.c` (T41 and T40 builds, all 14 types; fails without the check), apitest osd case: RECT -> 0, PIC -> the vendor code. Device T32 PRJ007: osd area 48 PASS / 0 FAIL (`PIC -> 0x80020040`), 10 reloads + kill -9, 0 oops.
+
 ## 2026-11-25: feature matrix, T32 column re-judged against the PRJ007 device evidence
 
 - Same rule as the T33 re-judge of 2026-11-22. 🔧 -> ✅: rows 1 (ISP core), 11 (IR cut; the board has no IR LED), 22 (H.264), 24 (JPEG), 25 (sub-stream), 28 (OSD), backed by the device apitest (258 of 258 streamer functions) and the vendor 2.2.0 A/B. 🔧 -> —: rows 31-33 (no microphone or speaker on the module). The picture-quality rows stay 🔧 until a T32 light-box run; the other 🔧 rows name what is missing. Docs only.

@@ -1460,10 +1460,22 @@ int IMP_OSD_SetRgnAttrWithTimestamp(IMPRgnHandle handle,
                                     IMPOSDRgnAttr *attr,
                                     IMPOSDRgnTimestamp *timestamp)
 {
-    /* The frame timestamp window is not tracked: the attribute applies from
-     * the next frame on, as with IMP_OSD_SetRgnAttr. */
-    if (!timestamp)
+    /* #889: the vendor takes only RECT and COVER regions and checks the type
+     * first (T23 1.3.0 0xae81c, T32 2.2.0 0x17cd88, T41 1.2.5: type 3 or 6,
+     * else 0x80020040; T40 1.3.1: the same types, else -1).  It then queues
+     * attribute + time stamp per region (fifo_put) and calls
+     * IMP_OSD_SetRgnAttr at once, returning its result.  The queue (change
+     * matched to the frame with that time stamp) is not reproduced: the
+     * attribute applies from the next frame on, as the immediate vendor call
+     * does.  NULL attr / timestamp are refused (the vendor dereferences them). */
+    if (!attr || !timestamp)
         return T23_OSD_ERR_NOT_SUPPORT;
+    if (attr->type != OSD_REG_RECT && attr->type != OSD_REG_COVER)
+#if defined(PLATFORM_T40)
+        return -1;
+#else
+        return T23_OSD_ERR_NOT_SUPPORT;
+#endif
     return IMP_OSD_SetRgnAttr(handle, attr);
 }
 

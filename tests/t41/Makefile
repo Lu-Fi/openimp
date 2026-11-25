@@ -41,7 +41,7 @@ P3_CONTROLS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p3-controls-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-p2-bufshare-test
 YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-yuv-encode-test
 YUV_T40_TEST_BIN := $(PROJECT_DIR)/build/tests/t40-yuv-encode-test
-.PHONY: check clean rawvic p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path fs-pool osd-luma
+.PHONY: check clean rawvic p3-controls p3-ao-mute audio-ext fs-inject isp-osd bin-path fs-pool osd-luma osd-ts
 
 check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(YUV_TEST_BIN)
@@ -53,6 +53,7 @@ check: $(TEST_BINS) $(P2_BUFSHARE_TEST_BIN) $(YUV_TEST_BIN) $(YUV_T40_TEST_BIN)
 	$(MAKE) p3-controls
 	$(MAKE) isp-osd
 	$(MAKE) osd-luma
+	$(MAKE) osd-ts
 	$(MAKE) rawvic
 	# CappedVBR/CappedQuality run the Allegro core (tests/t40 frame-rc)
 	grep -q 't31_hevc_headers t31_al_rc' $(PROJECT_DIR)/build-t41.sh
@@ -226,6 +227,18 @@ osd-luma:
 		$(PROJECT_DIR)/src/t23/openimp_t23_osd.c $(PROJECT_DIR)/src/core/imp_log_emit.c \
 		-pthread -Wl,--unresolved-symbols=ignore-all -o "$(OSD_LUMA_TEST_BIN)"
 	$(OSD_LUMA_TEST_BIN)
+
+# #889 IMP_OSD_SetRgnAttrWithTimestamp: only RECT/COVER like the vendor (T41/T32/T33 0x80020040,
+# T40 -1), type checked before the handle; built for T41 and T40
+OSD_TS_TEST_BIN := $(PROJECT_DIR)/build/tests/t41-osd-ts-test
+osd-ts:
+	mkdir -p "$(dir $(OSD_TS_TEST_BIN))"
+	for p in T41 T40; do \
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -DPLATFORM_$$p \
+		'-D_Static_assert(c,m)=' -Wno-unused-result -fno-pie -no-pie \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src osd_ts_test.c \
+		$(PROJECT_DIR)/src/t23/openimp_t23_osd.c $(PROJECT_DIR)/src/core/imp_log_emit.c \
+		-pthread -Wl,--unresolved-symbols=ignore-all -o "$(OSD_TS_TEST_BIN)-$$p" && "$(OSD_TS_TEST_BIN)-$$p" || exit 1; done
 
 # ISP-drawn OSD region table and the 0x080000a1/0x080000a2 driver controls
 # (vendor T41 libimp 1.2.6).  Needs the vendor T41 headers; skipped without.
