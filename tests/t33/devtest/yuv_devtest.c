@@ -22,6 +22,7 @@
 #include <imp/imp_system.h>
 /* exported by vendor 2.0.2.1 / 2.2.0 (0x1048ac), not in their header */
 int IMP_Encoder_SetChnQpgAI_Yuv(void *h, IMPEncoderQpgAICfg *q);
+void IMP_Encoder_SetChnQpgAIEnable_Yuv(int encChn, int enable);
 #endif
 
 static void pattern(uint8_t *buf, int w, int h, int n)
@@ -158,6 +159,11 @@ int main(int argc, char **argv)
         IMP_System_Exit();
         return r ? 1 : 0;
     }
+    /* #781: argv[6] flags: 's' SMART instead of CBR (arg < 0), 'q' QpgAI on with a map
+     * (left half of the MB grid foreground 1, right half 0), foreBackMode 1, markLvl 3 */
+    const char *fl = argc > 6 ? argv[6] : "";
+    if (strchr(fl, 'q'))
+        IMP_Encoder_SetChnQpgAIEnable_Yuv(0, 1);
     memset(&in, 0, sizeof(in));
     in.type = !strcmp(mode, "hevc") ? PT_H265 : PT_H264;
     if (arg >= 0) {
@@ -168,7 +174,8 @@ int main(int argc, char **argv)
 
         memset(&ca, 0, sizeof(ca));
         IMP_Encoder_SetDefaultParam(&ca, in.type == PT_H265 ? IMP_ENC_PROFILE_HEVC_MAIN : IMP_ENC_PROFILE_AVC_MAIN,
-                                    ENC_RC_MODE_CBR, (uint16_t)w, (uint16_t)h, 25, 1, 10, 0, -1,
+                                    strchr(fl, 's') ? ENC_RC_MODE_SMART : ENC_RC_MODE_CBR,
+                                    (uint16_t)w, (uint16_t)h, 25, 1, 10, 0, -1,
                                     (uint32_t)-arg);
         in.mode = ca.rcAttr.attrRcMode;
     }
@@ -179,6 +186,22 @@ int main(int argc, char **argv)
     fprintf(stderr, "YuvInit %s %dx%d: 0x%x\n", mode, w, h, (unsigned)r);
     if (r)
         return 1;
+    if (strchr(fl, 'q')) {
+        static uint8_t qmap[(1920 / 16) * (1088 / 16)];
+        IMPEncoderQpgAICfg q;
+        int mw = (w + 15) / 16, mh = (h + 15) / 16, x, y;
+
+        for (y = 0; y < mh; y++)
+            for (x = 0; x < mw; x++)
+                qmap[y * mw + x] = x < mw / 2;
+        memset(&q, 0, sizeof(q));
+        q.map = qmap;
+        q.width = (uint32_t)mw;
+        q.height = (uint32_t)mh;
+        q.foreBackMode = 1;
+        q.markLvl = 3;
+        fprintf(stderr, "SetChnQpgAI_Yuv %dx%d: 0x%x\n", mw, mh, (unsigned)IMP_Encoder_SetChnQpgAI_Yuv(enc, &q));
+    }
     for (i = 0; i < n; i++) {
         pattern(pic, w, h, i);
         memset(&f, 0, sizeof(f));
