@@ -24,7 +24,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 ## 2026-11-26: apitest case `carrier`: the vendor reference-app usage patterns (A2 A3 A5 A7 A9, #931)
 
 - New explicit case `carrier` (`APITEST_CASES=carrier`, `CARRIER_PARTS=a2,a3,a5,a7,a9`; tools/apitest/at_enc.c `enc_carrier_run`): `IMP_Encoder_GetFd` + `poll()` over two channels then `PollingStream(10)` + non-blocking `GetStream`; `SetMaxStreamCnt` 1/2/3 before CreateChn with a slow consumer; `FlushStream` on never-started/running/stopped/unknown channels, drain, `RequestIDR` before `StartRecvPic` (first frame after restart is an IDR); resolution change with `SetChnAttr` on a disabled bound FrameSource channel (encoder follows, SPS checked); `GetFrame` + `IMP_Encoder_InputJpege` without a JPEG channel. The `carrier:` lines hold only timing-independent values, so the vendor libimp and OpenIMP can be diffed.
-- Run vendor vs OpenIMP in QEMU 0731 (fresh boot each): T32 (vendor 2.2.0) differences filed as #936 (SetMaxStreamCnt ignored), #937 (error codes), #938 (SetChnAttr on an enabled channel). No library change in this entry.
+- Run vendor vs OpenIMP in QEMU 0731 (fresh boot each): T32 (vendor 2.2.0) differences filed as #936 (SetMaxStreamCnt ignored), #937 (error codes), #938 (SetChnAttr on an enabled channel); T31 (vendor 1.1.6): A2, A5, A7 equal, #942 (SetMaxStreamCnt does not limit held streams). No library change in this entry.
 
 ## 2026-11-26: T10/T20 GetFrame with a frame depth gets every frame next to a full-rate encoder (#922)
 
