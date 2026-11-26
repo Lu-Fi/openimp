@@ -189,7 +189,16 @@ size_t t32_h264_sps(const T32H264Seq *s, uint8_t *out)
     if (s->vui.signal) {
         put(&b, 3, s->vui.format);
         put(&b, 1, s->vui.full ? 1u : 0u);
-        put(&b, 1, 0);                  /* no colour description (the vendor does not pass it on) */
+#if defined(PLATFORM_T33)
+        put(&b, 1, 0);                  /* no colour description (the T33 2.0.2.1 vendor does not pass it on) */
+#else
+        put(&b, 1, s->vui.desc ? 1u : 0u);      /* T32 2.2.0: written (QEMU SPS of the vendor library, #930) */
+        if (s->vui.desc) {
+            put(&b, 8, s->vui.prim);
+            put(&b, 8, s->vui.trans);
+            put(&b, 8, s->vui.matrix);
+        }
+#endif
     }
     put(&b, 1, 0);                      /* chroma loc */
     put(&b, 1, 1);                      /* timing */

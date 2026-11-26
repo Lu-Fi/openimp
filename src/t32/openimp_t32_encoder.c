@@ -1096,6 +1096,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     /* intra refresh (#784): the encode loop's per-picture fields, then the
      * picture type as i264e_decide_slice_type_and_rd decides it */
+    OpenIMP_T32_E1AutoVui(chn_no(e), 0);
     OpenIMP_T32_E1GdrTake(chn_no(e), &g);
     if (!idr)
         idr = t32_gdr_slice_type(&a->gop_pos, &a->gdr_d, a->gop, g.req, g.en);
@@ -1372,6 +1373,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
 
     /* intra refresh (#784): as H.264 (the vendor H.265 loop 0xdf48c fills the
      * same fields; no periodic IDR while GDR runs) */
+    OpenIMP_T32_E1AutoVui(chn_no(e), 1);
     OpenIMP_T32_E1GdrTake(chn_no(e), &g);
     if (!idr)
         idr = t32_gdr_slice_type(&a->gop_pos, &a->gdr_d, a->gop, g.req, g.en);

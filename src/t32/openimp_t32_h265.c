@@ -35,6 +35,14 @@ static void params(const T32H265Seq *s, T30HevcVps *vps, T30HevcSps *sps, T30Hev
         sps->vui.video_signal_type_present = 1;
         sps->vui.video_format = s->vui.format;
         sps->vui.video_full_range = s->vui.full ? 1 : 0;
+#if !defined(PLATFORM_T33)
+        if (s->vui.desc) {              /* T32 2.2.0 writes the colour description (#930) */
+            sps->vui.colour_description_present = 1;
+            sps->vui.colour_primaries = s->vui.prim;
+            sps->vui.transfer_characteristics = s->vui.trans;
+            sps->vui.matrix_coeffs = s->vui.matrix;
+        }
+#endif
     }
     if (s->vui.aspect) {
         sps->vui.aspect_ratio_info_present = 1;

@@ -593,6 +593,22 @@ int32_t IMP_ISP_Tuning_GetISPCSCAttr(IMPVI_NUM num, IMPISPCSCAttr *csc)
     return 0;
 }
 
+/* The CSC colour gamut the ISP delivers its frames in (IMPISPCSCColorGamut, 0..6), -1 when it cannot be read:
+ * the per-frame field the vendor encode loop compares for IMP_Encoder_SetAutoVui (#930). */
+int OpenIMP_T32_CscGamut(void)
+{
+    uint8_t x[92];
+    uint32_t mode;
+
+    if (tun.fd < 0)
+        return -1;
+    memset(x, 0, sizeof(x));
+    if (tun_ptr(0, T32_GET, ID_CSC, x) != 0)
+        return -1;
+    memcpy(&mode, x, 4);
+    return (int)mode;
+}
+
 /* wait for a frame-done: driver block = the caller's timeout word, words 2..4
  * come back (frame count and time) */
 int32_t IMP_ISP_Tuning_WaitFrameDone(IMPVI_NUM num, IMPISPWaitFrameAttr *attr)

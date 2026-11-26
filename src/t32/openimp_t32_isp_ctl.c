@@ -771,7 +771,12 @@ int32_t IMP_ISP_LDC_OnlineInit(IMPVI_NUM num, IMPISPLDCInitOnlineAttr *attr)
         return E_STATE;
     }
 #if defined(PLATFORM_T33)
+#if defined(PLATFORM_T33)
     if (attr->func != IMPISP_I2D_MODE && attr->func != IMPISP_HLDC_MODE && attr->func != IMPISP_LDC_MODE) {
+#else
+    /* T32 2.2.0 (0x144364, PRJ007 branch): only LDC (4); I2D / HLDC belong to PRJ008 (#933) */
+    if (attr->func != IMPISP_LDC_MODE) {
+#endif
 #else
     /* T32 2.2.0 (IMP_ISP_LDC_OnlineInit 0x144364, chip class 0): only LDC (4), it keeps no block size */
     if (attr->func != IMPISP_LDC_MODE) {

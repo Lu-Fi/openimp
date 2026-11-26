@@ -22,6 +22,7 @@ int OpenIMP_T32_EncChnQuery(int encChn, T32EncChnInfo *ci);
 /* openimp_t32_enc_e1.c */
 void OpenIMP_T32_E1Reset(int encChn, const T32EncChnInfo *ci);
 int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui);
+void OpenIMP_T32_E1AutoVui(int encChn, int hevc);   /* IMP_Encoder_SetAutoVui, per frame (#930) */
 size_t OpenIMP_T32_E1Sei(int encChn, int hevc, uint8_t *out, size_t cap);
 int OpenIMP_T32_E1RoiTake(int encChn, uint8_t rec[16][9]);
 

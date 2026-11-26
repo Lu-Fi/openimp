@@ -265,11 +265,96 @@ void cs_t32gap(void)
     lbg = IMP_ISP_LDC_OnlineGetLutBufMode(IMPVI_MAIN, &lb);
     lbg1 = IMP_ISP_LDC_OnlineGetLutBufMode(IMPVI_SEC, NULL);
     i = (int)0xfffff003;
+    {   /* OnlineInit on PRJ007: only func 4 (LDC); mode online first, VI1 has no sensor */
+        IMPISPLDCInitOnlineAttr oa;
+        int rm, r1, r2, r3, rn;
+
+        memset(&oa, 0, sizeof(oa));
+        rm = IMP_ISP_LDC_SetMode(0);
+        rn = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, NULL);
+        oa.func = (IMPISPLDCFunc)1; r1 = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, &oa);
+        oa.func = (IMPISPLDCFunc)2; oa.size = 16; r2 = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, &oa);
+        oa.func = (IMPISPLDCFunc)3; r3 = IMP_ISP_LDC_OnlineInit(IMPVI_SEC, &oa);
+        rep(FN(IMP_ISP_LDC_OnlineInit), r1, r1 == (int)0xfffff004 && r2 == r1 && r3 == r1 ? V_PASS : V_FAIL,
+            "mode online 0x%x; NULL 0x%x; func I2D 0x%x, HLDC 0x%x, 3 0x%x (PRJ007 accepts LDC only)", T32G_X(rm), T32G_X(rn), T32G_X(r1), T32G_X(r2), T32G_X(r3));
+    }
     rep(FN(IMP_ISP_LDC_OnlineGetFunc), lf, lf == i && lf1 == i && (int)func == -7 ? V_PASS : V_FAIL, "VI0 0x%x, VI4 + NULL 0x%x (func untouched %d)", T32G_X(lf), T32G_X(lf1), (int)func);
     rep(FN(IMP_ISP_LDC_OnlineGetState), lst, lst == i && (int)st == -7 ? V_PASS : V_FAIL, "VI0 0x%x (state untouched %d)", T32G_X(lst), (int)st);
     rep(FN(IMP_ISP_LDC_OnlineSetState), lst0, lst0 == i ? V_PASS : V_FAIL, "VI0 open 0x%x; frames flow %d", T32G_X(lst0), flow());
     rep(FN(IMP_ISP_LDC_OnlineSetLutBufMode), lbs, lbs == i && lbs1 == i ? V_PASS : V_FAIL, "VI0 0x%x, VI4 0x%x", T32G_X(lbs), T32G_X(lbs1));
     rep(FN(IMP_ISP_LDC_OnlineGetLutBufMode), lbg, lbg == i && lbg1 == i && (int)lb == -7 ? V_PASS : V_FAIL, "VI0 0x%x (mode untouched %d), VI1 + NULL 0x%x", T32G_X(lbg), (int)lb, T32G_X(lbg1));
+}
+
+/* ---- case "t32avui": IMP_Encoder_SetAutoVui (#930, explicit only) ---------------------------------------------------------------
+ * Chn 16 / chn 5 (not created) codes; a started H.264 and H.265 channel: the SPS after AutoVui on + RequestIDR (the VUI video
+ * signal follows the frame gamut: full range, colour description, matrix) against the SPS of the same channel with it off, and the
+ * VUI read back.  Same lines on the vendor library + module (QEMU) and on OpenIMP. */
+int enc_e1_up(int chn, int codec);
+void enc_e1_down(int chn);
+int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, void *), void *arg);
+typedef struct { int h265, frames, bytes; char sps[2 * 80 + 4]; } AvScan;
+static void av_cb(const unsigned char *b, size_t n, int k, void *arg)
+{
+    AvScan *e = arg;
+    size_t i, j, m;
+
+    (void)k;
+    e->frames++;
+    e->bytes += (int)n;
+    for (i = 0; i + 4 < n && !e->sps[0]; i++) {
+        unsigned t;
+
+        if (b[i] || b[i + 1] || b[i + 2] != 1) continue;
+        t = e->h265 ? (b[i + 3] >> 1) & 63 : b[i + 3] & 31;
+        if ((e->h265 && t != 33) || (!e->h265 && t != 7)) continue;
+        for (j = i + 3; j + 3 < n && !(b[j] == 0 && b[j + 1] == 0 && b[j + 2] == 1); j++) ;
+        m = j + 3 >= n ? n - i - 3 : j - i - 3;
+        if (m > 80) m = 80;
+        for (j = 0; j < m; j++) snprintf(e->sps + 2 * j, 3, "%02x", b[i + 3 + j]);
+    }
+}
+
+static void av_one(int h265)
+{
+    AvScan off, on;
+    IMPEncoderH264Vui v4;
+    IMPEncoderH265Vui v5;
+    int a, b2, c, up;
+    const char *cn = h265 ? "H265" : "H264";
+
+    memset(&off, 0, sizeof(off)); memset(&on, 0, sizeof(on));
+    off.h265 = on.h265 = h265;
+    up = enc_e1_up(0, h265);
+    if (up) { rep(FN(IMP_Encoder_SetAutoVui), up, V_FAIL, "%s chn 0 could not be started", cn); return; }
+    IMP_Encoder_RequestIDR(0);
+    IMP_Encoder_PollingStream(0, 3000);       /* the first frames of a fresh channel (QEMU): wait for one before the pull */
+    enc_e1_pull(0, 3, av_cb, &off);
+    a = IMP_Encoder_SetAutoVui(0, 1);
+    enc_e1_pull(0, 12, NULL, NULL);          /* frames with AutoVui on: the update is made by the encode loop */
+    IMP_Encoder_RequestIDR(0);
+    enc_e1_pull(0, 4, av_cb, &on);
+    b2 = h265 ? IMP_Encoder_GetH265Vui(0, &v5) : IMP_Encoder_GetH264Vui(0, &v4);
+    c = IMP_Encoder_SetAutoVui(0, 0);
+    {
+        const IMPEncoderVuiVideoSignal *vs = h265 ? &v5.vuiVideoSignal : &v4.vuiVideoSignal;
+        rep(FN(IMP_Encoder_SetAutoVui), a, a == 0 && c == 0 && on.sps[0] ? V_PASS : V_FAIL,
+            "%s: on 0x%x, off 0x%x; VUI signal %u fmt %u full %u desc %u prim %u trans %u matrix %u (get 0x%x); frames %d/%d; SPS off %s; SPS on %s",
+            cn, T32G_X(a), T32G_X(c), vs->video_signal_type_present_flag, vs->video_format, vs->video_full_range_flag,
+            vs->colour_description_present_flag, vs->colour_primaries, vs->transfer_characteristics, vs->matrix_coefficients,
+            T32G_X(b2), off.frames, on.frames, off.sps, on.sps);
+    }
+    enc_e1_down(0);
+}
+
+void cs_t32avui(void)
+{
+    int a = IMP_Encoder_SetAutoVui(16, 1), b = IMP_Encoder_SetAutoVui(5, 1);
+
+    rep(FN(IMP_Encoder_SetAutoVui), a, a == (int)0x80040001 && b == (int)0x80040008 ? V_PASS : V_FAIL,
+        "chn 16 0x%x, chn 5 (not created) 0x%x", T32G_X(a), T32G_X(b));
+    av_one(0);
+    wdog("cases", 120);
+    av_one(1);
 }
 #endif
 
@@ -7936,7 +8021,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap", "t32avui" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -8064,6 +8149,7 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("t32l2")) { cs_t32l2(); wdog("cases", 60); }   /* explicit only (#491) */
 #if defined(APITEST_T32_HDR220)
     if (getenv("APITEST_CASES") && cs_on("t32gap")) { cs_t32gap(); wdog("cases", 60); }   /* explicit only (#99) */
+    if (getenv("APITEST_CASES") && cs_on("t32avui")) { cs_t32avui(); wdog("cases", 120); }   /* explicit only (#930) */
 #endif
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);

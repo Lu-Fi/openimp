@@ -41,12 +41,15 @@
 #define T32_E1_UD_BYTES 1024             /* bytes per entry (maxUserDataSize: vendor 16..1024) */
 #define T32_E1_CHNS     16
 
+int OpenIMP_T32_CscGamut(void);                   /* openimp_t32_tuning.c: ISP frame CSC gamut, -1 unknown */
 int OpenIMP_T32_EncMotionQualityOn(int encChn);  /* openimp_t32_fs_enc_ext.c: SetMotionQualityEnable */
 int OpenIMP_T32_EncQpgAIOn(int encChn);          /* SetChnQpgAIEnable */
 
 struct t32_e1 {
     T32Vui vui;                          /* the next IDR's VUI */
     int vui_pend;
+    int auto_vui;                        /* IMP_Encoder_SetAutoVui (#930) */
+    uint32_t auto_vui_last;              /* the frame gamut the VUI was last set for (-1: none yet) */
     IMPEncoderH264Vui v4, v4_pend;       /* getter images: in effect / from the next IDR */
     IMPEncoderH265Vui v5, v5_pend;
     int trans264, trans264_pend;
@@ -104,6 +107,7 @@ void OpenIMP_T32_E1Reset(int encChn, const T32EncChnInfo *ci)
     pthread_mutex_lock(&e1_lock);
     x = &E1;
     memset(x, 0, sizeof(*x));
+    x->auto_vui_last = 0xffffffffu;
     x->hskip.n = 1;
     if (ci->codec == 2)
         x->hskip.maxSameSceneCnt = 1;
@@ -249,18 +253,105 @@ int IMP_Encoder_SetH264Vui(int encChn, const IMPEncoderH264Vui *v)
         if (v->vuiVideoSignal.video_signal_type_present_flag) {
             x->vui.format = v->vuiVideoSignal.video_format & 7u;
             x->vui.full = v->vuiVideoSignal.video_full_range_flag ? 1 : 0;
+#if !defined(PLATFORM_T33)
+            x->vui.desc = v->vuiVideoSignal.colour_description_present_flag ? 1 : 0;
+            x->vui.prim = v->vuiVideoSignal.colour_primaries;
+            x->vui.trans = v->vuiVideoSignal.transfer_characteristics;
+            x->vui.matrix = v->vuiVideoSignal.matrix_coefficients;
+#endif
         }
         x->vui.signal = x->vui.format != 5 || x->vui.full;
         x->vui.restriction = v->vuiBitstreamRestric.bitstream_restriction_flag ? 1 : 0;
         x->v4_pend.vuiVideoSignal.video_signal_type_present_flag = x->vui.signal;
         x->v4_pend.vuiVideoSignal.video_format = x->vui.format ? x->vui.format : 5;
         x->v4_pend.vuiVideoSignal.video_full_range_flag = x->vui.full;
+#if !defined(PLATFORM_T33)
+        if (x->vui.desc) {
+            x->v4_pend.vuiVideoSignal.colour_description_present_flag = 1;
+            x->v4_pend.vuiVideoSignal.colour_primaries = x->vui.prim;
+            x->v4_pend.vuiVideoSignal.transfer_characteristics = x->vui.trans;
+            x->v4_pend.vuiVideoSignal.matrix_coefficients = x->vui.matrix;
+        }
+#endif
         x->v4_pend.vuiAspectRatio.sar_width = x->vui.sar_w;
         x->v4_pend.vuiAspectRatio.sar_height = x->vui.sar_h;
         x->vui_pend = 1;
     }
     pthread_mutex_unlock(&e1_lock);
     return rc;
+}
+
+/* IMP_Encoder_SetAutoVui (T32 2.2.0 0xf4118): chn >= 16 0x80040001, not created 0x80040008, else the
+ * flag is kept (any non-zero = on). */
+#if !defined(PLATFORM_T33)           /* T33 2.0.2.1 has no SetAutoVui (2.1.0 does) */
+int IMP_Encoder_SetAutoVui(int encChn, int bEnable)
+{
+    T32EncChnInfo ci;
+    int rc;
+
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+    pthread_mutex_lock(&e1_lock);
+    rc = e1_get(encChn, &ci);
+    if (!rc)
+        E1.auto_vui = bEnable != 0;
+    pthread_mutex_unlock(&e1_lock);
+    return rc;
+}
+
+#endif
+
+/* The encode loop (vendor on_encoder_group_data_update 0xf1730 / 0xf2bd8), once per frame: with AutoVui on and
+ * a frame gamut that differs from the last one, read the VUI, set the video signal and write it back (it takes
+ * effect at the next IDR like any SetH264Vui): video_signal_type_present 1, full range = the gamut is not one
+ * of the limited ones (1, 3, 5), colour_description_present 1, matrix 5 for BT601 (0, 1), 9 for BT2020 (4, 5),
+ * else 1; colour primaries and transfer 1 on the first update.  A failed Get / Set is retried on the next frame. */
+void OpenIMP_T32_E1AutoVui(int encChn, int hevc)
+{
+    int on, g;
+    uint32_t last;
+    uint8_t full, mc;
+
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return;
+    pthread_mutex_lock(&e1_lock);
+    on = E1.auto_vui;
+    last = E1.auto_vui_last;
+    pthread_mutex_unlock(&e1_lock);
+    if (!on || (g = OpenIMP_T32_CscGamut()) < 0 || (uint32_t)g == last)
+        return;
+    full = (uint32_t)g < 6 ? (((1u << g) & 0x2au) == 0) : 1;
+    mc = (uint32_t)g < 6 ? ((((1u << g) & 3u) != 0) ? 5 : ((((1u << g) & 0x30u) != 0) ? 9 : 1)) : 1;
+    if (hevc) {
+        IMPEncoderH265Vui v;
+
+        if (IMP_Encoder_GetH265Vui(encChn, &v) != 0)
+            return;
+        v.vuiVideoSignal.video_signal_type_present_flag = 1;
+        v.vuiVideoSignal.video_full_range_flag = full;
+        v.vuiVideoSignal.colour_description_present_flag = 1;
+        v.vuiVideoSignal.matrix_coefficients = mc;
+        if (last == 0xffffffffu)
+            v.vuiVideoSignal.colour_primaries = v.vuiVideoSignal.transfer_characteristics = 1;
+        if (IMP_Encoder_SetH265Vui(encChn, &v) != 0)
+            return;
+    } else {
+        IMPEncoderH264Vui v;
+
+        if (IMP_Encoder_GetH264Vui(encChn, &v) != 0)
+            return;
+        v.vuiVideoSignal.video_signal_type_present_flag = 1;
+        v.vuiVideoSignal.video_full_range_flag = full;
+        v.vuiVideoSignal.colour_description_present_flag = 1;
+        v.vuiVideoSignal.matrix_coefficients = mc;
+        if (last == 0xffffffffu)
+            v.vuiVideoSignal.colour_primaries = v.vuiVideoSignal.transfer_characteristics = 1;
+        if (IMP_Encoder_SetH264Vui(encChn, &v) != 0)
+            return;
+    }
+    pthread_mutex_lock(&e1_lock);
+    E1.auto_vui_last = (uint32_t)g;
+    pthread_mutex_unlock(&e1_lock);
 }
 
 int IMP_Encoder_GetH264Vui(int encChn, IMPEncoderH264Vui *v)
@@ -305,6 +396,16 @@ int IMP_Encoder_SetH265Vui(int encChn, const IMPEncoderH265Vui *v)
         x->vui.signal = v->vuiVideoSignal.video_signal_type_present_flag ? 1 : 0;
         x->vui.format = v->vuiVideoSignal.video_format & 7u;
         x->vui.full = v->vuiVideoSignal.video_full_range_flag ? 1 : 0;
+#if !defined(PLATFORM_T33)
+        x->vui.desc = v->vuiVideoSignal.colour_description_present_flag ? 1 : 0;
+        x->vui.prim = v->vuiVideoSignal.colour_primaries;
+        x->vui.trans = v->vuiVideoSignal.transfer_characteristics;
+        x->vui.matrix = v->vuiVideoSignal.matrix_coefficients;
+        x->v5_pend.vuiVideoSignal.colour_description_present_flag = x->vui.desc;
+        x->v5_pend.vuiVideoSignal.colour_primaries = x->vui.prim;
+        x->v5_pend.vuiVideoSignal.transfer_characteristics = x->vui.trans;
+        x->v5_pend.vuiVideoSignal.matrix_coefficients = x->vui.matrix;
+#endif
         x->vui.restriction = v->vuiBitstreamRestric.bitstream_restriction_flag ? 1 : 0;
         x->v5_pend.vuiAspectRatio = v->vuiAspectRatio;
         x->v5_pend.vuiVideoSignal.video_signal_type_present_flag = x->vui.signal;

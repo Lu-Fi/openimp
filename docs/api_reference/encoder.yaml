@@ -598,6 +598,13 @@ functions:
     returns: "0 on success; 0x80040001 for a channel of 16 or more, 0x80040010 for a NULL pointer, 0x80040008 for a channel that does not exist. On an H.265 channel 0 and the structure is left alone."
     notes: "After SetH264Vui the getter shows the new values only from the next IDR picture on, as vendor libimp 2.0.2.1."
     soc: "T32, T33"
+  Encoder_SetAutoVui:
+    group: h26x
+    summary: "Switches the automatic VUI video signal on or off: while on, the encode loop follows the ISP colour gamut of the frames and updates the VUI of the channel when it changes."
+    returns: "0 on success; 0x80040001 for a channel of 16 and more, 0x80040008 for a channel that is not created."
+    notes: "On a gamut change (first frame included) the VUI is read, video_signal_type_present 1, full range 1 unless the gamut is a limited one, colour_description_present 1, matrix 5 (BT601) / 9 (BT2020) / 1 are set (colour primaries and transfer 1 on the first update) and written back as by SetH264Vui / SetH265Vui, i.e. effective at the next IDR. T32 only; the T32 SPS now carries the colour description (the T33 2.0.2.1 vendor library does not write it)."
+    see_also: [Encoder_SetH264Vui, Encoder_SetH265Vui]
+    soc: "T32"
   Encoder_SetH264Vui:
     group: h26x
     summary: "Sets the VUI of an H.264 channel; it goes into the SPS of the next IDR picture."

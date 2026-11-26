@@ -22,6 +22,8 @@
  * all zero = the default parameter sets */
 typedef struct {
     uint8_t signal, format, full;       /* video_signal_type_present, video_format, video_full_range */
+    uint8_t desc, prim, trans, matrix;  /* T32 2.2.0: colour_description_present + primaries / transfer / matrix (the
+                                         * T33 2.0.2.1 vendor library does not write them) */
     uint8_t restriction;                /* bitstream_restriction_flag */
     uint8_t aspect, aspect_idc;         /* H.265: aspect_ratio_info_present, aspect_ratio_idc */
     uint16_t sar_w, sar_h;              /* H.264: written when both are set; H.265: with idc 255 */

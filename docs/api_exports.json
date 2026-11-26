@@ -3263,6 +3263,7 @@
     "Encoder_RequestGDR",
     "Encoder_RequestIDR",
     "Encoder_RequestPskip",
+    "Encoder_SetAutoVui",
     "Encoder_SetChangeRef",
     "Encoder_SetChnAttrRcMode",
     "Encoder_SetChnBitRate",
