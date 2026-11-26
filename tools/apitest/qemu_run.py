@@ -59,6 +59,13 @@ def sh(cmd, maxt=300, idle=60):
 
 s.sendall(b"\x03\n"); rd(1, 3)
 sh("stty -echo; mkdir -p /tmp/at; /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 2; dmesg -c >/dev/null; free | head -2", 60, 5)
+# guard (2026-11-26, #916, T20 rc3 image): timpsd kept running after "S95timps stop" (respawned), apitest then failed AddSensor
+# (i2c client busy) next to it -- never run apitest and the streamer on one sensor: stop it for sure or give up.
+o, _ = sh("pidof timpsd >/dev/null && { /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 3; p=$(pidof timpsd); [ -n \"$p\" ] && kill $p; sleep 3; }; "
+          "pidof timpsd || echo NO_STREAMER", 60, 10)
+if "NO_STREAMER" not in o:
+    print("QEMU %s: GUEST-FAULT (timpsd still running after stop) -- test fault, no case ran" % soc)
+    sys.exit(3)
 # guard (2026-11-26, #916): a guest without the ISP module (S10isp-guard emptied modules.d, or a cold image) fails every case
 # with "ISP open/add/enable sensor failed" and a 0-frame health check: that is a test fault, not a case result.  Load the ISP
 # stack the way the camera does and stop when there is still none.
