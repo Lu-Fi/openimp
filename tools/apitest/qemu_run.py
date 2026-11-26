@@ -59,6 +59,15 @@ def sh(cmd, maxt=300, idle=60):
 
 s.sendall(b"\x03\n"); rd(1, 3)
 sh("stty -echo; mkdir -p /tmp/at; /etc/init.d/S95timps stop >/dev/null 2>&1; sleep 2; dmesg -c >/dev/null; free | head -2", 60, 5)
+# guard (2026-11-26, #916): a guest without the ISP module (S10isp-guard emptied modules.d, or a cold image) fails every case
+# with "ISP open/add/enable sensor failed" and a 0-frame health check: that is a test fault, not a case result.  Load the ISP
+# stack the way the camera does and stop when there is still none.
+o, _ = sh("lsmod | grep -c '^tx_isp' || { /etc/init.d/S10isp-guard clear >/dev/null 2>&1; /etc/init.d/S10isp-guard load >/dev/null 2>&1; "
+          "for m in /etc/modules.d/*isp* /etc/modules.d/*sensor*; do [ -f $m ] && while read a; do modprobe $a; done < $m; done; "
+          "sleep 2; lsmod | grep -c '^tx_isp'; }", 120, 10)
+if not re.search(r"^\s*[1-9]", o.replace("\r", ""), re.M):
+    print("QEMU %s: GUEST-FAULT (no tx_isp module after load; check /etc/modules.d) -- test fault, no case ran" % soc)
+    sys.exit(3)
 CH = int(os.environ.get("QR_CHUNK", "150"))      # characters per echo line (QR_CHUNK=900 pushes about 6x faster on a quiet host)
 def push(path, dest, mode="755"):
     """gzip+base64 over the console into /tmp/at/<dest>"""
@@ -105,7 +114,7 @@ for c in cases:
             envx = " ".join(v if "=" in v else v + "=1" for v in ev.split(":")) + " "
     elif ":" in c:                   # case:ENVVAR  -> run with ENVVAR=1 (e.g. process:APITEST_PROCESS_BYPASS)
         c, envx = c.split(":", 1); envx = " ".join(v if "=" in v else v + "=1" for v in envx.split(":")) + " "   # case:VAR1:VAR2 -> VAR1=1 VAR2=1 (VAR=value keeps the value)
-    cmd = "cd /tmp/at; " + ldp + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_QEMU=1 APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] tisp_node_|^\\[A\\] sensorattr_t40|^\\[A\\] IMP_DMIC_|^\\[A\\] SU_|^\\[A\\] customalgo|^\\[A\\] libsysutils|^\\[A\\] dmic|^\\[A\\] IMP_(Alloc|Free|Sp_Alloc|Decoder_|OSD_AttachToGroup|ISPOSD_Alloc|OSD_Alloc|Phys_to|Virt_to|FlushCache|Pool|MemPool_|System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|LOG|ISP_[A-Z]|OSD_[A-Za-z_]*ISP[A-Za-z]*|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary|^hskip: |^demask: |^pic ' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
+    cmd = "cd /tmp/at; " + ldp + envx + ("APITEST_AO=1 " if area == "audio" else "APITEST_AO=0 ") + "APITEST_QEMU=1 APITEST_CASES=%s ./apitest %s %s %s %s %s 2>&1 | grep -E '^\\[A\\] stalesnap|^\\[A\\] tisp_node_|^\\[A\\] sensorattr_t40|^\\[A\\] IMP_DMIC_|^\\[A\\] SU_|^\\[A\\] customalgo|^\\[A\\] libsysutils|^\\[A\\] dmic|^\\[A\\] IMP_(Alloc|Free|Sp_Alloc|Decoder_|OSD_AttachToGroup|ISPOSD_Alloc|OSD_Alloc|Phys_to|Virt_to|FlushCache|Pool|MemPool_|System_|IVS_|FrameSource_|Encoder_|ISP_Tuning|ISP_Get|ISP_Set|Log|LOG|ISP_[A-Z]|OSD_[A-Za-z_]*ISP[A-Za-z]*|A[IOED]).*(PASS|FAIL|N/A|SKIP)|^\\[E\\]|^\\[T\\] summary|^hskip: |^demask: |^push: |^pic ' | grep -v 'IMP_ISP_\\(Open\\|AddSensor\\|EnableSensor\\|DisableSensor\\|DelSensor\\|Close\\|EnableTuning\\|DisableTuning\\)'" % (c, sensor, i2c, W, H, area)
     out, rc = sh(cmd, 300, 90)
     open(os.path.join(outdir, c + ".log"), "w").write(out)
     if rc is None or re.search(r"Kernel panic|Oops|Unable to handle|Restarting system", out):
