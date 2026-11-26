@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: T30 SU_Base_Suspend / SU_Base_Shutdown device cells
+
+- ABUS T30 camera: SU_Base_Suspend returns -1/ENOENT like the vendor libsysutils (no /sys/power/state on the 3.10 kernel); SU_Base_Shutdown does sync() + kill(1, SIGUSR2) and returns 0 (shim, no real power-off). Both cells dev.
+
 ## 2026-11-26: T10/T20 GetFrame with a frame depth gets every frame next to a full-rate encoder (#922)
 
 - Cause: `IMP_FrameSource_GetFrame` popped the capture pool's VBM ready queue, the same queue the bound encoder takes its frames from, so a GetFrame reader and an encoder at the full sensor rate split the frames (T10: 8.0 + 7.0 fps at 15 fps). Vendor libimp 3.12.0 (T10 da38e940, T20 the same code at +0x10000) copies every dequeued frame into the channel's depth list before the bound group gets it: `on_framesource_group_data_update` 0x63558 (depth check 0x636f8, NV12 memcpy luma w*h + chroma from w*ALIGN16(h) 0x637bc, ready list head 0x63814), `SetFrameDepth` 0x658ac (free/ready/held lists, depth nodes of calloc(0x28) + calloc(frame size)), `GetFrame` 0x68f54 (newest ready node, one 2 s wait), `ReleaseFrame` 0x6983c.
