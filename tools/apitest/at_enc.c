@@ -2916,3 +2916,326 @@ int enc_push_run(void)
 #else
 int enc_push_run(void) { return -1; }
 #endif
+
+/* ------------------------------------------------------------------------------------------
+ * Explicit case "carrier" (APITEST_CASES=carrier, #931): usage patterns of the vendor reference streamer (carrier-server, SDK 2.1.0).
+ *   A2 IMP_Encoder_GetFd + poll() over two channels, then PollingStream(10) + non-blocking GetStream
+ *   A3 IMP_Encoder_SetMaxStreamCnt 1/2/3 (before CreateChn) with a slow consumer (streams held, never a blocking GetStream)
+ *   A5 FlushStream (never started / running / stopped chn) + drain + RequestIDR before StartRecvPic: first frame after the restart is an IDR
+ *   A7 resolution change: StopRecvPic, DisableChn, SetChnAttr on a disabled bound channel, EnableChn, new encoder size
+ *   A9 FS GetFrame + IMP_Encoder_InputJpege (no JPEG channel)
+ * Lines "carrier: ..." carry only timing-independent values, so the vendor library and OpenIMP can be diffed (QEMU, fresh boot each).
+ * CARRIER_PARTS=a2,a3,a5,a7,a9 selects (default all). Never a blocking GetStream on a channel without a frame (vendor hangs).
+ * ------------------------------------------------------------------------------------------ */
+#ifdef ENC_NEW
+# define CAR_SIZE(a, w_, h_) do { (a)->encAttr.uWidth = (w_); (a)->encAttr.uHeight = (h_); } while (0)
+#else
+# define CAR_SIZE(a, w_, h_) do { (a)->encAttr.picWidth = (w_); (a)->encAttr.picHeight = (h_); } while (0)
+#endif
+static int car_on(const char *p)
+{
+    const char *v = getenv("CARRIER_PARTS");
+    return !v || !*v || strstr(v, p);
+}
+
+static int car_up(int grp, int fs_ch, int chn, int w, int h, int maxstream, int start)
+{
+    IMPCell fs = { DEV_ID_FS, fs_ch, 0 }, enc = { DEV_ID_ENC, grp, 0 };
+    G(EAttr, a);
+    int r;
+
+    r = IMP_Encoder_CreateGroup(grp);
+    if (!r) r = IMP_System_Bind(&fs, &enc);
+    fill_attr(a, CODEC_H264, EGOP);
+    CAR_SIZE(a, w, h);
+    if (!r && IMP_Encoder_SetPool && !getenv("APITEST_NOPOOL")) {
+#if defined(APITEST_T32)
+        static int pool_req[3];
+        int pid = ENC_POOL_ID + 1 + (chn & 1);
+        if (!pool_req[chn & 1] && IMP_System_MemPoolRequest) pool_req[chn & 1] = IMP_System_MemPoolRequest(pid, 8u << 20, "carrier-enc") == 0 ? 1 : -1;
+        if (getenv("CARRIER_V")) printf("carrier-v: pool %d req %d SetPool chn %d -> %d\n", pid, pool_req[chn & 1], chn, IMP_Encoder_SetPool(chn, pid));
+        else IMP_Encoder_SetPool(chn, pid);
+#endif
+    }
+    if (!r && maxstream > 0 && IMP_Encoder_SetMaxStreamCnt) r = IMP_Encoder_SetMaxStreamCnt(chn, maxstream);
+    if (!r) r = IMP_Encoder_CreateChn(chn, a);
+    if (!r) r = IMP_Encoder_RegisterChn(grp, chn);
+    if (!r && start) r = IMP_Encoder_StartRecvPic(chn);
+    gfree(a);
+    return r;
+}
+
+static void car_down(int grp, int fs_ch, int chn)
+{
+    IMPCell fs = { DEV_ID_FS, fs_ch, 0 }, enc = { DEV_ID_ENC, grp, 0 };
+
+    IMP_Encoder_StopRecvPic(chn);
+    IMP_Encoder_UnRegisterChn(chn);
+    IMP_Encoder_DestroyChn(chn);
+    IMP_System_UnBind(&fs, &enc);
+    IMP_Encoder_DestroyGroup(grp);
+}
+
+/* one non-blocking fetch after a poll wake: 0 got+released a frame, else -1 / -2 (Polling failed) */
+static int car_fetch(int chn, int poll_ms, int hold, IMPEncoderStream **keep)
+{
+    G(IMPEncoderStream, s);
+    int r = IMP_Encoder_PollingStream(chn, poll_ms);
+
+    if (r) { gfree(s); return -2; }
+    r = IMP_Encoder_GetStream(chn, s, false);
+    if (r) { gfree(s); return -1; }
+    if (hold && keep) { *keep = s; return 0; }
+    IMP_Encoder_ReleaseStream(chn, s);
+    gfree(s);
+    return 0;
+}
+
+static void car_a2(void)
+{
+    int f0, f1, i, n0 = 0, n1 = 0, wake_bad = 0, get_bad = 0, tmo = 0, r0, r1, empty, fs2;
+    struct pollfd pf[2];
+
+    if (!IMP_Encoder_GetFd || !IMP_Encoder_PollingStream) { rep_na(FN(IMP_Encoder_GetFd)); return; }
+    {   /* second 640x360 source: FS ch2 like ch1 (the QEMU vendor encoder cannot do the 1080p main channel) */
+        G(IMPFSChnAttr, fa);
+        IMP_FrameSource_GetChnAttr(CH_SUB, fa);
+        fs2 = IMP_FrameSource_CreateChn(2, fa);
+        if (!fs2) fs2 = IMP_FrameSource_EnableChn(2);
+        gfree(fa);
+    }
+    r0 = car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1);
+    r1 = fs2 ? fs2 : car_up(1, 2, 1, SUB_W, SUB_H, 0, 1);
+    f0 = IMP_Encoder_GetFd(0);
+    f1 = IMP_Encoder_GetFd(1);
+    for (i = 0; i < 80 && (n0 < 10 || n1 < 10); i++) {
+        int k;
+
+        pf[0].fd = f0; pf[0].events = POLLIN; pf[0].revents = 0;
+        pf[1].fd = f1; pf[1].events = POLLIN; pf[1].revents = 0;
+        if (poll(pf, 2, 2000) <= 0) { tmo++; continue; }
+        for (k = 0; k < 2; k++) {
+            if (!(pf[k].revents & POLLIN)) continue;
+            switch (car_fetch(k, 10, 0, NULL)) {
+            case 0: if (k) n1++; else n0++; break;
+            case -2: wake_bad++; break;
+            default: get_bad++; break;
+            }
+        }
+    }
+    printf("carrier: A2 FS2 %d up %d/%d fd0>=0 %d fd1>=0 %d distinct %d frames chn0>=10 %d chn1>=10 %d poll-timeouts %d, Polling after wake failed %d, GetStream(nonblock) after wake failed %d\n",
+           fs2, r0, r1, f0 >= 0, f1 >= 0, f0 != f1, n0 >= 10, n1 >= 10, tmo > 0, wake_bad, get_bad);
+    /* empty channel: stop chn 0, drain, non-blocking GetStream must return at once (no hang) */
+    IMP_Encoder_StopRecvPic(0);
+    if (getenv("CARRIER_V")) { printf("carrier-v: A2 stopped, draining\n"); fflush(stdout); }
+    for (i = 0; i < 40 && car_fetch(0, 100, 0, NULL) == 0; i++) ;
+    if (getenv("CARRIER_V")) { printf("carrier-v: A2 drained after %d, GetStream(nonblock)\n", i); fflush(stdout); }
+    empty = -1;
+    if (getenv("CARRIER_EMPTY")) {    /* opt-in: the VENDOR library blocks forever in GetStream(block=false) on a drained stopped chn (QEMU, 2026-11-26) */
+        G(IMPEncoderStream, s);
+        int64_t t0 = now_us();
+        empty = IMP_Encoder_GetStream(0, s, false);
+        printf("carrier: A2 GetStream(nonblock) on a drained stopped chn: rc %d, returned at once %d\n", empty, now_us() - t0 < 1000000);
+        gfree(s);
+    }
+    {
+        int pr = IMP_Encoder_PollingStream(0, 10);
+        printf("carrier: A2 PollingStream(10) on a drained stopped chn: rc %d\n", pr);
+    }
+    rep(FN(IMP_Encoder_GetFd), f0, (!r0 && !r1 && f0 >= 0 && f1 >= 0 && f0 != f1 && n0 >= 10 && n1 >= 10 && !wake_bad && !get_bad) ? V_PASS : V_FAIL,
+        "poll over 2 chns: chn0 %d, chn1 %d frames, Polling-after-wake failures %d, GetStream failures %d, empty GetStream %d", n0, n1, wake_bad, get_bad, empty);
+    car_down(0, CH_SUB, 0);
+    car_down(1, 2, 1);
+    IMP_FrameSource_DisableChn(2);
+    IMP_FrameSource_DestroyChn(2);
+}
+
+static void car_a3(void)
+{
+    int mx, ok_all = 1;
+
+    if (!IMP_Encoder_SetMaxStreamCnt || !IMP_Encoder_GetMaxStreamCnt) { rep_na(FN(IMP_Encoder_SetMaxStreamCnt)); return; }
+    for (mx = 1; mx <= 3; mx++) {
+        IMPEncoderStream *held[8];
+        int nh = 0, rg, cnt = -7, i, after, r = car_up(0, CH_SUB, 0, SUB_W, SUB_H, mx, 1), rc;
+        SI si;
+
+        rg = IMP_Encoder_GetMaxStreamCnt(0, &cnt);
+        memset(held, 0, sizeof(held));
+        for (i = 0; i < 6; i++) {            /* slow consumer: hold every stream we get, never release; stop at the first refusal */
+            if (car_fetch(0, 700, 1, &held[nh]) != 0) break;
+            nh++;
+        }
+        for (i = 0; i < nh; i++) { IMP_Encoder_ReleaseStream(0, held[i]); gfree(held[i]); }
+        pull(0, CODEC_H264, 8, 0, 0, &si, 3000);
+        after = si.frames;
+        rc = IMP_Encoder_SetMaxStreamCnt(0, mx);      /* after CreateChn */
+        printf("carrier: A3 max %d: up %d, GetMaxStreamCnt rc %d value %d, held streams %d (%s), 8 frames after release: %d, Set after CreateChn rc %d\n",
+               mx, r, rg, cnt, nh, nh >= 1 ? "some" : "none", after, rc);
+        if (r || rg || cnt != mx || nh < 1 || after < 8) ok_all = 0;
+        car_down(0, CH_SUB, 0);
+    }
+    {   /* range checks */
+        int rz, r4, r9;
+        car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 0);
+        rz = IMP_Encoder_SetMaxStreamCnt(0, 0); r4 = IMP_Encoder_SetMaxStreamCnt(0, 4); r9 = IMP_Encoder_SetMaxStreamCnt(0, 99);
+        printf("carrier: A3 range: 0 -> %d, 4 -> %d, 99 -> %d\n", rz, r4, r9);
+        car_down(0, CH_SUB, 0);
+    }
+    rep(FN(IMP_Encoder_SetMaxStreamCnt), 0, ok_all ? V_PASS : V_FAIL, "max 1/2/3 before CreateChn: read back, slow consumer holds streams, frames flow again after release");
+}
+
+static void car_a5(void)
+{
+    int rf_new, rf_bad, rf_run, rf_stop, rq, rs, ndrain = 0, i, left0 = -1, left1 = -1, idr0, idr1, nstale;
+    SI si, si2;
+    EStat q;
+
+    if (!IMP_Encoder_FlushStream || !IMP_Encoder_RequestIDR) { rep_na(FN(IMP_Encoder_FlushStream)); return; }
+    if (car_up(0, CH_SUB, 0, SUB_W, SUB_H, 2, 0)) { rep(FN(IMP_Encoder_FlushStream), -1, V_FAIL, "chn up failed"); return; }
+    rf_new = IMP_Encoder_FlushStream(0);                 /* created, never started */
+    rf_bad = IMP_Encoder_FlushStream(7);                 /* never created */
+    rq = IMP_Encoder_RequestIDR(0);                      /* before StartRecvPic (carrier order) */
+    rs = IMP_Encoder_StartRecvPic(0);
+    pull(0, CODEC_H264, 10, 0, 0, &si, 3000);
+    idr0 = si.first_idr_frame;
+    rf_run = IMP_Encoder_FlushStream(0);                 /* running */
+    /* idle stop with unconsumed frames queued, then restart the carrier way: Flush, drain, RequestIDR, Start */
+    usleep(400000);
+    IMP_Encoder_StopRecvPic(0);
+    memset(&q, 0xff, sizeof(q));
+    IMP_Encoder_Query(0, &q); left0 = (int)q.leftStreamFrames > 0;
+    rf_stop = IMP_Encoder_FlushStream(0);                /* stopped */
+    memset(&q, 0xff, sizeof(q));
+    IMP_Encoder_Query(0, &q); left1 = (int)q.leftStreamFrames;
+    for (i = 0; i < 6 && car_fetch(0, 100, 0, NULL) == 0; i++) ndrain++;
+    IMP_Encoder_RequestIDR(0);
+    rs = IMP_Encoder_StartRecvPic(0);
+    pull(0, CODEC_H264, 10, 0, 0, &si2, 3000);
+    idr1 = si2.first_idr_frame;
+    printf("carrier: A5 Flush on never-started %d, on unknown chn 7 %d, RequestIDR before Start %d, Start %d; first frame IDR at index %d (10 frames %d)\n",
+           rf_new, rf_bad, rq, rs, idr0, si.frames);
+    printf("carrier: A5 Flush on running %d, on stopped %d; frames queued before flush %d, after flush %d, drained after flush %d; after restart first IDR at index %d (10 frames %d)\n",
+           rf_run, rf_stop, left0, left1, ndrain, idr1, si2.frames);
+    /* control: restart WITHOUT flush/drain, informational (stale frames show up here) */
+    usleep(300000);
+    IMP_Encoder_StopRecvPic(0);
+    usleep(400000);
+    IMP_Encoder_RequestIDR(0);
+    IMP_Encoder_StartRecvPic(0);
+    pull(0, CODEC_H264, 10, 0, 0, &si, 3000);
+    nstale = si.first_idr_frame;
+    printf("carrier: A5 control restart without flush: first IDR at index %d (0 = no stale frame in front)\n", nstale);
+    rep(FN(IMP_Encoder_FlushStream), rf_stop, (rf_stop == 0 && rf_run == 0 && left1 == 0 && ndrain == 0 && idr1 == 0 && si2.frames >= 10) ? V_PASS : V_FAIL,
+        "flush stopped %d running %d, queued after flush %d, drained %d, first frame after restart IDR index %d", rf_stop, rf_run, left1, ndrain, idr1);
+    (void)nstale;
+    car_down(0, CH_SUB, 0);
+}
+
+static void car_a7(void)
+{
+    G(IMPFSChnAttr, at);
+    G(IMPFSChnAttr, rd);
+    int rst, rg, rd_ = -9, rset_en, rset, ren, ok = 1, w0, h0, nw = 480, nh = 272, rr;
+    SI si, si2;
+    char sz[64] = "";
+
+    if (car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1)) { rep(FN(IMP_FrameSource_SetChnAttr), -1, V_FAIL, "chn up failed"); gfree(at); gfree(rd); return; }
+    pull(0, CODEC_H264, 5, 0, 0, &si, 3000);
+    rg = IMP_FrameSource_GetChnAttr(CH_SUB, at);
+    w0 = at->picWidth; h0 = at->picHeight;
+    rst = IMP_Encoder_StopRecvPic(0);
+    at->picWidth = nw; at->picHeight = nh; at->scaler.enable = 1; at->scaler.outwidth = nw; at->scaler.outheight = nh;
+    rset_en = IMP_FrameSource_SetChnAttr(CH_SUB, at);          /* channel still enabled and bound */
+    rd_ = IMP_FrameSource_DisableChn(CH_SUB);
+    rset = IMP_FrameSource_SetChnAttr(CH_SUB, at);             /* disabled, still bound */
+    memset(rd, 0, sizeof(*rd));
+    rr = IMP_FrameSource_GetChnAttr(CH_SUB, rd);
+    ren = IMP_FrameSource_EnableChn(CH_SUB);
+    /* the encoder follows at the new size */
+    IMP_Encoder_UnRegisterChn(0); IMP_Encoder_DestroyChn(0);
+    {
+        G(EAttr, a);
+        int rc, rreg, rsr;
+
+        fill_attr(a, CODEC_H264, EGOP);
+        CAR_SIZE(a, nw, nh);
+        rc = IMP_Encoder_CreateChn(0, a);
+        rreg = rc ? rc : IMP_Encoder_RegisterChn(0, 0);
+        rsr = rreg ? rreg : IMP_Encoder_StartRecvPic(0);
+        pull(0, CODEC_H264, 10, 0, 0, &si2, 3000);
+        snprintf(sz, sizeof(sz), "%dx%d", si2.w, si2.h);
+        printf("carrier: A7 GetChnAttr %d, size %dx%d; Stop %d; SetChnAttr while enabled -> %d; Disable %d; SetChnAttr disabled -> %d, read back %dx%d (rc %d); Enable %d; encoder at new size: create %d reg %d start %d, SPS %s, frames %d\n",
+               rg, w0, h0, rst, rset_en, rd_, rset, rd->picWidth, rd->picHeight, rr, ren, rc, rreg, rsr, sz, si2.frames);
+        if (rc || rreg || rsr) ok = 0;
+        gfree(a);
+    }
+    if (rset || ren || si2.w != nw || si2.h != nh || si2.frames < 10) ok = 0;
+    /* back to the original size, same way */
+    IMP_Encoder_StopRecvPic(0); IMP_Encoder_UnRegisterChn(0); IMP_Encoder_DestroyChn(0);
+    IMP_FrameSource_DisableChn(CH_SUB);
+    at->picWidth = w0; at->picHeight = h0; at->scaler.outwidth = w0; at->scaler.outheight = h0;
+    IMP_FrameSource_SetChnAttr(CH_SUB, at);
+    IMP_FrameSource_EnableChn(CH_SUB);
+    {
+        G(EAttr, a);
+        fill_attr(a, CODEC_H264, EGOP);
+        IMP_Encoder_CreateChn(0, a); IMP_Encoder_RegisterChn(0, 0); IMP_Encoder_StartRecvPic(0);
+        pull(0, CODEC_H264, 10, 0, 0, &si, 3000);
+        printf("carrier: A7 back to %dx%d: SPS %dx%d, frames %d\n", w0, h0, si.w, si.h, si.frames);
+        if (si.w != w0 || si.h != h0 || si.frames < 10) ok = 0;
+        gfree(a);
+    }
+    rep(FN(IMP_FrameSource_SetChnAttr), rset, ok ? V_PASS : V_FAIL, "SetChnAttr on a disabled bound channel %dx%d -> %dx%d and back, encoder follows, SPS checked", w0, h0, nw, nh);
+    car_down(0, CH_SUB, 0);
+    gfree(at); gfree(rd);
+}
+
+#if !HAS_IMP_Encoder_InputJpege
+static void car_a9(void) { }
+#else
+static void car_a9(void)
+{
+    IMPFrameInfo *fr = NULL;
+    unsigned char *dst;
+    int rd, rg, len = -7, r, rbad_w, rbad_h, soi = 0, eoi = 0, w, h, rrel;
+
+    if (!IMP_Encoder_InputJpege) { rep_na(FN(IMP_Encoder_InputJpege)); return; }
+    rd = IMP_FrameSource_SetFrameDepth(CH_SUB, 1);
+    usleep(300000);
+    rg = IMP_FrameSource_GetFrame(CH_SUB, &fr);
+    if (rg || !fr) { rep(FN(IMP_Encoder_InputJpege), rg, V_FAIL, "SetFrameDepth %d, GetFrame %d: no frame", rd, rg); IMP_FrameSource_SetFrameDepth(CH_SUB, 0); return; }
+    w = fr->width; h = fr->height;
+    dst = malloc((size_t)w * h);
+    len = -7;
+    r = IMP_Encoder_InputJpege((uint8_t *)(uintptr_t)fr->virAddr, dst, w, h, 25, &len);
+    if (r == 0 && len > 4) { soi = dst[0] == 0xff && dst[1] == 0xd8; eoi = dst[len - 2] == 0xff && dst[len - 1] == 0xd9; }
+    {
+        int l2 = -7;
+        rbad_w = IMP_Encoder_InputJpege((uint8_t *)(uintptr_t)fr->virAddr, dst, w - 8, h, 25, &l2);
+        rbad_h = IMP_Encoder_InputJpege((uint8_t *)(uintptr_t)fr->virAddr, dst, w, h - 1, 25, &l2);
+    }
+    rrel = IMP_FrameSource_ReleaseFrame(CH_SUB, fr);
+    printf("carrier: A9 SetFrameDepth %d, GetFrame %d %ux%u; InputJpege rc 0x%x len>0 %d SOI %d EOI %d; width-8 rc 0x%x, height-1 rc 0x%x; Release %d, frames flow %d\n",
+           rd, rg, w, h, (unsigned)r, len > 0, soi, eoi, (unsigned)rbad_w, (unsigned)rbad_h, rrel, enc_pull_h264(0) >= 0);
+    rep(FN(IMP_Encoder_InputJpege), r, (r == 0 && len > 4 && soi && eoi) ? V_PASS : V_FAIL,
+        "GetFrame %ux%u -> InputJpege q25: len %d SOI %d EOI %d; no JPEG channel", w, h, len, soi, eoi);
+    free(dst);
+    IMP_FrameSource_SetFrameDepth(CH_SUB, 0);
+}
+#endif
+
+int enc_carrier_run(void)
+{
+    wdog("cases", 240);
+    if (car_on("a2")) car_a2();
+    wdog("cases", 240);
+    if (car_on("a3")) car_a3();
+    wdog("cases", 240);
+    if (car_on("a5")) car_a5();
+    wdog("cases", 240);
+    if (car_on("a7")) car_a7();
+    wdog("cases", 240);
+    if (car_on("a9")) car_a9();
+    return 0;
+}

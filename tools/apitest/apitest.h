@@ -189,6 +189,7 @@ int enc_hskip_run(void);     /* case "hskip" (explicit only) */
 int enc_demask_run(void);    /* case "demask" (explicit only, T10/T20) */
 int enc_fisheye_run(void);   /* case "fisheye" (explicit only, T10/T20) */
 int enc_push_run(void);      /* case "push" (explicit only, T10/T20, #916 #917 #918) */
+int enc_carrier_run(void);   /* case "carrier" (explicit only, #931: vendor reference-app usage patterns) */
 int enc_transcfg_run(void); /* case "transcfg" (explicit only, legacy encoder API) */
 int enc_gopfps_run(void);    /* case "gopfps" (explicit only, T10/T20/T21, #367) */
 int enc_rctrig_run(void);    /* case "rctrig" (explicit only, T10/T20) */
