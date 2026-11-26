@@ -47,20 +47,20 @@ Open stack = open-tx-isp + OpenIMP. **Newest release candidate: RC3 `v2026.11.07
 
 ### Completeness
 
-Vendor IMP/SU functions per SoC on 2026-11-22, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
+Vendor IMP/SU functions per SoC on 2026-11-26, `next` after RC3 `v2026.11.07-rc3` (from the "All areas" coverage summary of [FEATURE_MATRIX](docs/FEATURE_MATRIX.md#coverage-summary); rendered: https://lu-fi.github.io/openimp/feature-matrix.html). "Works" = device-tested or vendor no-op (a round trip counts as working); "implemented" = exists but not device-tested; gaps = error, missing, stub or cache-only; "?" = state not yet judged. All streamer-used functions work on every gate SoC (RC3 gate).
 
 | SoC | Vendor functions | Works | Implemented, not device-tested | Gaps | ? | Status |
 |---|--:|--:|--:|--:|--:|---|
-| T10 | 331 | 328 (99.1 %) | 3 | 0 | 0 | RC3 gate |
+| T10 | 331 | 329 (99.4 %) | 2 | 0 | 0 | RC3 gate |
 | T20 | 331 | 328 (99.1 %) | 3 | 0 | 0 | RC3 gate |
-| T21 | 335 | 332 (99.1 %) | 3 | 0 | 0 | RC3 gate |
-| T23 | 459 | 456 (99.3 %) | 3 | 0 | 0 | RC3 gate |
+| T21 | 335 | 333 (99.4 %) | 2 | 0 | 0 | RC3 gate |
+| T23 | 459 | 457 (99.6 %) | 2 | 0 | 0 | RC3 gate |
 | T30 | 352 | 350 (99.4 %) | 2 | 0 | 0 | RC3 gate |
 | T31 | 401 | 399 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T40 | 389 | 387 (99.5 %) | 2 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
 | T32 | 610 | 343 (56.2 %) | 212 | 55 | 0 | Release 1 gate (device: PRJ007 module; streamer functions 258/258; light box and 72 h open) |
-| T33 | 571 | 489 (85.6 %) | 54 | 28 | 0 | Release 1 gate (device: T33L module; streamer functions 258/258; light box and 72 h open) |
+| T33 | 571 | 497 (87.0 %) | 60 | 14 | 0 | Release 1 gate (device: T33L module; streamer functions 258/258; light box and 72 h open) |
 
 T32 and T33 are in development (not a release gate): the "implemented" cells are checked in QEMU against the vendor libraries. T32 has no camera (QEMU only; its "works" cells are vendor no-ops). T33 runs the open stack on a T33L module since 2026-11-14; its 468 "works" cells are device-tested (first full device API test on the module 2026-11-17, plus the later device checks up to 2026-11-22; 63 of them API round trips only) or vendor no-ops; the module is on the bench, not in the light box.
 

@@ -57,6 +57,17 @@ def soc_status():
         return out
     for m in re.finditer(r"^\|\s*(T\d\d)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\(([\d.]+)\s*%\)\s*\|.*\|\s*([^|]+?)\s*\|\s*$", text, re.M):
         out.append((m.group(1), int(m.group(2)), int(m.group(3)), float(m.group(4)), m.group(5)))
+    # the numbers come from the generated coverage summary of the feature matrix (source of truth, updated with every
+    # matrix regeneration); the README table only supplies the SoC order and status text (2026-11-26: README was stale)
+    try:
+        fm = open("docs/FEATURE_MATRIX.md", encoding="utf-8").read()
+        line = next(l for l in fm.splitlines() if l.startswith("- **All areas:**"))
+        cov = {m.group(1): (int(m.group(2)), int(m.group(3)))
+               for m in re.finditer(r"(T\d\d) (\d+)/(\d+) \u2705", line)}
+        out = [(s, cov[s][1], cov[s][0], 100.0 * cov[s][0] / cov[s][1], st) if s in cov else (s, nf, nd, pct, st)
+               for s, nf, nd, pct, st in out]
+    except (OSError, StopIteration):
+        pass
     return out
 
 
