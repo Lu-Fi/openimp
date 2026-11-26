@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-24: Light box, Secuplug SP1, jxh42 full run 5000 K (#230)
+
+- New report `docs/lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-5000.html` (GATE PASS, better 10 (incl. 1 beyond vendor) / equal 146 / worse 0 / invalid 0; open-tx-isp 3ba242db + OpenIMP libimp aceb6843), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+
 ## 2026-11-26: T10/T20 capture worker waits in LISTEN_BUF, encode thread per channel like the vendor (#896)
 
 - Cause: measured on the T10 (per-thread CPU and context switches, 25 fps, 60 s): vendor libimp 3.12.0 splits a frame over threads: "FS(%d)-tick" (frame_pooling_thread 0x73168) only waits in VIDIOC_DEFAULT_CMD_LISTEN_BUF 0x400456bf (0.07 ms CPU, 1 wake-up per frame) and kicks the group threads (Framesource-0 0.14 ms, OSD-0, Encoder-0 0.8 ms). OpenIMP did capture + OSD + encode + QBUF in the one capture worker (1.2 ms per frame, polls while a frame waited). Under a burst of nice -20 tasks every nice-0 thread gets its own CFS share, so the single thread missed the next DMA bank more often (high-burst test: 24-51 lost frames per 120 s vs vendor 10-17). The 2026-11-25 entry below ("encode in the capture worker like the vendor") read the vendor statically; the vendor encodes in its encoder group thread.
