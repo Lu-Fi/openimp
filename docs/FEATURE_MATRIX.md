@@ -64,7 +64,7 @@ Stable days = days since the later of: the image first ran on the camera, its la
 
 | SoC | light-box run | cameras | best stable days | progress | unplanned reboots | oops |
 |---|---|---|--:|---|--:|--:|
-| T10 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T10 | 🟢 [report](lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-5000.html) | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T20 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T21 | 🟢 [report](lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html) | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T23 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |

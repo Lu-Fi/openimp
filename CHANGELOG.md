@@ -10,6 +10,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: T10 light-box gate passed (#230)
+
+- Secuplug SP1 (T10, jxh42), cam .31, 5000 K and 3000 K: both reports GATE PASS (worse 0, invalid 0), `release.yaml` `lightbox_runs.T10` set. The 3000 K report has one row accepted by the user on 2026-11-26 (`cmp: AEC speech-like`, bimodal on both stacks: open bad 3 of 6 runs, vendor 2 of 6, median gap 0.1 dB, 2:2 tie under the repeat rule); it is shown as "accepted by the user 2026-11-26" and counted as equal.
+
 ## 2026-11-24: Light box, Secuplug SP1, jxh42 full run 3000 K (#230)
 
 - New report `docs/lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-3000.html` (GATE PASS, better 11 (incl. 1 beyond vendor) / equal 141 / worse 0 / invalid 0 / accepted 1; open-tx-isp 3ba242db + OpenIMP libimp aceb6843), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
