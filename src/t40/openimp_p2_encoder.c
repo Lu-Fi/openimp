@@ -3707,6 +3707,20 @@ typedef struct {
 static P2PushThread p2_push_thr[P2_ALL_CHANNELS];
 static pthread_once_t p2_push_thr_once = PTHREAD_ONCE_INIT;
 
+/* #916: per source channel, the encode kicks not finished yet (all encoder
+ * channels of that source) and the ready tag of the newest kicked frame.
+ * The give-back runs under `mx` once nothing is in flight and returns only
+ * frames up to that tag; the capture worker sets both under `mx` when it
+ * kicks, so a frame it published but has not kicked yet stays queued. */
+typedef struct {
+    pthread_mutex_t mx;
+    unsigned int inflight;
+    unsigned int tag;
+} P2PushSource;
+
+#define P2_MAX_SOURCE_CHANNELS 6      /* kernel_interface.c MAX_VBM_POOLS */
+static P2PushSource p2_push_src[P2_MAX_SOURCE_CHANNELS];
+
 static void p2_push_thr_init(void)
 {
     int i;
@@ -3715,6 +3729,8 @@ static void p2_push_thr_init(void)
         pthread_mutex_init(&p2_push_thr[i].mx, NULL);
         pthread_cond_init(&p2_push_thr[i].kick, NULL);
     }
+    for (i = 0; i < P2_MAX_SOURCE_CHANNELS; i++)
+        pthread_mutex_init(&p2_push_src[i].mx, NULL);
 }
 
 static void *p2_push_thread(void *arg)
@@ -3736,14 +3752,22 @@ static void *p2_push_thread(void *arg)
         pthread_mutex_unlock(&t->mx);
         p2_push_encode_one(i, source);
         /* The capture worker does not poll for this frame (it waits in
-         * LISTEN_BUF): a picture this channel did not take (output rate
-         * below the sensor rate, stream ring full, channel stopped) goes
-         * back to the driver now, or the 2-bank ring would stay one
-         * buffer short (#405/#420). */
-        pthread_mutex_lock(&t->mx);
-        if (!t->pending)
-            (void)VBMExpireReady(source, 0u, 0);
-        pthread_mutex_unlock(&t->mx);
+         * LISTEN_BUF): a picture no channel took (output rate below the
+         * sensor rate, stream ring full, channel stopped) goes back to the
+         * driver now, or the 2-bank ring would stay one buffer short
+         * (#405/#420).  Only frames up to the newest kicked one (#916),
+         * and not while another reader pulls this source: the worker then
+         * keeps the #420 ready-age wait for it (#918). */
+        if (source >= 0 && source < P2_MAX_SOURCE_CHANNELS) {
+            P2PushSource *ps = &p2_push_src[source];
+
+            pthread_mutex_lock(&ps->mx);
+            if (ps->inflight)
+                ps->inflight--;
+            if (!ps->inflight && !VBMFrameReaderActive(source))
+                (void)VBMExpireReadyUpTo(source, ps->tag);
+            pthread_mutex_unlock(&ps->mx);
+        }
     }
     return NULL;
 }
@@ -3765,7 +3789,15 @@ static int p2_push_thread_on(void)
 int OpenIMP_FS_PushEncode(int source_channel)
 {
     int i, kicked = 0;
+    P2PushSource *ps = NULL;
 
+    if (source_channel >= 0 && source_channel < P2_MAX_SOURCE_CHANNELS &&
+        p2_push_thread_on()) {
+        pthread_once(&p2_push_thr_once, p2_push_thr_init);
+        ps = &p2_push_src[source_channel];
+        pthread_mutex_lock(&ps->mx);
+        ps->tag = VBMReadyTag(source_channel);
+    }
     for (i = 0; i < P2_ALL_CHANNELS; i++) {
         P2EncoderChannel *ch = &p2_channels[i];
         P2PushThread *t = &p2_push_thr[i];
@@ -3783,8 +3815,16 @@ int OpenIMP_FS_PushEncode(int source_channel)
             pthread_t th;
             pthread_attr_t a;
 
+            struct sched_param sp = { .sched_priority = 0 };
+
             pthread_attr_init(&a);
             pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+            /* #920 L2: normal policy like the vendor Encoder-N thread,
+             * not the policy of the capture worker that creates it
+             * (OPENIMP_FS_RT=1 makes that one SCHED_FIFO) */
+            pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
+            pthread_attr_setschedpolicy(&a, SCHED_OTHER);
+            pthread_attr_setschedparam(&a, &sp);
             t->started = pthread_create(&th, &a, p2_push_thread,
                                         (void *)(intptr_t)i) == 0 ? 1 : -1;
             pthread_attr_destroy(&a);
@@ -3793,8 +3833,11 @@ int OpenIMP_FS_PushEncode(int source_channel)
             t->source = source_channel;
             /* at most one picture waits: a later frame supersedes it in
              * the ready queue, which gives the older one back */
-            if (t->pending < 2u)
+            if (t->pending < 2u) {
                 t->pending++;
+                if (ps)
+                    ps->inflight++;
+            }
             pthread_cond_signal(&t->kick);
             kicked++;
         }
@@ -3802,6 +3845,8 @@ int OpenIMP_FS_PushEncode(int source_channel)
         if (t->started < 0)
             p2_push_encode_one(i, source_channel);
     }
+    if (ps)
+        pthread_mutex_unlock(&ps->mx);
     return kicked;
 }
 #endif
@@ -4511,11 +4556,16 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
 #endif
 
     pthread_mutex_lock(&ch->lock);
+    /* #917: push encodes into its stream ring while the application holds
+     * a stream (only the ring limit above applies), like the vendor
+     * stream queue; a pull poll returns the stream it already has. */
     if (!ch->created || !ch->registered || !ch->receiving || !ch->codec ||
-        ch->raw_stream) {
+        (ch->raw_stream && !push)) {
+        int have = ch->raw_stream && !push;
+
         pthread_mutex_unlock(&ch->lock);
         openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
-        return ch->raw_stream ? 0 : -1;
+        return have ? 0 : -1;
     }
     if (ch->codec_type != IMP_ENC_TYPE_JPEG) {
         /* counted under the lock that StopRecvPic clears receiving with:
@@ -4566,6 +4616,10 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
             /* the pull stays non-blocking here: the public GetFrame of
              * T31 waits up to 2 s like libimp, this loop has its own
              * deadline and StopRecvPic check */
+#if defined(PLATFORM_T20)
+            if (!push)      /* #918: a pull reader next to a push encoder */
+                VBMNoteFrameReader(ch->source_channel);
+#endif
             if (VBMGetFrame(ch->source_channel, &frame) == 0) {
 #if defined(PLATFORM_T23)
                 if (ivdc_push &&

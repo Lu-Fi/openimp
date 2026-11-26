@@ -134,6 +134,15 @@ int VBMBuffersInDriver(int chn);
  * ready, -1 the newest is younger, else the count; `query`: count only). */
 #define VBM_READY_MAX_AGE_MS 20u
 int VBMExpireReady(int chn, uint32_t max_age_ms, int query);
+/* #916: tag of the newest frame VBMKernelDequeue published on chn (wraps) */
+unsigned int VBMReadyTag(int chn);
+/* #916: give back the ready frames published up to `tag` (VBMReadyTag),
+ * keep newer ones; returns how many went back */
+int VBMExpireReadyUpTo(int chn, unsigned int tag);
+/* #918: a pull reader other than the push encoder (IMP_FrameSource_GetFrame,
+ * a pulling PollingStream) read chn; active = within VBM_PULL_IDLE_MS */
+void VBMNoteFrameReader(int chn);
+int VBMFrameReaderActive(int chn);
 #endif
 /* #374/#405: hand the oldest ready frames (all but the newest keep_ready)
  * back until the driver holds two buffers; returns how many it still

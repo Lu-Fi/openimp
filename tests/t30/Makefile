@@ -319,6 +319,13 @@ P2_T1X_FLAGS = -std=gnu99 -Wno-unused-result '-D_Static_assert(c,m)=' \
 p2_t1x_test_t20: $(P2_T1X_SOURCES) $(ROOT)/src/demask/demask.c
 	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 $(ROOT)/src/core/imp_log_emit.c -o $@ $(P2_T1X_SOURCES) $(ROOT)/src/demask/demask.c -lpthread
 
+# #916/#917/#918: the T10/T20 push model (Encoder-N thread) against a fake
+# VBM ready queue and a stub codec.
+p2_push_t20_test: p2_push_t20_test.c $(P2_T1X_SOURCES) $(ROOT)/src/demask/demask.c
+	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T20 -DPLATFORM_T21 $(ROOT)/src/core/imp_log_emit.c -o $@ p2_push_t20_test.c \
+		$(ROOT)/src/t40/openimp_p2_encoder.c $(ROOT)/src/openimp_profile.c $(ROOT)/src/t40/t31_stream_layout.c \
+		$(ROOT)/src/demask/demask.c -lpthread
+
 p2_t1x_test_t21: $(P2_T1X_SOURCES)
 	$(CC) $(CFLAGS) $(P2_T1X_FLAGS) -DPLATFORM_T21 $(ROOT)/src/core/imp_log_emit.c -o $@ $(P2_T1X_SOURCES) -lpthread
 
@@ -379,7 +386,7 @@ radix-smoke:
 		$(ROOT)/src/eprc/eprc_t30.c $(ROOT)/src/dma_alloc.c $(ROOT)/src/core/imp_log_emit.c \
 		-lpthread -lm -o radix_smoke
 
-check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test isp_t20_movestate_test isp_t21_movestate_test isp_t30_movestate_test isp_t31_awbzone_test p2_t1x_test_t20 p2_t1x_test_t21 rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test nv12_compact_test helix_encoder_test \
+check: p2_push_t20_test p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test isp_t20_movestate_test isp_t21_movestate_test isp_t30_movestate_test isp_t31_awbzone_test p2_t1x_test_t20 p2_t1x_test_t21 rmem_highwater_test ref_ring_test ref_ring_test_t23 descriptor_test annexb_test level_test nv12_compact_test helix_encoder_test \
 	helix_encoder_test_t21 helix_encoder_test_t20 t21_rmem_layout_test t23_ring_layout_test \
 	t21_sinter_map_test t21_front_crop_test helix_jpeg_test_t21 helix_jpeg_test_t20 helix_jpeg_test_t23 \
 	ivs_framework_test_t21 ivs_framework_test_t20 ivs_framework_test_t30 ivs_move_bench_t20 \
@@ -402,6 +409,7 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	./isp_t30_movestate_test
 	./isp_t31_awbzone_test
 	./p2_t1x_test_t20
+	./p2_push_t20_test
 	./p2_t1x_test_t21
 	./p2_t30_enc_test
 	./rmem_highwater_test
@@ -427,6 +435,9 @@ check: p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t31_movestate_test 
 	./ivs_move_bench_t20 equiv
 	./fs_lifecycle_test_t21
 	./fs_lifecycle_test_t20
+	# #896 opt-in OPENIMP_FS_RT=1 (SCHED_FIFO capture worker, refused on a
+	# host without the right: the worker must still run the push model)
+	OPENIMP_FS_RT=1 FS_TEST_ONLY=listen_buf,push_reader ./fs_lifecycle_test_t20
 	./fs_lifecycle_test_t23
 	./fs_lifecycle_test_t30
 	./fs_lifecycle_test_t31

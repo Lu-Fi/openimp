@@ -1361,8 +1361,11 @@ static void *frame_pooling_thread(void *arg)
                      * long, then hand it back, then dequeue. */
 #if defined(PLATFORM_T20)
                     /* #896: the frame went to an encode thread, which
-                     * takes it or gives it back: no poll for a reader */
-                    if (push_kicked && listen) {
+                     * takes it or gives it back: no poll for a reader.
+                     * #918: while GetFrame (or a pulling PollingStream)
+                     * reads this channel the encode thread gives nothing
+                     * back and the #420 ready-age wait below stays. */
+                    if (push_kicked && listen && !VBMFrameReaderActive(chn)) {
                         push_kicked = 0;
                         goto t20_listen;
                     }
@@ -3086,6 +3089,9 @@ static int fs_getframe_impl(int chnNum, void **frame, int compact)
         uint32_t start = fs_now_ms();
 
         for (;;) {
+#if defined(PLATFORM_T20)
+            VBMNoteFrameReader(chnNum);     /* #918: next to a push encoder */
+#endif
             if (FS_PULL(chnNum, frame, compact) == 0 && *frame != NULL)
                 return 0;
             if (fs_chan_get_state(chnNum) != 2 ||

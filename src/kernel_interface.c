@@ -1126,6 +1126,7 @@ typedef struct {
     uint8_t *buf_in_userspace; /* Per-buffer: 1 if DQBUF'd, 0 if in kernel queue;
                                 * ext pool: VBM_EXT_FREE/QUEUED/HELD */
     int ext;                /* extension channel pool, software filled (#370) */
+    uint32_t *ready_tag;    /* #916: per buffer, publish tag (VBMReadyTag) */
 } VBMPool;
 
 /* Frame states of an extension channel pool (buf_in_userspace). */
@@ -1611,10 +1612,13 @@ static int vbm_create_pool(int chn, void *fmt, void *ops, void *priv) {
      * VBMReleaseFrame is called multiple times for the same buffer
      * (OEM uses AL_Buffer refcounting; we track explicitly). */
     pool->buf_in_userspace = (uint8_t*)calloc(frame_count, sizeof(uint8_t));
-    if (pool->available_queue == NULL || pool->buf_in_userspace == NULL) {
+    pool->ready_tag = (uint32_t *)calloc(frame_count, sizeof(uint32_t));
+    if (pool->available_queue == NULL || pool->buf_in_userspace == NULL ||
+        pool->ready_tag == NULL) {
         fprintf(stderr, "[VBM] CreatePool: failed to allocate queue\n");
         free(pool->available_queue);
         free(pool->buf_in_userspace);
+        free(pool->ready_tag);
         DMA_FreePhys(pool->phys_base);
         free(pool);
         return -1;
@@ -1808,6 +1812,8 @@ static int vbm_destroy_pool(int chn, int park) {
     if (pool->available_queue != NULL) {
         free(pool->available_queue);
     }
+    free(pool->ready_tag);
+    pool->ready_tag = NULL;
     if (pool->buf_in_userspace != NULL) {
         free(pool->buf_in_userspace);
     }
@@ -2192,6 +2198,9 @@ static int vbm_recycle_ready(int chn)
  * the driver unless `query`.
  */
 static uint32_t vbm_publish_ms[MAX_VBM_POOLS];
+static uint32_t vbm_publish_tag[MAX_VBM_POOLS];
+static uint32_t vbm_reader_ms[MAX_VBM_POOLS];
+static int vbm_release_frame(int chn, void *frame);
 
 int VBMExpireReady(int chn, uint32_t max_age_ms, int query)
 {
@@ -2218,6 +2227,84 @@ int VBMExpireReady(int chn, uint32_t max_age_ms, int query)
     if (n)
         ki_trace("libimp/VBM: ready-expired ch=%d frames=%d age=%u\n", chn, n, age);
     return n;
+}
+
+unsigned int VBMReadyTag(int chn)
+{
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return 0u;
+    return __atomic_load_n(&vbm_publish_tag[chn], __ATOMIC_ACQUIRE);
+}
+
+/*
+ * #916 (T10/T20 push model): the encode thread gives back what it did not
+ * take only up to the frame it was kicked for.  The capture worker
+ * publishes frame N+1 (VBMKernelDequeue) before it kicks the encoder for
+ * it; an "expire everything" right after the encode of N recycled N+1 in
+ * that window and N+1 was never encoded.  Ready frames leave the queue at
+ * its head only, so the walk stops at the first newer frame.  Under
+ * vbm_pool_lock like the other calls from outside the capture worker: a
+ * late give-back after StopRecvPic cannot meet DisableChn freeing the pool
+ * (#920 L1).
+ */
+int VBMExpireReadyUpTo(int chn, unsigned int tag)
+{
+    VBMPool *pool;
+    int n = 0;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return 0;
+    pthread_mutex_lock(&vbm_pool_lock[chn]);
+    pool = vbm_instance[chn];
+    /* as vbm_recycle_ready: back by QBUF on the pool fd or the release
+     * callback of a FrameSource-owned fd */
+    if (!pool || !pool->buf_in_userspace || pool->ext || !pool->ready_tag ||
+        (pool->fd < 0 && !pool->ops[1])) {
+        pthread_mutex_unlock(&vbm_pool_lock[chn]);
+        return 0;
+    }
+    for (;;) {
+        int idx;
+
+        pthread_mutex_lock(&pool->queue_mutex);
+        if (pool->queue_count <= 0) {
+            pthread_mutex_unlock(&pool->queue_mutex);
+            break;
+        }
+        idx = pool->available_queue[pool->queue_head];
+        if (idx < 0 || idx >= pool->frame_count ||
+            (int32_t)(pool->ready_tag[idx] - tag) > 0) {
+            pthread_mutex_unlock(&pool->queue_mutex);
+            break;
+        }
+        pool->queue_head = (pool->queue_head + 1) % pool->frame_count;
+        pool->queue_count--;
+        pthread_mutex_unlock(&pool->queue_mutex);
+        (void)vbm_release_frame(chn, &pool->frames[idx]);
+        n++;
+    }
+    pthread_mutex_unlock(&vbm_pool_lock[chn]);
+    if (n)
+        ki_trace("libimp/VBM: ready-expired ch=%d frames=%d upto=%u\n",
+                 chn, n, tag);
+    return n;
+}
+
+void VBMNoteFrameReader(int chn)
+{
+    if (chn >= 0 && chn < MAX_VBM_POOLS)
+        __atomic_store_n(&vbm_reader_ms[chn], vbm_now_ms() | 1u,
+                         __ATOMIC_RELAXED);
+}
+
+int VBMFrameReaderActive(int chn)
+{
+    uint32_t last;
+
+    if (chn < 0 || chn >= MAX_VBM_POOLS)
+        return 0;
+    last = __atomic_load_n(&vbm_reader_ms[chn], __ATOMIC_RELAXED);
+    return last && vbm_now_ms() - last < VBM_PULL_IDLE_MS;
 }
 #endif
 
@@ -2686,6 +2773,8 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     pool->queue_count++;
 #if defined(PLATFORM_T20) || defined(PLATFORM_T30)
     vbm_publish_ms[chn] = vbm_now_ms();
+    pool->ready_tag[idx] = __atomic_add_fetch(&vbm_publish_tag[chn], 1u,
+                                              __ATOMIC_RELEASE);
 #endif
     pthread_mutex_unlock(&pool->queue_mutex);
 #if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T23) || defined(PLATFORM_T21)

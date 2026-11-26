@@ -2427,6 +2427,134 @@ static void test_listen_buf(void)
 }
 #endif
 
+#if defined(PLATFORM_T20)
+/* #916/#918: the push encoder (openimp_p2_encoder.c OpenIMP_FS_PushEncode)
+ * as the capture worker sees it: the frame goes to an Encoder-N thread
+ * that skips it (output rate below the sensor rate) and gives back the
+ * ready frames up to the kicked one, unless another reader pulls the
+ * channel.  Off (returns 0, nothing kicked) outside these tests. */
+extern unsigned int VBMReadyTag(int chn);
+extern int VBMExpireReadyUpTo(int chn, unsigned int tag);
+extern int VBMFrameReaderActive(int chn);
+extern int VBMExpireReady(int chn, uint32_t max_age_ms, int query);
+static int fake_push, fake_push_probe, probe_keep = -1, probe_left = -1,
+           probe_give = -1, probe_after = -1;
+static unsigned int fake_push_kicks;
+
+int OpenIMP_FS_PushEncode(int source_channel)
+{
+    unsigned int tag;
+
+    if (!__atomic_load_n(&fake_push, __ATOMIC_ACQUIRE))
+        return 0;
+    __atomic_add_fetch(&fake_push_kicks, 1u, __ATOMIC_RELAXED);
+    tag = VBMReadyTag(source_channel);
+    if (__atomic_exchange_n(&fake_push_probe, 0, __ATOMIC_ACQ_REL)) {
+        /* the frame just published carries `tag`: an older tag keeps it */
+        probe_keep = VBMExpireReadyUpTo(source_channel, tag - 1u);
+        probe_left = VBMExpireReady(source_channel, 0u, 1);
+        probe_give = VBMExpireReadyUpTo(source_channel, tag);
+        probe_after = VBMExpireReady(source_channel, 0u, 1);
+        return 1;
+    }
+    if (!VBMFrameReaderActive(source_channel))
+        (void)VBMExpireReadyUpTo(source_channel, tag);
+    return 1;
+}
+
+extern void VBMNotePull(int chn);
+
+/* the application polls the push encoder (PollingStream marks the pull) */
+static void sleep_polling(unsigned int ms)
+{
+    unsigned int t;
+
+    for (t = 0; t < ms; t += 10) {
+        VBMNotePull(0);
+        sleep_ms(10);
+    }
+}
+
+static int push_reader_stop;
+static unsigned int push_reader_got, push_reader_fail, push_reader_stale;
+
+static void *push_reader(void *arg)
+{
+    (void)arg;
+    while (!__atomic_load_n(&push_reader_stop, __ATOMIC_RELAXED)) {
+        IMPFrameInfo *fi = NULL;
+
+        if (IMP_FrameSource_GetFrame(0, (void **)&fi) == 0 && fi) {
+            unsigned int seq = (unsigned int)(fi->timeStamp / 40000);
+
+            if (frames_done() - seq > 3u)
+                __atomic_add_fetch(&push_reader_stale, 1u, __ATOMIC_RELAXED);
+            __atomic_add_fetch(&push_reader_got, 1u, __ATOMIC_RELAXED);
+            IMP_FrameSource_ReleaseFrame(0, fi);
+        } else {
+            __atomic_add_fetch(&push_reader_fail, 1u, __ATOMIC_RELAXED);
+        }
+        sleep_ms(100);              /* a snapshot / motion reader */
+    }
+    return NULL;
+}
+
+/* The worker waits in LISTEN_BUF after a kick; a slow GetFrame reader next
+ * to the push encoder keeps the #420 ready-age path, so the bank ring keeps
+ * running (frames complete far faster than the reader pulls) and every
+ * GetFrame gets a current frame. */
+static void test_push_reader(void)
+{
+    IMPFSChnAttr a = attr_for(640, 360, 2);
+    unsigned int f0, done, kicks;
+    pthread_t thread;
+
+    fake_stock_dq = 1;
+    fake_need_ring = 1;
+    fake_frame_budget = -1;
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "push reader: create");
+    __atomic_store_n(&fake_push_probe, 1, __ATOMIC_RELEASE);
+    __atomic_store_n(&fake_push, 1, __ATOMIC_RELEASE);
+    VBMNotePull(0);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "push reader: enable");
+    /* no reader: the encode thread gives every frame back at once */
+    f0 = frames_done();
+    kicks = __atomic_load_n(&fake_push_kicks, __ATOMIC_RELAXED);
+    sleep_polling(300);
+    CHECK(probe_keep == 0 && probe_left >= 1 && probe_give >= 1 && probe_after == 0,
+          "push reader: tag give-back keeps the unkicked frame (keep %d left %d give %d after %d)",
+          probe_keep, probe_left, probe_give, probe_after);
+    CHECK(frames_done() - f0 >= 20, "push reader: frames flow without a reader (%u)", frames_done() - f0);
+    CHECK(__atomic_load_n(&fake_push_kicks, __ATOMIC_RELAXED) - kicks >= 20, "push reader: frames kicked");
+    /* a GetFrame reader every 100 ms next to it */
+    __atomic_store_n(&push_reader_stop, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&push_reader_got, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&push_reader_fail, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&push_reader_stale, 0, __ATOMIC_RELAXED);
+    pthread_create(&thread, NULL, push_reader, NULL);
+    sleep_polling(150);
+    f0 = frames_done();
+    sleep_polling(1000);
+    done = frames_done() - f0;
+    __atomic_store_n(&push_reader_stop, 1, __ATOMIC_RELAXED);
+    pthread_join(thread, NULL);
+    CHECK(__atomic_load_n(&push_reader_got, __ATOMIC_RELAXED) >= 8 &&
+          __atomic_load_n(&push_reader_fail, __ATOMIC_RELAXED) == 0,
+          "push reader: GetFrame got %u, failed %u",
+          __atomic_load_n(&push_reader_got, __ATOMIC_RELAXED),
+          __atomic_load_n(&push_reader_fail, __ATOMIC_RELAXED));
+    CHECK(__atomic_load_n(&push_reader_stale, __ATOMIC_RELAXED) == 0,
+          "push reader: %u stale frames", __atomic_load_n(&push_reader_stale, __ATOMIC_RELAXED));
+    CHECK(done >= 25, "push reader: %u frames in 1 s with a reader every 100 ms (bank ring held by parked frames)", done);
+    __atomic_store_n(&fake_push, 0, __ATOMIC_RELEASE);
+    fake_need_ring = 0;
+    fake_stock_dq = 0;
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "push reader: disable");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "push reader: destroy");
+    check_clean("push reader");
+}
+#endif
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -2465,6 +2593,7 @@ int main(void)
     RUN(single_pull_capture);
 #if defined(PLATFORM_T20)
     RUN(listen_buf);
+    RUN(push_reader);
 #endif
 #if !defined(PLATFORM_T31)
     /* T31 stamps frames from its own clock (fs_frame_timestamp), the

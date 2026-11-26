@@ -2762,3 +2762,157 @@ int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, v
     }
     return k;
 }
+
+/* ------------------------------------------------------------------------------------------
+ * Explicit case "push" (APITEST_CASES=push, #916 #917 #918, T10/T20): the push model of the encoder next to the vendor.
+ * chn 0 (group 0, FS ch1 640x360) and with PUSH_2CH=1 (default) chn 1 (group 1, FS ch0 sensor size), H.264 at PUSH_FPS
+ * (default the sensor rate), one drain thread per channel for PUSH_SEC (30) s: pictures and capture-timestamp gaps
+ * > 1.5 output intervals; PUSH_GF=1: a thread calls IMP_FrameSource_GetFrame(1) as fast as frames come (after
+ * SetFrameDepth(1, PUSH_DEPTH=1)); PUSH_HOLD_MS: the drain of chn 0 holds each stream that long before ReleaseStream
+ * (#917, a slow streamer); then PUSH_CYCLES (20) StopRecvPic / StartRecvPic rounds of both channels, each must give
+ * 5 pictures within 2 s.  Lines "push: ..." carry the numbers. */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T10)
+#include <pthread.h>
+static int push_env(const char *n, int d) { const char *v = getenv(n); return v && *v ? atoi(v) : d; }
+typedef struct { int chn; volatile int run; int pics, gaps, maxgap_ms, hold_ms; int64_t last_ts; int interval_us; } PushDrain;
+static volatile int g_push_gf_run;
+static int g_push_gf_ok, g_push_gf_fail;
+
+static void *push_drain(void *arg)
+{
+    PushDrain *d = arg;
+
+    while (d->run) {
+        IMPEncoderStream s;
+
+        if (IMP_Encoder_PollingStream(d->chn, 500) != 0) continue;
+        memset(&s, 0, sizeof(s));
+        if (IMP_Encoder_GetStream(d->chn, &s, 1) != 0) continue;
+        if (s.packCount > 0 && s.pack) {
+            int64_t ts = s.pack[0].timestamp;
+
+            if (d->last_ts && ts > d->last_ts && (ts - d->last_ts) * 2 > (int64_t)d->interval_us * 3) {
+                int ms = (int)((ts - d->last_ts) / 1000);
+
+                d->gaps++;
+                if (ms > d->maxgap_ms) d->maxgap_ms = ms;
+            }
+            d->last_ts = ts;
+        }
+        d->pics++;
+        if (d->hold_ms) usleep((useconds_t)d->hold_ms * 1000u);
+        IMP_Encoder_ReleaseStream(d->chn, &s);
+    }
+    return NULL;
+}
+
+static void *push_getframe(void *arg)
+{
+    (void)arg;
+    while (g_push_gf_run) {
+        IMPFrameInfo *fr = NULL;
+
+        if (IMP_FrameSource_GetFrame(CH_SUB, &fr) == 0 && fr) {
+            g_push_gf_ok++;
+            IMP_FrameSource_ReleaseFrame(CH_SUB, fr);
+        } else {
+            g_push_gf_fail++;
+            usleep(5000);
+        }
+    }
+    return NULL;
+}
+
+static int push_chn_up(int grp, int fs_ch, int chn, int w, int h, int fps)
+{
+    IMPCell fs = { DEV_ID_FS, fs_ch, 0 }, enc = { DEV_ID_ENC, grp, 0 };
+    G(EAttr, a);
+    int r;
+
+    r = IMP_Encoder_CreateGroup(grp);
+    if (!r) r = IMP_System_Bind(&fs, &enc);
+    fill_attr(a, CODEC_H264, fps * 2);
+    a->encAttr.picWidth = w;
+    a->encAttr.picHeight = h;
+    a->rcAttr.outFrmRate.frmRateNum = fps;
+    a->rcAttr.outFrmRate.frmRateDen = 1;
+    if (!r) r = IMP_Encoder_CreateChn(chn, a);
+    if (!r) r = IMP_Encoder_RegisterChn(grp, chn);
+    if (!r) r = IMP_Encoder_StartRecvPic(chn);
+    printf("push: chn %d group %d fs %d %dx%d %d fps up: %d\n", chn, grp, fs_ch, w, h, fps, r);
+    gfree(a);
+    return r;
+}
+
+static void push_chn_down(int grp, int fs_ch, int chn)
+{
+    IMPCell fs = { DEV_ID_FS, fs_ch, 0 }, enc = { DEV_ID_ENC, grp, 0 };
+
+    IMP_Encoder_StopRecvPic(chn);
+    IMP_Encoder_UnRegisterChn(chn);
+    IMP_Encoder_DestroyChn(chn);
+    IMP_System_UnBind(&fs, &enc);
+    IMP_Encoder_DestroyGroup(grp);
+}
+
+int enc_push_run(void)
+{
+    int sec = push_env("PUSH_SEC", 30), two = push_env("PUSH_2CH", 1), gf = push_env("PUSH_GF", 0), cycles = push_env("PUSH_CYCLES", 20);
+    int fps = push_env("PUSH_FPS", g_fps > 0 ? g_fps : 25), n = two ? 2 : 1, i, k, cyc_ok = 0, r;
+    PushDrain d[2];
+    pthread_t th[2], gth;
+    int64_t t0;
+
+    wdog("cases", sec + cycles * 4 + 60);
+    memset(d, 0, sizeof(d));
+    if (gf) printf("push: SetFrameDepth(%d, %d) %d\n", CH_SUB, push_env("PUSH_DEPTH", 1),
+                   IMP_FrameSource_SetFrameDepth(CH_SUB, push_env("PUSH_DEPTH", 1)));
+    if (push_chn_up(0, CH_SUB, 0, SUB_W, SUB_H, fps)) return -1;
+    if (two && push_chn_up(1, CH_MAIN, 1, g_sw, g_sh, fps)) { push_chn_down(0, CH_SUB, 0); return -1; }
+    for (i = 0; i < n; i++) {
+        d[i].chn = i; d[i].run = 1; d[i].interval_us = 1000000 / fps;
+        d[i].hold_ms = i == 0 ? push_env("PUSH_HOLD_MS", 0) : 0;
+        pthread_create(&th[i], NULL, push_drain, &d[i]);
+    }
+    if (gf) { g_push_gf_run = 1; pthread_create(&gth, NULL, push_getframe, NULL); }
+    t0 = now_us();
+    sleep((unsigned)sec);
+    if (gf) { g_push_gf_run = 0; pthread_join(gth, NULL); }
+    for (i = 0; i < n; i++) { d[i].run = 0; pthread_join(th[i], NULL); }
+    t0 = now_us() - t0;
+    for (i = 0; i < n; i++)
+        printf("push: chn %d pictures %d in %.1f s (%.2f fps, want %d) gaps %d maxgap %d ms\n", i, d[i].pics, t0 / 1e6,
+               d[i].pics * 1e6 / t0, fps, d[i].gaps, d[i].maxgap_ms);
+    if (gf) printf("push: getframe ok %d (%.2f fps) fail %d\n", g_push_gf_ok, g_push_gf_ok * 1e6 / t0, g_push_gf_fail);
+    for (k = 0; k < cycles; k++) {
+        int good = 1;
+
+        for (i = 0; i < n; i++) IMP_Encoder_StopRecvPic(i);
+        usleep(100000);
+        for (i = 0; i < n; i++) IMP_Encoder_StartRecvPic(i);
+        for (i = 0; i < n; i++) {
+            int got = 0;
+            int64_t until = now_us() + 2000000;
+
+            while (got < 5 && now_us() < until) {
+                IMPEncoderStream s;
+
+                if (IMP_Encoder_PollingStream(i, 500) != 0) continue;
+                memset(&s, 0, sizeof(s));
+                if (IMP_Encoder_GetStream(i, &s, 1) != 0) continue;
+                IMP_Encoder_ReleaseStream(i, &s);
+                got++;
+            }
+            if (got < 5) good = 0;
+        }
+        cyc_ok += good;
+    }
+    printf("push: stop/start cycles %d/%d gave 5 pictures per channel\n", cyc_ok, cycles);
+    if (two) push_chn_down(1, CH_MAIN, 1);
+    push_chn_down(0, CH_SUB, 0);
+    r = cyc_ok == cycles ? 0 : -1;
+    return r;
+}
+#else
+int enc_push_run(void) { return -1; }
+#endif
