@@ -37,6 +37,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - SU_Base_Suspend host -> dev on T40 .184 (Eufy, 4.4.94, `mem` offered, no wake source): called once with the image and once with the vendor ISVP 1.3.1 libsysutils, both -1/EINVAL, camera stayed up (no suspend started). Shutdown on T40 re-run with the extended shim (also blocks connect/send/exec/popen/open of tty): same sync(), kill(1,17), 0.
 - Evidence and test programs: `audit/su-cells-1125/` (pm_call.c, shim.c, run_cam.sh, out-*-su.txt).
 
+## 2026-11-26: T33 online LDC setters and getters cache -> qemu (#784; QEMU only)
+
+- `ISP_LDC_OnlineSetLut`, `OnlineSetStrength`, `OnlineGetLut` and `OnlineGetStrength`: the cells said "stored, not applied". That note was stale: since #491, `IMP_ISP_AddSensor` applies the state as the vendor does. QEMU: OpenIMP with a LUT file before AddSensor passes (SetLut 0, AddSensor 0, 0 oops). A vendor A/B of the applied LUT is not possible in QEMU, because the vendor library hangs the guest in AddSensor with an online LUT file (#935). The device A/B on the T33L module is still open.
+
 ## 2026-11-26: T32/T33 CreateJoint refuses a channel already in a joint (#784; QEMU only)
 
 - `IMP_FrameSource_CreateJoint` returns 0x80010004 for a channel that is already in another joint, as vendor 2.0.2.1 (QEMU apitest `t33pass`, same lines on the vendor and OpenIMP). `DestroyJoint` frees the channels again (the vendor keeps a stale mark). Applying a joint (shared buffer, channel frames at offsets) stays a feature gap; the four Joint cells stay cache.

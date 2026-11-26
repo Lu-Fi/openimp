@@ -21585,7 +21585,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21593,7 +21593,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads ctx+0xfc88 -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads ctx+0xfc88 -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): the 'not applied' above is stale: since #491 (d304f500, 8240be4b) IMP_ISP_AddSensor sends the online state and writes the LUT (file copy, or the identity mesh for a strength) as the vendor; OnlineInit is qemu on the same evidence. QEMU 2026-11-26: OpenIMP with SetLut(file) before AddSensor -> SetLut 0, AddSensor 0, all areas pass, 0 oops (audit issue784/ldc o4). Cell cache -> qemu. Not shown: a vendor A/B of the applied LUT - the vendor library hangs the QEMU guest in AddSensor with an online LUT file (#935); device A/B on the T33L module open."
     },
     "ISP_LDC_OnlineGetLutBufMode": {
       "area": "ISP tuning",
@@ -21647,7 +21647,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21655,7 +21655,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads ctx+0xfc80 -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): reads ctx+0xfc80 -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): the 'not applied' above is stale: since #491 (d304f500, 8240be4b) IMP_ISP_AddSensor sends the online state and writes the LUT (file copy, or the identity mesh for a strength) as the vendor; OnlineInit is qemu on the same evidence. QEMU 2026-11-26: OpenIMP with SetLut(file) before AddSensor -> SetLut 0, AddSensor 0, all areas pass, 0 oops (audit issue784/ldc o4). Cell cache -> qemu. Not shown: a vendor A/B of the applied LUT - the vendor library hangs the QEMU guest in AddSensor with an online LUT file (#935); device A/B on the T33L module open."
     },
     "ISP_LDC_OnlineInit": {
       "area": "ISP tuning",
@@ -21688,7 +21688,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21697,7 +21697,7 @@
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)",
         "T32": "QEMU -M ingenic-t32 2026-11-21 (#751): AddSensor T32 branch like vendor 2.2.0 (openimp a291ca98), open module online LDC + DMA config (open-tx-isp f3e956a54): 541 LDC/DMA writes = decompiled vendor flow, 10/10 frames, 0 oops; binoracle t32-ldcdma 4005 cases 0 diff; image effect not device-proven (no T32 camera), follow-up #759"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): LUT at ctx+0xfc88 read by IMP_ISP_AddSensor; the open module lacks the online LUT requests (#491) -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): LUT at ctx+0xfc88 read by IMP_ISP_AddSensor; the open module lacks the online LUT requests (#491) -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): the 'not applied' above is stale: since #491 (d304f500, 8240be4b) IMP_ISP_AddSensor sends the online state and writes the LUT (file copy, or the identity mesh for a strength) as the vendor; OnlineInit is qemu on the same evidence. QEMU 2026-11-26: OpenIMP with SetLut(file) before AddSensor -> SetLut 0, AddSensor 0, all areas pass, 0 oops (audit issue784/ldc o4). Cell cache -> qemu. Not shown: a vendor A/B of the applied LUT - the vendor library hangs the QEMU guest in AddSensor with an online LUT file (#935); device A/B on the T33L module open."
     },
     "ISP_LDC_OnlineSetLutBufMode": {
       "area": "ISP tuning",
@@ -21751,7 +21751,7 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -21759,7 +21759,7 @@
       "ref": {
         "T33": "apitest t33f1/t33l1/t33e3 2026-11-13 QEMU -M ingenic-t33 (no camera), vendor 2.0.2.1 reference run (audit t33backlog/runs2)"
       },
-      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): ctx+0xfc80/0xfc84, state 0xfc70 = 2 -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54/#480 batch L1, src/t32/openimp_t32_isp_ctl.c): every return code and read-back equal to vendor 2.0.2.1 in QEMU (t33l1: mode record, NULL/func checks, VI with sensor added f009, strength round trip, LUT/strength exclusion). The state is kept but not applied at AddSensor: the open T32/T33 module lacks the online LUT requests 0xc00454b9..bb (driver issue #491) -> cache. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): ctx+0xfc80/0xfc84, state 0xfc70 = 2 -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): the 'not applied' above is stale: since #491 (d304f500, 8240be4b) IMP_ISP_AddSensor sends the online state and writes the LUT (file copy, or the identity mesh for a strength) as the vendor; OnlineInit is qemu on the same evidence. QEMU 2026-11-26: OpenIMP with SetLut(file) before AddSensor -> SetLut 0, AddSensor 0, all areas pass, 0 oops (audit issue784/ldc o4). Cell cache -> qemu. Not shown: a vendor A/B of the applied LUT - the vendor library hangs the QEMU guest in AddSensor with an online LUT file (#935); device A/B on the T33L module open."
     },
     "ISP_LDC_SetMode": {
       "area": "ISP tuning",
