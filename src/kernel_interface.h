@@ -56,7 +56,7 @@ int fs_stream_off(int fd);
 #if defined(PLATFORM_T31)
 int fs_stream_off_quiet(int fd); /* ioctl only, for the exit paths */
 #endif
-/* OEM frame-ready wait (0x400456bf), unused by OpenIMP; see the .c file. */
+/* OEM frame-ready wait (0x400456bf); the T20 (T10/T20) worker issues it itself (framesource_tseries.c fs_t20_listen, #896); see the .c file. */
 int fs_poll_frame(int fd, unsigned int *ready_out, int timeout_ms);
 
 /* Whether the frame-channel driver honours O_NONBLOCK in DQBUF, learnt from

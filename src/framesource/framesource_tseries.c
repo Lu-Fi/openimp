@@ -84,7 +84,7 @@ extern void   *video_vbm_malloc(int32_t size, int32_t align);
 /* Module/system helpers */
 extern int32_t notify_observers(Module *module, void *frame);
 #if defined(PLATFORM_T20)
-extern void OpenIMP_FS_PushEncode(int source_channel) __attribute__((weak));
+extern int OpenIMP_FS_PushEncode(int source_channel) __attribute__((weak));
 #endif
 extern int     add_observer_to_module(void *module, Observer *observer);
 extern int     remove_observer_from_module(void *src_module, void *dst_module);
@@ -806,6 +806,43 @@ static int g_fs_thread_entered[FS_MAX_CHANNELS];
 static int g_fs_thread_enabled_seen[FS_MAX_CHANNELS];
 /* Set by the pooling worker when it leaves its loop (not when cancelled). */
 static int g_fs_thread_exited[FS_MAX_CHANNELS];
+#if defined(PLATFORM_T20)
+/* #896: vendor libimp 3.12.0 frame_pooling_thread (0x73168, "FS(%d)-tick")
+ * sleeps in VIDIOC_DEFAULT_CMD_LISTEN_BUF (0x400456bf, ioctl at 0x73290)
+ * until the driver finished a frame, then dequeues it. In tx-isp-t10/t20
+ * (open tx-isp-frame-channel.c frame_channel_listen_buffer) that is
+ * wait_for_completion_interruptible(&vdev->comp), one complete() per
+ * delivered frame, and the only frame ioctl outside the video-device mutex
+ * (v4l2_disable_ioctl_locking): a DQBUF that sleeps keeps vdev->mlock and
+ * blocks every QBUF of the channel until the next frame. -1: the driver
+ * does not know the ioctl, wait in DQBUF as before. */
+#define FS_T20_LISTEN_BUF 0x400456bfu
+static int g_fs_listen[FS_MAX_CHANNELS];
+/* STREAMOFF does not complete the wait: DisableChn lets the worker see
+ * running == 0 at the next frame before it stops the stream (the vendor
+ * cancels and joins the thread before STREAMOFF, IMP_FrameSource_DisableChn). */
+#define FS_T20_LISTEN_STOP_MS 500
+
+/* 0: a frame is ready (or the driver lacks the ioctl: DQBUF waits),
+ * -1: no frame (signal, channel not running yet): back to the loop top. */
+static int fs_t20_listen(int chn, int fd)
+{
+    int ready = -1;
+    int err;
+
+    if (ioctl(fd, FS_T20_LISTEN_BUF, &ready) >= 0)
+        return 0;
+    err = errno;
+    if (err == ENOTTY || err == EINVAL) {
+        __atomic_store_n(&g_fs_listen[chn], -1, __ATOMIC_RELAXED);
+        IMP_LOG_INFO("Framesource", "chn%d: no LISTEN_BUF in the driver (errno %d), DQBUF waits", chn, err);
+        return 0;
+    }
+    if (err == EPERM)           /* channel not in the RUN state (yet) */
+        usleep(1000);
+    return -1;
+}
+#endif
 
 /* Where IMP_FrameSource_DisableChn is, per channel (0 = not in it): a stop
  * that does not return is located by OpenIMP_FS_DebugState() (apitest
@@ -1093,6 +1130,9 @@ static void *frame_pooling_thread(void *arg)
     int no_frame_cycles = 0;
     int state_wait_count = 0;
     int software_mode = 0;
+#if defined(PLATFORM_T20)
+    int push_kicked = 0;    /* #896: the last frame went to an encode thread */
+#endif
     int last_state = -1;
     int first_enabled_seen = 0;
 
@@ -1174,6 +1214,9 @@ static void *frame_pooling_thread(void *arg)
 
         if (!software_mode) {
             int drained = 0;
+#if defined(PLATFORM_T20)
+            int listen = 0;
+#endif
             fd_set rfds;
             struct timeval tv;
             int select_ret;
@@ -1194,6 +1237,14 @@ static void *frame_pooling_thread(void *arg)
             fs_trace("libimp/FS: pooling select-enter ch=%d fd=%d iter=%d\n",
                      chn, ctx->fd, poll_count);
             FS_STEP(chn, FS_STEP_SELECT);
+#if defined(PLATFORM_T20)
+            /* #896: the frame channel of tx-isp-t10/t20 has no poll (select
+             * is always ready); the wait is LISTEN_BUF below */
+            listen = __atomic_load_n(&g_fs_listen[chn], __ATOMIC_RELAXED) >= 0;
+            if (listen)
+                select_ret = 1;
+            else
+#endif
             select_ret = select(ctx->fd + 1, &rfds, NULL, NULL, &tv);
             fs_trace("libimp/FS: pooling select-exit ch=%d fd=%d iter=%d rc=%d errno=%d\n",
                      chn, ctx->fd, poll_count, select_ret, errno);
@@ -1263,6 +1314,12 @@ static void *frame_pooling_thread(void *arg)
                  * sleeps until the next frame, which may never come. */
                 if (!FS_FLAG_LOAD(ctx->running))
                     break;
+#if defined(PLATFORM_T20)
+                /* one DQBUF per LISTEN_BUF completion: a second one would
+                 * sleep in DQBUF (O_NONBLOCK ignored) */
+                if (listen && drained > 0)
+                    break;
+#endif
                 if (poll_count <= 2) {
                     fs_thread_trace("libimp/FS: thread-mark ch=%d step=dq-drain iter=%d fd=%d state=%d errno=%d\n",
                                     chn, poll_count, ctx->fd, ch_state, errno);
@@ -1302,6 +1359,15 @@ static void *frame_pooling_thread(void *arg)
                      * its bank (one bank short stops this ISP's DMA, and
                      * DQBUF then sleeps for good): wait for a reader that
                      * long, then hand it back, then dequeue. */
+#if defined(PLATFORM_T20)
+                    /* #896: the frame went to an encode thread, which
+                     * takes it or gives it back: no poll for a reader */
+                    if (push_kicked && listen) {
+                        push_kicked = 0;
+                        goto t20_listen;
+                    }
+                    push_kicked = 0;
+#endif
                     {
                         int expire = VBMExpireReady(chn, VBM_READY_MAX_AGE_MS, 1);
 
@@ -1335,6 +1401,15 @@ static void *frame_pooling_thread(void *arg)
                             break;
                         }
                     }
+#if defined(PLATFORM_T20)
+t20_listen:
+                    if (listen) {
+                        FS_STEP(chn, FS_STEP_SELECT);
+                        if (fs_t20_listen(chn, ctx->fd) < 0 ||
+                            !FS_FLAG_LOAD(ctx->running))
+                            break;
+                    }
+#endif
 #endif
                     FS_STEP(chn, FS_STEP_DQBUF);
                     dq_ret = VBMKernelDequeue(chn, ctx->fd, &frame);
@@ -1406,7 +1481,7 @@ static void *frame_pooling_thread(void *arg)
                      * the next bank under CPU load and the ISP dropped a
                      * frame. */
                     if (OpenIMP_FS_PushEncode)
-                        OpenIMP_FS_PushEncode(chn);
+                        push_kicked = OpenIMP_FS_PushEncode(chn) > 0;
 #endif
                     if (*(int32_t *)((char *)m + 0x3c) == 0) {
                         fs_trace("libimp/FS: pooling ch=%d fd=%d module=%p frame=%p notify-empty direct-enc\n",
@@ -2892,6 +2967,11 @@ int IMP_FrameSource_DisableChn(int chnNum)
         ctx->thread = 0;
     }
 #else
+#if defined(PLATFORM_T20)
+    if (ctx->thread != 0 &&
+        __atomic_load_n(&g_fs_listen[chnNum], __ATOMIC_RELAXED) >= 0)
+        (void)fs_wait_worker_exit(chnNum, FS_T20_LISTEN_STOP_MS);
+#endif
     /* A frame-channel DQBUF may remain asleep in the kernel even after the
      * worker is cancelled.  STREAMOFF is the driver's wakeup edge, so issue
      * it before joining the pooling thread.  Waiting first deadlocks T21

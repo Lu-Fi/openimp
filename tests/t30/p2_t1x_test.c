@@ -90,6 +90,7 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
 }
 void VBMWakeReaders(int chn) { (void)chn; }
 void VBMNotePull(int chn) { (void)chn; }
+int VBMExpireReady(int chn, uint32_t max_age_ms, int query) { (void)chn; (void)max_age_ms; (void)query; return 0; }
 #endif
 int AL_Codec_Encode_InsertUserData(void *c, const void *d, unsigned int s, unsigned int n, unsigned int m)
 { (void)c; (void)d; (void)s; (void)n; (void)m; return 0; }

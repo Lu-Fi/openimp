@@ -5,6 +5,7 @@
 #include "../core/thread_name.h"
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/prctl.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -3657,39 +3658,151 @@ static int p2_push_wait(P2EncoderChannel *ch, uint32_t timeout_ms)
     }
 }
 
-/* Called by the FrameSource capture worker after it published a frame of
- * source_channel (framesource_tseries.c): encode it for every bound video
- * channel in this thread, as the vendor's frame_pooling_thread does
- * (on_encoder_group_data_update -> do_channel_process_h264e). */
-void OpenIMP_FS_PushEncode(int source_channel)
+/* Encode one published frame of channel i in the calling thread (the
+ * vendor's do_channel_process_h264e path; StopRecvPic waits for in_poll). */
+static void p2_push_encode_one(int i, int source_channel)
+{
+    P2EncoderChannel *ch = &p2_channels[i];
+    int ok;
+
+    pthread_mutex_lock(&ch->lock);
+    ok = ch->push_on && ch->created && ch->registered && ch->receiving &&
+         !ch->closing && ch->codec &&
+         ch->source_channel == source_channel &&
+         ch->codec_type != IMP_ENC_TYPE_JPEG;
+    if (ok)
+        ch->in_poll++;
+    pthread_mutex_unlock(&ch->lock);
+    if (!ok)
+        return;
+    if (pthread_mutex_trylock(&ch->poll_serial) == 0) {
+        (void)p2_polling_stream(i, 0u, 1);
+        pthread_mutex_unlock(&ch->poll_serial);
+    }
+    pthread_mutex_lock(&ch->lock);
+    if (--ch->in_poll == 0)
+        pthread_cond_broadcast(&ch->poll_idle);
+    pthread_mutex_unlock(&ch->lock);
+}
+
+/* #896: one encode thread per encoder channel, woken by the capture
+ * worker, as in vendor libimp 3.12.0: its "FS(%d)-tick" thread (0x73168)
+ * only waits in LISTEN_BUF and kicks the group threads ("%s-%d":
+ * Framesource-N dequeues, OSD-N, Encoder-N encodes and releases the
+ * frame). Measured on the T10 at 25 fps: vendor FS(0)-tick 0.07 ms CPU and
+ * one wake-up per frame, Framesource-0 0.14 ms, Encoder-0 0.8 ms; OpenIMP
+ * doing all of it in the capture worker: 1.2 ms per frame in one thread.
+ * Under CFS every nice-0 thread gets its own share against a burst of
+ * nice -20 tasks, so the single thread missed the next DMA bank about
+ * twice as often as the vendor's split work (51 / 24 vs 17 / 10 lost
+ * frames per 120 s). OPENIMP_T20_PUSH_THREAD=0 encodes in the worker. */
+typedef struct {
+    pthread_mutex_t mx;
+    pthread_cond_t kick;
+    unsigned int pending;
+    int source;
+    int started;            /* 1 running, -1 could not start */
+} P2PushThread;
+
+static P2PushThread p2_push_thr[P2_ALL_CHANNELS];
+static pthread_once_t p2_push_thr_once = PTHREAD_ONCE_INIT;
+
+static void p2_push_thr_init(void)
 {
     int i;
 
     for (i = 0; i < P2_ALL_CHANNELS; i++) {
-        P2EncoderChannel *ch = &p2_channels[i];
-        int ok;
-
-        if (!__atomic_load_n(&ch->push_on, __ATOMIC_ACQUIRE))
-            continue;
-        pthread_mutex_lock(&ch->lock);
-        ok = ch->push_on && ch->created && ch->registered && ch->receiving &&
-             !ch->closing && ch->codec &&
-             ch->source_channel == source_channel &&
-             ch->codec_type != IMP_ENC_TYPE_JPEG;
-        if (ok)
-            ch->in_poll++;
-        pthread_mutex_unlock(&ch->lock);
-        if (!ok)
-            continue;
-        if (pthread_mutex_trylock(&ch->poll_serial) == 0) {
-            (void)p2_polling_stream(i, 0u, 1);
-            pthread_mutex_unlock(&ch->poll_serial);
-        }
-        pthread_mutex_lock(&ch->lock);
-        if (--ch->in_poll == 0)
-            pthread_cond_broadcast(&ch->poll_idle);
-        pthread_mutex_unlock(&ch->lock);
+        pthread_mutex_init(&p2_push_thr[i].mx, NULL);
+        pthread_cond_init(&p2_push_thr[i].kick, NULL);
     }
+}
+
+static void *p2_push_thread(void *arg)
+{
+    int i = (int)(intptr_t)arg;
+    P2PushThread *t = &p2_push_thr[i];
+    char name[16];
+
+    snprintf(name, sizeof(name), "Encoder-%d", i);
+    prctl(PR_SET_NAME, name);
+    for (;;) {
+        int source;
+
+        pthread_mutex_lock(&t->mx);
+        while (!t->pending)
+            pthread_cond_wait(&t->kick, &t->mx);
+        t->pending--;
+        source = t->source;
+        pthread_mutex_unlock(&t->mx);
+        p2_push_encode_one(i, source);
+        /* The capture worker does not poll for this frame (it waits in
+         * LISTEN_BUF): a picture this channel did not take (output rate
+         * below the sensor rate, stream ring full, channel stopped) goes
+         * back to the driver now, or the 2-bank ring would stay one
+         * buffer short (#405/#420). */
+        pthread_mutex_lock(&t->mx);
+        if (!t->pending)
+            (void)VBMExpireReady(source, 0u, 0);
+        pthread_mutex_unlock(&t->mx);
+    }
+    return NULL;
+}
+
+static int p2_push_thread_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T20_PUSH_THREAD");
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+
+/* Called by the FrameSource capture worker after it published a frame of
+ * source_channel (framesource_tseries.c): encode it for every bound video
+ * channel (on_encoder_group_data_update -> do_channel_process_h264e). */
+int OpenIMP_FS_PushEncode(int source_channel)
+{
+    int i, kicked = 0;
+
+    for (i = 0; i < P2_ALL_CHANNELS; i++) {
+        P2EncoderChannel *ch = &p2_channels[i];
+        P2PushThread *t = &p2_push_thr[i];
+
+        if (!__atomic_load_n(&ch->push_on, __ATOMIC_ACQUIRE) ||
+            ch->source_channel != source_channel)
+            continue;
+        if (!p2_push_thread_on()) {
+            p2_push_encode_one(i, source_channel);
+            continue;
+        }
+        pthread_once(&p2_push_thr_once, p2_push_thr_init);
+        pthread_mutex_lock(&t->mx);
+        if (!t->started) {
+            pthread_t th;
+            pthread_attr_t a;
+
+            pthread_attr_init(&a);
+            pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+            t->started = pthread_create(&th, &a, p2_push_thread,
+                                        (void *)(intptr_t)i) == 0 ? 1 : -1;
+            pthread_attr_destroy(&a);
+        }
+        if (t->started > 0) {
+            t->source = source_channel;
+            /* at most one picture waits: a later frame supersedes it in
+             * the ready queue, which gives the older one back */
+            if (t->pending < 2u)
+                t->pending++;
+            pthread_cond_signal(&t->kick);
+            kicked++;
+        }
+        pthread_mutex_unlock(&t->mx);
+        if (t->started < 0)
+            p2_push_encode_one(i, source_channel);
+    }
+    return kicked;
 }
 #endif
 

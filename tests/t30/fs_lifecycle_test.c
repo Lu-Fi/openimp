@@ -226,6 +226,9 @@ static int fake_need_two;
 static int fake_need_ring;
 
 /* fake_lock held: whether the driver can complete a frame now */
+#if defined(PLATFORM_T20)
+static int fake_listens, fake_listen_eintr;   /* #896 LISTEN_BUF calls, waits that only a signal ended */
+#endif
 static int fake_can_complete(const struct fake_chan *c)
 {
     unsigned int banks = c->banks ? c->banks : c->reqbufs;
@@ -312,6 +315,38 @@ int __wrap_ioctl(int fd, unsigned long request, void *arg)
                 usleep(1000);
         }
     }
+#if defined(PLATFORM_T20)
+    /* #896: VIDIOC_DEFAULT_CMD_LISTEN_BUF (tx-isp-t10/t20
+     * frame_channel_listen_buffer): -EPERM unless streaming, else sleep
+     * until a frame can be dequeued. STREAMOFF does not end the wait (no
+     * complete() there); a signal would: EINTR after the test's 4 s bound. */
+    if ((uint32_t)request == 0x400456bfu) {
+        int waited, ready = 0, run;
+
+        pthread_mutex_lock(&fake_lock);
+        run = fd >= 0 && fd < FAKE_FDS && fake[fd].open && fake[fd].streaming;
+        if (run)
+            fake_listens++;
+        pthread_mutex_unlock(&fake_lock);
+        if (!run)
+            return fake_fail(EPERM);
+        for (waited = 0; waited < 4000 && !ready; waited++) {
+            pthread_mutex_lock(&fake_lock);
+            ready = fake[fd].open && fake[fd].streaming &&
+                    fake_frame_budget != 0 && fake_can_complete(&fake[fd]);
+            pthread_mutex_unlock(&fake_lock);
+            if (!ready)
+                usleep(1000);
+        }
+        if (!ready) {
+            fake_listen_eintr++;
+            return fake_fail(EINTR);
+        }
+        if (words)
+            words[0] = 1;
+        return 0;
+    }
+#endif
     pthread_mutex_lock(&fake_lock);
     if (fd < 0 || fd >= FAKE_FDS || !fake[fd].open) {
         fake_bad_ioctl++;
@@ -2351,6 +2386,47 @@ static __attribute__((unused)) void test_fresh_after_pause(void)
     }
 }
 
+#if defined(PLATFORM_T20)
+/* #896: the T20/T10 worker waits for a frame in LISTEN_BUF like the vendor
+ * frame_pooling_thread (no select, no DQBUF sleep), and DisableChn lets it
+ * leave at the next frame before STREAMOFF, which does not end that wait. */
+static void test_listen_buf(void)
+{
+    IMPFSChnAttr main_attr = attr_for(1920, 1080, 2);
+    int listens, frames;
+    uint64_t t0, dt;
+
+    fake_listen_eintr = 0;
+    CHECK(IMP_FrameSource_CreateChn(0, &main_attr) == 0, "create 0");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable 0");
+    listens = fake_listens;
+    frames = (int)fake_frames_done;
+    for (t0 = now_ms(); now_ms() - t0 < 3000 &&
+                        ((int)fake_frames_done - frames <= 5 || fake_listens - listens <= 5); )
+        sleep_ms(10);           /* sanitizer builds run slowly */
+    CHECK(fake_listens - listens > 5, "frames waited in LISTEN_BUF (%d)", fake_listens - listens);
+    CHECK((int)fake_frames_done - frames > 5, "frames flow (%d)", (int)fake_frames_done - frames);
+    t0 = now_ms();
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable 0");
+    dt = now_ms() - t0;
+    CHECK(dt < 900, "disable with frames flowing took %llu ms", (unsigned long long)dt);
+    sleep_ms(50);
+    CHECK(fake_listen_eintr == 0, "no worker left in LISTEN_BUF after STREAMOFF");
+    /* no frame at all (sensor stalled): the worker sleeps in LISTEN_BUF;
+     * DisableChn must still return (wait, STREAMOFF, cancel fallback) */
+    fake_frame_budget = 0;
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "enable 0 without frames");
+    sleep_ms(50);
+    t0 = now_ms();
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "disable 0 without frames");
+    dt = now_ms() - t0;
+    CHECK(dt < 2500, "disable without frames took %llu ms", (unsigned long long)dt);
+    fake_frame_budget = -1;
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "destroy 0");
+    check_clean("listen_buf");
+}
+#endif
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -2387,6 +2463,9 @@ int main(void)
     RUN(disable_during_delivery);
     RUN(disable_during_dqbuf);
     RUN(single_pull_capture);
+#if defined(PLATFORM_T20)
+    RUN(listen_buf);
+#endif
 #if !defined(PLATFORM_T31)
     /* T31 stamps frames from its own clock (fs_frame_timestamp), the
      * check below reads the fake driver's frame number from the stamp */
