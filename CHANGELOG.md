@@ -43,6 +43,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - Same cause as #905 / T21: T31 gave a stopped reader's buffers back only after `VBM_PULL_IDLE_MS` (1 s). `VBMFeedDriverIdle` now also runs on T31. Device (Wuuk T31X .21, kernel 3.10, open-stack image, installed timps with RTSP off in the test copy of the config so a permanent RTSP client cannot keep chn0 busy, 20 on-demand chn0 restarts, DQBUF trace): before 20 / 20 restarts with a 945 ms ch0 gap, after 0 on both channels; snapshot 200. T30: not changed (its DQBUF path feeds a dry driver, #405).
 
+## 2026-11-26: SU_Key_EnableEvent device-tested on T10 (#99)
+
+T10 (.31, image libsysutils, kernel 3.10.14) moves from audit to device: OpenEvent ok, Enable(28) and Enable(102) return 0, DisableEvent -1/EINVAL (kernel gpio-keys limit, same as vendor). T20 stays audit (camera offline).
+
 ## 2026-11-25: SU_Key_EnableEvent device-tested on T21 and T23 (#99)
 
 The API cell moves from audit to device for T21 (.24, image libsysutils: OpenEvent ok, Enable(28) and Enable(102) return 0) and T23 (.30, neo PR 2 build: Enable 0). DisableEvent still answers -1/EINVAL because the 3.10/4.4 gpio-keys kernel refuses `disabled_keys` writes, same as the vendor library (#909). T10 and T20 stay audit (T10 box busy, T20 camera offline), SU_CIPHER on T41 waits for a T41 board with the AES engine (.32 offline, .34 runs the k7 kernel without /dev/aes). SU_Base_Suspend/Shutdown unchanged: need a power cycle with the user present (plan in the session audit).
