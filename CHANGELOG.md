@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: T32 API gap cells batch 1: FrameDropOnce, OneShotDropCnt, OneByOne callback, online LDC state calls (#99)
+
+- New T32 exports (vendor libimp 2.2.0, addresses in the source comments): `IMP_ISP_Set/GetFrameDropOnce` (requests 0xc00454cd / 0xc00454ce, line-size checks and clamp as the vendor), `IMP_ISP_OneShotDropCnt` (value argument of 0xc004543e; both the vendor and the open module ignore it), `IMP_ISP_PM_SetOneByOneCallback` (kept callback; `IMP_ISP_PM_SetMode` on the T32 one-shot path now runs it around the switch as the vendor does) and the five online LDC state / LUT buffer calls (`OnlineGetFunc/GetState/SetState/GetLutBufMode/SetLutBufMode`): on the PRJ007 side the vendor only logs and answers 0xfffff003, OpenIMP does the same.
+- QEMU 0731 A/B (apitest case `t32gap`, fresh boot per run): the vendor libimp 2.2.0 and OpenIMP give identical lines on the same module. The AOV switch with the callback is not QEMU-safe (the vendor module panics in an IRQ) and stays static-audit.
+- api_evidence.json: 10 T32 cells `miss` -> `qemu`. Not done yet (reverse-engineered, in the #99 comment): `IMP_Encoder_SetAutoVui` (conditional VUI update per frame), `IMP_FrameSource_Get/SetChnAttr_Expand` + `UpdateChnLut` (per-channel offline LDC job at EnableChn), `IMP_ISP_LDC_OfflineCreateJobExt`.
+
 ## 2026-11-26: T10/T20 push model: no frame lost between publish and kick, encode while the app holds a stream, GetFrame next to the push encoder (#916, #917, #918)
 
 - Cause (code check of #896, audit review-1126): (#916) the Encoder-N thread gave back every ready frame (age 0) after its encode, so a frame the capture worker had already published but not kicked yet was recycled and never encoded (more likely under CPU bursts, with 2 channels or big frames); (#917) the second `raw_stream` check in the poll also stopped the push encode while the application held a stream, so captures between PollingStream and ReleaseStream were dropped without a counter; (#918) with a push channel bound the worker skipped the #420 20 ms ready-age wait and Encoder-N gave untaken frames back at once, so `IMP_FrameSource_GetFrame` (snapshot, software motion) next to the push encoder mostly timed out.

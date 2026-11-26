@@ -191,6 +191,88 @@ void cs_t32l2(void)
 }
 #endif
 
+#if defined(APITEST_T32) && !defined(APITEST_T33) && defined(APITEST_T32_HDR220)
+/* ---- case "t32gap": the T32 2.2.0 exports that had no OpenIMP cell (#99 gap batch; explicit only) ------------------------------
+ * Return codes and read-backs, the same lines on the vendor library + module and on OpenIMP + the open module (QEMU, fresh boot):
+ * Set/GetFrameDropOnce, OneShotDropCnt, PM_SetOneByOneCallback (PM_SetMode to the mode it is already in: no switch, no callback;
+ * APITEST_PMCB=1 also switches to AOV and back: device only, the QEMU one-shot switch panics the VENDOR module in an IRQ, 2026-11-26), LDC online state / LutBufMode calls (PRJ008 only: 0xfffff003). */
+#define T32G_X(r) ((unsigned)(r))
+static volatile int t32gap_cb_n, t32gap_cb_m[4];
+static void t32gap_cb(IMPVI_NUM num, IMPISPOneByOneMode mode, void *data)
+{
+    (void)num; (void)data;
+    if (t32gap_cb_n < 4)
+        t32gap_cb_m[t32gap_cb_n] = (int)mode;
+    t32gap_cb_n++;
+}
+
+void cs_t32gap(void)
+{
+    uint32_t fa[9], fb[9];
+    int rs0, rs4, rsbad, rg, rgn, rs, rg2;
+    int ro0, ron, ro3, rcb0, rpm, rpm2 = 0, rpm3 = 0;
+    int lf1, lst0, lbs, lbg, lbs1, lbg1, lf, lst;
+    IMPISPPMAttr pm = TISP_NORMAL_MODE;
+    IMPISPLDCFunc func = (IMPISPLDCFunc)-7;
+    IMPISPLDCOnlineState st = (IMPISPLDCOnlineState)-7;
+    IMPISPLDCLutBufMode lb = (IMPISPLDCLutBufMode)-7;
+    int i;
+
+    /* FrameDropOnce: 3 x {enable, lsize, fmark} */
+    memset(fa, 0, sizeof(fa)); memset(fb, 0xa5, sizeof(fb));
+    rs0 = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, NULL);
+    rg = IMP_ISP_GetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fb);
+    rgn = IMP_ISP_GetFrameDropOnce((IMPVI_NUM)4, (IMPISPFrameDropAttr *)fb);
+    fa[1] = 16;
+    rsbad = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fa);
+    memset(fa, 0, sizeof(fa)); fa[0] = 1; fa[1] = 2; fa[2] = 0x1;
+    rs4 = IMP_ISP_SetFrameDropOnce((IMPVI_NUM)4, (IMPISPFrameDropAttr *)fa);
+    rs = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fa);
+    memset(fb, 0xa5, sizeof(fb));
+    rg2 = IMP_ISP_GetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fb);
+    rep(FN(IMP_ISP_SetFrameDropOnce), rs, rs == 0 && rs0 == (int)0xfffff009 && rs4 == (int)0xfffff00c && rsbad == (int)0xfffff004 ? V_PASS : V_FAIL,
+        "NULL 0x%x, VI4 0x%x, lsize 16 0x%x, enable/2/1: 0x%x; frames flow %d", T32G_X(rs0), T32G_X(rs4), T32G_X(rsbad), T32G_X(rs), flow());
+    rep(FN(IMP_ISP_GetFrameDropOnce), rg2, rg2 == 0 && rgn == (int)0xfffff00c ? V_PASS : V_FAIL,
+        "first 0x%x, VI4 0x%x, after set 0x%x: entry 0 {lsize %u, fmark 0x%x} (the module consumes the request, the enable word may already be 0), entries 1/2 {%u,0x%x} {%u,0x%x}", T32G_X(rg), T32G_X(rgn), T32G_X(rg2),
+        fb[1], fb[2], fb[4], fb[5], fb[7], fb[8]);
+
+    /* OneShotDropCnt */
+    ro0 = IMP_ISP_OneShotDropCnt(0);
+    ron = IMP_ISP_OneShotDropCnt(-1);
+    ro3 = IMP_ISP_OneShotDropCnt(3);
+    rep(FN(IMP_ISP_OneShotDropCnt), ro3, ro0 == (int)0xfffff008 && ron == (int)0xfffff008 && ro3 == 0 ? V_PASS : V_FAIL,
+        "0: 0x%x, -1: 0x%x, 3 (both modules ignore the request): 0x%x; frames flow %d", T32G_X(ro0), T32G_X(ron), T32G_X(ro3), flow());
+
+    /* PM_SetOneByOneCallback */
+    rcb0 = IMP_ISP_PM_SetOneByOneCallback(t32gap_cb);
+    rpm = IMP_ISP_PM_SetMode(IMPVI_MAIN, &pm);
+    if (getenv("APITEST_PMCB")) {
+        pm = TISP_AOV_MODE; rpm2 = IMP_ISP_PM_SetMode(IMPVI_MAIN, &pm);
+        usleep(200000);
+        pm = TISP_NORMAL_MODE; rpm3 = IMP_ISP_PM_SetMode(IMPVI_MAIN, &pm);
+    }
+    rep(FN(IMP_ISP_PM_SetOneByOneCallback), rcb0, rcb0 == 0 ? V_PASS : V_FAIL,
+        "set 0x%x; SetMode to the current mode 0x%x; callbacks %d {%d,%d,%d,%d}; AOV 0x%x, back 0x%x; frames flow %d", T32G_X(rcb0), T32G_X(rpm),
+        t32gap_cb_n, t32gap_cb_m[0], t32gap_cb_m[1], t32gap_cb_m[2], t32gap_cb_m[3], T32G_X(rpm2), T32G_X(rpm3), flow());
+
+    /* online LDC state / LUT buffer calls: PRJ008 only, vendor T32 answers 0xfffff003 before looking at any argument */
+    lf = IMP_ISP_LDC_OnlineGetFunc(IMPVI_MAIN, &func);
+    lf1 = IMP_ISP_LDC_OnlineGetFunc((IMPVI_NUM)4, NULL);
+    lst = IMP_ISP_LDC_OnlineGetState(IMPVI_MAIN, &st);
+    lst0 = IMP_ISP_LDC_OnlineSetState(IMPVI_MAIN, IMPISP_LDC_OPEN);
+    lbs = IMP_ISP_LDC_OnlineSetLutBufMode(IMPVI_MAIN, IMPISP_LDC_BUF_SINGLE);
+    lbs1 = IMP_ISP_LDC_OnlineSetLutBufMode((IMPVI_NUM)4, IMPISP_LDC_BUF_SINGLE);
+    lbg = IMP_ISP_LDC_OnlineGetLutBufMode(IMPVI_MAIN, &lb);
+    lbg1 = IMP_ISP_LDC_OnlineGetLutBufMode(IMPVI_SEC, NULL);
+    i = (int)0xfffff003;
+    rep(FN(IMP_ISP_LDC_OnlineGetFunc), lf, lf == i && lf1 == i && (int)func == -7 ? V_PASS : V_FAIL, "VI0 0x%x, VI4 + NULL 0x%x (func untouched %d)", T32G_X(lf), T32G_X(lf1), (int)func);
+    rep(FN(IMP_ISP_LDC_OnlineGetState), lst, lst == i && (int)st == -7 ? V_PASS : V_FAIL, "VI0 0x%x (state untouched %d)", T32G_X(lst), (int)st);
+    rep(FN(IMP_ISP_LDC_OnlineSetState), lst0, lst0 == i ? V_PASS : V_FAIL, "VI0 open 0x%x; frames flow %d", T32G_X(lst0), flow());
+    rep(FN(IMP_ISP_LDC_OnlineSetLutBufMode), lbs, lbs == i && lbs1 == i ? V_PASS : V_FAIL, "VI0 0x%x, VI4 0x%x", T32G_X(lbs), T32G_X(lbs1));
+    rep(FN(IMP_ISP_LDC_OnlineGetLutBufMode), lbg, lbg == i && lbg1 == i && (int)lb == -7 ? V_PASS : V_FAIL, "VI0 0x%x (mode untouched %d), VI1 + NULL 0x%x", T32G_X(lbg), (int)lb, T32G_X(lbg1));
+}
+#endif
+
 #if defined(APITEST_T32) && !defined(APITEST_T33)
 /* ---- case "t32i2d": FrameSource I2D rotation on channel 2 (T32, #445; explicit only) -------------------------------------------
  * ch2 320x192 NV12 with i2dattr {enable, rotate 90}, enabled, depth 1: GetFrame's size tells whether the library turned the frame
@@ -7854,7 +7936,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -7980,6 +8062,9 @@ void t_cases(void)
 #if defined(APITEST_T32) && !defined(APITEST_T33)
     if (getenv("APITEST_CASES") && cs_on("t32i2d")) { cs_t32i2d(); wdog("cases", 60); }   /* explicit only (#445) */
     if (getenv("APITEST_CASES") && cs_on("t32l2")) { cs_t32l2(); wdog("cases", 60); }   /* explicit only (#491) */
+#if defined(APITEST_T32_HDR220)
+    if (getenv("APITEST_CASES") && cs_on("t32gap")) { cs_t32gap(); wdog("cases", 60); }   /* explicit only (#99) */
+#endif
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);
     if (getenv("APITEST_CASES") && cs_on("t30pass_csc")) cs_t30pass_csc(); wdog("cases", 60);   /* explicit only: OpenIMP extension */

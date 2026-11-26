@@ -12,6 +12,8 @@ int OpenIMP_T32_IspFd(void);
 int OpenIMP_T32_SensorSize(uint32_t *width, uint32_t *height);
 /* sensor of VI num: 0 none, 1 added, 2 enabled (streaming) */
 int OpenIMP_T32_SensorState(int num);
+/* 1 while IMP_ISP_EnableTuning is active (vendor ISP state 3) */
+int OpenIMP_T32_TuningEnabled(void);
 /* /dev/misc-ivdc GET_DIRECT: the direct mode (0 = frames via memory, 1 = the
  * ISP feeds the encoder directly, 2..4 several sensors) */
 int OpenIMP_T32_IvdcDirect(void);

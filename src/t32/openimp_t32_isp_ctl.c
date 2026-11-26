@@ -130,6 +130,9 @@ int32_t IMP_ISP_OneShotDisable(void) { return oneshot(0, "OneShotDisable"); }
 int32_t IMP_ISP_OneShotTick(void)    { return oneshot(2, "OneShotTick"); }
 
 /* ---- power-management mode -------------------------------------------- */
+#if !defined(PLATFORM_T33)
+static void (*onebyone_cb)(IMPVI_NUM num, IMPISPOneByOneMode mode, void *data);
+#endif
 #if defined(PLATFORM_T33)
 static int32_t pm_ioctl(unsigned vinum, uint32_t req, int32_t *mode, const char *name)
 {
@@ -161,16 +164,28 @@ int32_t IMP_ISP_PM_SetMode(IMPVI_NUM num, IMPISPPMAttr *attr)
     IMPISPDriverMode cur;
     int32_t rc;
 
-    (void)num;
     if (!attr)
         return E_STATE;
     rc = IMP_ISP_GET_DriverMode(&cur);
     if (rc)
         return rc;
-    if (*attr == TISP_NORMAL_MODE)
-        return cur == IMPISP_DRIVER_NORMAL_MODE ? 0 : IMP_ISP_OneShotDisable();
-    if (*attr == TISP_AOV_MODE)
-        return cur == IMPISP_DRIVER_ONESHOT_MODE ? 0 : IMP_ISP_OneShotEnable() + IMP_ISP_OneShotTick();
+    /* vendor 2.2.0 (0x132f34): the ONEBYONE callback of IMP_ISP_PM_SetOneByOneCallback runs around the
+     * switch: (num, 1, 0) before the one-shot disable, (num, 0, 0) after the enable and before the tick */
+    if (*attr == TISP_NORMAL_MODE) {
+        if (cur == IMPISP_DRIVER_NORMAL_MODE)
+            return 0;
+        if (onebyone_cb)
+            onebyone_cb(num, IMPISP_ONEBYONE_MODE_SLAVE, NULL);
+        return IMP_ISP_OneShotDisable();
+    }
+    if (*attr == TISP_AOV_MODE) {
+        if (cur == IMPISP_DRIVER_ONESHOT_MODE)
+            return 0;
+        rc = IMP_ISP_OneShotEnable();
+        if (onebyone_cb)
+            onebyone_cb(num, IMPISP_ONEBYONE_MODE_MASTER, NULL);
+        return rc + IMP_ISP_OneShotTick();
+    }
     return -0xfff;
 #endif
 }
@@ -201,6 +216,36 @@ int32_t IMP_ISP_PM_GetMode(IMPVI_NUM num, IMPISPPMAttr *attr)
     return 0;
 #endif
 }
+
+#if !defined(PLATFORM_T33)
+/* T32 2.2.0 (0x12c4c0): ISP not open f008; tuning not enabled f005; the callback is kept (one slot) and
+ * IMP_ISP_PM_SetMode runs it around the one-shot switch (above). */
+int32_t IMP_ISP_PM_SetOneByOneCallback(void (*cb)(IMPVI_NUM num, IMPISPOneByOneMode mode, void *data))
+{
+    if (OpenIMP_T32_IspFd() < 0)
+        return E_OPEN;
+    if (!OpenIMP_T32_TuningEnabled())
+        return (int32_t)0xfffff005;
+    onebyone_cb = cb;
+    return 0;
+}
+
+/* T32 2.2.0 (0x1294b8): ISP not open or cnt <= 0 f008; the VALUE cnt is the argument of 0xc004543e (no
+ * pointer, as OneShotEnable); the ioctl failing f001.  Neither the vendor tx-isp-t32.ko nor the open module
+ * implements 0xc004543e (no 21566 in the vendor module's ioctl switch), so both answer f001. */
+int32_t IMP_ISP_OneShotDropCnt(int32_t cnt)
+{
+    int fd = OpenIMP_T32_IspFd();
+
+    if (fd < 0 || cnt <= 0)
+        return E_OPEN;
+    if (ioctl(fd, 0xc004543eu, (void *)(intptr_t)cnt) != 0) {
+        IMP_LOG_ERR(TAG, "OneShotDropCnt: %s", strerror(errno));
+        return E_IOCTL;
+    }
+    return 0;
+}
+#endif
 
 int32_t IMP_ISP_PM_WaitAllDone(IMPISPOpsMode *enable)
 {
@@ -819,6 +864,27 @@ int32_t IMP_ISP_LDC_OnlineGetLut(IMPVI_NUM num, char lut_name[128])
     pthread_mutex_unlock(&ctl_lock);
     return rc;
 }
+
+#if !defined(PLATFORM_T33)
+/* ---- online LDC state / LUT buffer calls: PRJ008 only (T32 2.2.0, #99 gap batch) -----------------------
+ * Vendor 0x1461ac GetState, 0x145874 SetState, 0x146454 GetFunc, 0x146990 GetLutBufMode, 0x1466d4
+ * SetLutBufMode (QEMU, vendor libimp 2.2.0 + vendor module: 0xfffff003 for every VI, also VI 4 and NULL
+ * out, before any argument is looked at).  The library branches on the project word of its ISP block
+ * (*block == 0: PRJ007 = T32, 1: PRJ008 = T33) and on the PRJ007 side only logs "not supported" (the
+ * header: "only PRJ008 can be used") and answers f003; the T33 library keeps the state in the same block. */
+#define LDC_PRJ008_ONLY(call, args) \
+    int32_t call args \
+    { \
+        IMP_LOG_WARN(TAG, #call ": not supported on this ISP (PRJ008 only)"); \
+        return (int32_t)0xfffff003; \
+    }
+
+LDC_PRJ008_ONLY(IMP_ISP_LDC_OnlineGetFunc, (IMPVI_NUM num __attribute__((unused)), IMPISPLDCFunc *func __attribute__((unused))))
+LDC_PRJ008_ONLY(IMP_ISP_LDC_OnlineGetState, (IMPVI_NUM num __attribute__((unused)), IMPISPLDCOnlineState *state __attribute__((unused))))
+LDC_PRJ008_ONLY(IMP_ISP_LDC_OnlineSetState, (IMPVI_NUM num __attribute__((unused)), IMPISPLDCOnlineState state __attribute__((unused))))
+LDC_PRJ008_ONLY(IMP_ISP_LDC_OnlineGetLutBufMode, (IMPVI_NUM num __attribute__((unused)), IMPISPLDCLutBufMode *mode __attribute__((unused))))
+LDC_PRJ008_ONLY(IMP_ISP_LDC_OnlineSetLutBufMode, (IMPVI_NUM num __attribute__((unused)), IMPISPLDCLutBufMode mode __attribute__((unused))))
+#endif
 
 /* ---- online LDC at IMP_ISP_AddSensor (#491) ------------------------------------------------------
  * Vendor 2.0.2.1 IMP_ISP_AddSensor after S_INPUT (disassembly, no code copied): for a VI with an

@@ -1495,6 +1495,63 @@ functions:
       mode: "Pointer to `IMPISPDriverMode`: 0 normal, 1 one-shot."
     returns: "0 on success; 0xfffff009 before `IMP_ISP_Open`, 0xfffff001 for NULL or when the driver refuses."
     soc: "T32, T33"
+  ISP_SetFrameDropOnce:
+    group: sys
+    summary: "Like `IMP_ISP_SetFrameDrop`, but the drop pattern is consumed once (3 x {enable, line size, frame mark}); the module clears the request after it ran."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff009 for a NULL attribute, 0xfffff00c for a VI >= 4, 0xfffff004 for a line size above 15, 0xfffff001 when the driver refuses."
+    notes: "Request 0xc00454cd. The `enable` word of a read-back may already be 0 when the request was consumed."
+    see_also: [ISP_GetFrameDropOnce, ISP_SetFrameDrop]
+    soc: "T32"
+  ISP_GetFrameDropOnce:
+    group: sys
+    summary: "Reads the pending \"once\" drop block; the line sizes are clamped to 15."
+    returns: "0 on success; 0xfffff008, 0xfffff009, 0xfffff00c as `IMP_ISP_SetFrameDropOnce`, 0xfffff001 when the driver refuses."
+    see_also: [ISP_SetFrameDropOnce]
+    soc: "T32"
+  ISP_OneShotDropCnt:
+    group: sys
+    summary: "Asks the driver to drop `cnt` frames around a one-shot capture."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open` or for cnt <= 0, 0xfffff001 when the driver refuses."
+    notes: "The value cnt is the argument of request 0xc004543e (no pointer). Neither the vendor tx-isp-t32.ko nor the open module has a handler for it (unknown requests answer 0), so the call returns 0 without an effect on both."
+    see_also: [ISP_OneShotEnable]
+    soc: "T32"
+  ISP_PM_SetOneByOneCallback:
+    group: sys
+    summary: "Registers one callback (num, mode, data) that `IMP_ISP_PM_SetMode` runs around the one-shot switch: mode SLAVE (1) before leaving one-shot, MASTER (0) after entering it, before the first tick."
+    returns: "0 on success; 0xfffff008 before `IMP_ISP_Open`, 0xfffff005 while tuning is not enabled."
+    notes: "One slot, a later call replaces the callback; NULL removes it."
+    see_also: [ISP_PM_SetMode]
+    soc: "T32"
+  ISP_LDC_OnlineGetFunc:
+    group: ldc
+    summary: "PRJ008 only: reads the online LDC function. On PRJ007 (T32) the call only logs and answers 0xfffff003."
+    returns: "0xfffff003 on T32 for every argument."
+    see_also: [ISP_LDC_OnlineInit]
+    soc: "T32"
+  ISP_LDC_OnlineGetState:
+    group: ldc
+    summary: "PRJ008 only: reads the online LDC on/off state. On PRJ007 (T32) 0xfffff003."
+    returns: "0xfffff003 on T32 for every argument."
+    see_also: [ISP_LDC_OnlineSetState]
+    soc: "T32"
+  ISP_LDC_OnlineSetState:
+    group: ldc
+    summary: "PRJ008 only: switches the online LDC on or off. On PRJ007 (T32) 0xfffff003."
+    returns: "0xfffff003 on T32 for every argument."
+    see_also: [ISP_LDC_OnlineGetState]
+    soc: "T32"
+  ISP_LDC_OnlineGetLutBufMode:
+    group: ldc
+    summary: "PRJ008 only: reads the LUT buffer mode (double / single). On PRJ007 (T32) 0xfffff003."
+    returns: "0xfffff003 on T32 for every argument."
+    see_also: [ISP_LDC_OnlineSetLutBufMode]
+    soc: "T32"
+  ISP_LDC_OnlineSetLutBufMode:
+    group: ldc
+    summary: "PRJ008 only: sets the LUT buffer mode before AddSensor. On PRJ007 (T32) 0xfffff003."
+    returns: "0xfffff003 on T32 for every argument."
+    see_also: [ISP_LDC_OnlineGetLutBufMode]
+    soc: "T32"
   ISP_OneShotEnable:
     group: sys
     summary: "Switches the ISP driver to one-shot mode (a frame only on `OneShotTick`), for low-power capture; `OneShotDisable` returns to continuous streaming, `OneShotTick` requests one frame."

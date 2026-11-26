@@ -794,6 +794,11 @@ static int32_t ispx_check(int num, const void *p)
     return 0;
 }
 
+int OpenIMP_T32_TuningEnabled(void)
+{
+    return tun.fd >= 0;
+}
+
 int32_t IMP_ISP_GetDefaultBinPath(IMPVI_NUM num, IMPISPDefaultBinAttr *attr)
 {
     int32_t rc = ispx_check(num, attr);
@@ -842,6 +847,59 @@ int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
     *attr = b.attr;
     return 0;
 }
+
+#if !defined(PLATFORM_T33)
+/* Set/GetFrameDropOnce (T32 2.2.0 libimp 0x11a344 / 0x11a904, #99 gap batch): the FrameDrop block through the
+ * "once" requests 0xc00454cd / 0xc00454ce (the open module serves them: one-shot frame drop, the driver
+ * answers the block back).  Checks in vendor order: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a
+ * line-size byte (offsets 4, 16, 28 of the block) above 15 f004; ioctl error f001; Get: the line-size
+ * bytes the driver returns are clamped to 15. */
+#define T32X_IOC_SET_FRAME_DROP_ONCE 0xc00454cdu
+#define T32X_IOC_GET_FRAME_DROP_ONCE 0xc00454ceu
+
+int32_t IMP_ISP_SetFrameDropOnce(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct ispx_fdrop b;
+    const uint8_t *p = (const uint8_t *)attr;
+    int32_t rc = ispx_check(num, attr);
+
+    if (rc)
+        return rc;
+    if (p[4] > 0xf || p[16] > 0xf || p[28] > 0xf) {
+        IMP_LOG_ERR(TAG, "SetFrameDropOnce: line size above 15");
+        return E_FIELD;
+    }
+    b.vi = (uint32_t)num;
+    b.attr = *attr;
+    if (ioctl(OpenIMP_T32_IspFd(), T32X_IOC_SET_FRAME_DROP_ONCE, &b) != 0) {
+        IMP_LOG_ERR(TAG, "SET_FRAME_DROP_ONCE: %s", strerror(errno));
+        return E_SENSOR;
+    }
+    return 0;
+}
+
+int32_t IMP_ISP_GetFrameDropOnce(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
+{
+    struct ispx_fdrop b;
+    uint8_t *p;
+    int32_t rc = ispx_check(num, attr);
+
+    if (rc)
+        return rc;
+    memset(&b, 0, sizeof(b));
+    b.vi = (uint32_t)num;
+    if (ioctl(OpenIMP_T32_IspFd(), T32X_IOC_GET_FRAME_DROP_ONCE, &b) != 0) {
+        IMP_LOG_ERR(TAG, "GET_FRAME_DROP_ONCE: %s", strerror(errno));
+        return E_SENSOR;
+    }
+    *attr = b.attr;
+    p = (uint8_t *)attr;
+    for (int i = 4; i < 40; i += 12)
+        if (p[i] > 0xf)
+            p[i] = 0xf;
+    return 0;
+}
+#endif
 
 int32_t IMP_ISP_SetISPBypass(IMPVI_NUM num, IMPISPOpsMode *enable)
 {

@@ -21355,15 +21355,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a904: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454ce on /dev/tx-isp with {vi, 36-byte block}, driver error f001; Get clamps the three line-size bytes to 15. QEMU: return codes and the clamped read-back identical to the vendor library on the same module. The \"once\" request is consumed by the module, so the enable word reads 0 or 1 depending on timing (same on the vendor library)."
     },
     "ISP_HB_GetAttr": {
       "area": "ISP tuning",
@@ -21561,15 +21563,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor GetFunc 0x146454: on the PRJ007 side (project word of the ISP block 0, the T32) the call only logs and answers 0xfffff003 before it looks at VI or pointer (\"only PRJ008 can be used\" in the header); OpenIMP answers the same. QEMU: vendor lib and OpenIMP give 0xfffff003 for VI0, VI4 and NULL, output untouched."
     },
     "ISP_LDC_OnlineGetLut": {
       "area": "ISP tuning",
@@ -21600,15 +21604,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor GetLutBufMode 0x146990: on the PRJ007 side (project word of the ISP block 0, the T32) the call only logs and answers 0xfffff003 before it looks at VI or pointer (\"only PRJ008 can be used\" in the header); OpenIMP answers the same. QEMU: vendor lib and OpenIMP give 0xfffff003 for VI0, VI4 and NULL, output untouched."
     },
     "ISP_LDC_OnlineGetState": {
       "area": "ISP tuning",
@@ -21619,15 +21625,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor GetState 0x1461ac: on the PRJ007 side (project word of the ISP block 0, the T32) the call only logs and answers 0xfffff003 before it looks at VI or pointer (\"only PRJ008 can be used\" in the header); OpenIMP answers the same. QEMU: vendor lib and OpenIMP give 0xfffff003 for VI0, VI4 and NULL, output untouched."
     },
     "ISP_LDC_OnlineGetStrength": {
       "area": "ISP tuning",
@@ -21700,15 +21708,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor SetLutBufMode 0x1466d4: on the PRJ007 side (project word of the ISP block 0, the T32) the call only logs and answers 0xfffff003 before it looks at VI or pointer (\"only PRJ008 can be used\" in the header); OpenIMP answers the same. QEMU: vendor lib and OpenIMP give 0xfffff003 for VI0, VI4 and NULL, output untouched."
     },
     "ISP_LDC_OnlineSetState": {
       "area": "ISP tuning",
@@ -21719,15 +21729,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor SetState 0x145874: on the PRJ007 side (project word of the ISP block 0, the T32) the call only logs and answers 0xfffff003 before it looks at VI or pointer (\"only PRJ008 can be used\" in the header); OpenIMP answers the same. QEMU: vendor lib and OpenIMP give 0xfffff003 for VI0, VI4 and NULL, output untouched."
     },
     "ISP_LDC_OnlineSetStrength": {
       "area": "ISP tuning",
@@ -21818,15 +21830,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 0x1294b8: ISP not open or cnt <= 0 f008; the VALUE cnt is the argument of ioctl 0xc004543e (no pointer), ioctl error f001. Neither the vendor tx-isp-t32.ko nor the open module has a handler (unknown requests answer 0), so both answer 0 for cnt 3. QEMU: identical lines."
     },
     "ISP_OneShotEnable": {
       "area": "ISP tuning",
@@ -21917,15 +21931,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 0x12c4c0: ISP not open f008, tuning not enabled f005, one callback slot kept; IMP_ISP_PM_SetMode (T32 one-shot path, vendor 0x132f34) runs it as cb(num, 1, 0) before the one-shot disable and cb(num, 0, 0) after the enable, before the tick (OpenIMP now does the same). QEMU proves the return codes and that a SetMode to the current mode does not call it; the switch itself is NOT QEMU-safe (the vendor module panics in an IRQ on the one-shot switch) and stays static-audit until a device run."
     },
     "ISP_PM_WaitAllDone": {
       "area": "ISP tuning",
@@ -21994,15 +22010,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "miss",
+        "T32": "qemu",
         "T33": "n.a.",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)"
-      }
+        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
+      },
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a344: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454cd on /dev/tx-isp with {vi, 36-byte block}, driver error f001. QEMU: return codes and the clamped read-back identical to the vendor library on the same module."
     },
     "ISP_Tuning_GetAeLightCompensation": {
       "area": "AE / AWB / AF",
