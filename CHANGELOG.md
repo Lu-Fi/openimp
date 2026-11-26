@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: SU_Base_Suspend / SU_Base_Shutdown device-tested (#99)
+
+- SU_Base_Shutdown host -> dev on T10 .31, T21 .24, T23 .30, T31 .21, T40 .184: LD_PRELOAD shim over sync()/kill(); image and vendor libsysutils both call sync() then kill(1, 17) and return 0. Real call on T21 .24: board powered down and the HW watchdog rebooted it after about 25 s.
+- SU_Base_Suspend aud -> dev on T10, T21, T23, T31 (3.10 kernel, no /sys/power, no RTC): image and vendor libsysutils both return -1/ENOENT. T40 (4.4, `mem` offered, no wake source) was not called. T20 (light box busy), T30 (ABUS cams only) and T41 (board off) are not run.
+- Evidence and test programs: `audit/su-cells-1125/` (pm_call.c, shim.c, run_cam.sh, out-*-su.txt).
+
 ## 2026-11-26: T32/T33 SetFrameDepthCopyType no-copy GetFrame like the vendor (#784)
 
 - Vendor 2.0.2.1 (SetFrameDepth 0x14948c, frame thread 0x144eb4, GetFrame 0x14d0dc, ReleaseFrame 0x14db2c): with `SetFrameDepthCopyType(chn, 1)` the depth is the channel's nrVBs (the argument is ignored, a set depth stays), GetFrame gets the capture buffer itself, held until ReleaseFrame, the height rounded up to 16; a frame only goes to a free node.
