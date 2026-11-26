@@ -113,6 +113,7 @@ struct fs_joint {
     sem_t sem;
 };
 static struct fs_joint *joints[JOINTS];
+static struct fs_joint *joint_of[FS_CHNS];   /* vendor chn+0x428: the joint a channel is in */
 static uint32_t joint_bg;
 
 static int joint_find_locked(int32_t h)
@@ -159,6 +160,15 @@ int IMP_FrameSource_CreateJoint(IMPFSJointAttr *joint_attr)
         h += rh;
     }
     pthread_mutex_lock(&ext_lock);
+    /* vendor 2.0.2.1 CreateJoint: a channel already in a joint -> 0x80010004 (checked under the
+     * lock here, so a refused board leaves no channel marked; the vendor marks the ones before) */
+    for (r = 0; r < 12 && joint_attr->position[r][0] != 0xff; r++)
+        for (c = 0; c < 12 && joint_attr->position[r][c] != 0xff; c++)
+            if (joint_of[joint_attr->position[r][c]]) {
+                pthread_mutex_unlock(&ext_lock);
+                free(j);
+                return E_FS_BUSY;
+            }
     for (slot = 0; slot < JOINTS && joints[slot]; slot++)
         ;
     if (slot == JOINTS) {
@@ -172,6 +182,9 @@ int IMP_FrameSource_CreateJoint(IMPFSJointAttr *joint_attr)
     j->attr.handler = (int32_t)(intptr_t)j;
     sem_init(&j->sem, 0, 0);
     joints[slot] = j;
+    for (r = 0; r < 12 && joint_attr->position[r][0] != 0xff; r++)
+        for (c = 0; c < 12 && joint_attr->position[r][c] != 0xff; c++)
+            joint_of[joint_attr->position[r][c]] = j;
     pthread_mutex_unlock(&ext_lock);
     joint_attr->width = (int16_t)w;
     joint_attr->height = (int16_t)h;
@@ -192,6 +205,11 @@ int IMP_FrameSource_DestroyJoint(int32_t handler)
     }
     j = joints[i];
     joints[i] = NULL;
+    /* the vendor frees the board but keeps chn+0x428 and the table slot (stale pointer);
+     * here the channels are free for a new joint again */
+    for (i = 0; i < FS_CHNS; i++)
+        if (joint_of[i] == j)
+            joint_of[i] = NULL;
     pthread_mutex_unlock(&ext_lock);
     sem_destroy(&j->sem);
     free(j);

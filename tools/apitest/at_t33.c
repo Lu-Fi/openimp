@@ -277,10 +277,19 @@ static void t33_fs_enc_q2(void)
         rn = IMP_FrameSource_CreateJoint(j);      /* empty board (all 0xff): the vendor creates an empty joint */
         hnd = j->handler;
         if (rn == 0) { memset(j, 0, sizeof(*j)); j->handler = hnd; rg2 = IMP_FrameSource_GetJointByHandler(j); rd2 = IMP_FrameSource_DestroyJoint(hnd); }
+        /* channel 5 (never enabled here: the vendor keeps chn+0x428 after DestroyJoint and its
+         * EnableChn would build a joint pool) twice: the second board is refused 0x80010004 */
+        int r5 = -1, r5b = -1, r5d = -1, h5;
+        memset(j, 0xff, sizeof(*j)); j->position[0][0] = 5;
+        r5 = IMP_FrameSource_CreateJoint(j); h5 = j->handler;
+        memset(j, 0xff, sizeof(*j)); j->position[0][0] = 5;
+        r5b = IMP_FrameSource_CreateJoint(j);
+        if (r5 == 0) r5d = IMP_FrameSource_DestroyJoint(h5);
         memset(j, 0xff, sizeof(*j)); j->handler = 99;
         rg = IMP_FrameSource_GetJointByHandler(j); gchk(j);
-        rep(FN(IMP_FrameSource_CreateJoint), rn, rn == 0 && rg2 == 0 && rd2 == 0 ? V_PASS : V_FAIL, "empty board 0x%x (%dx%d), get by its handler 0x%x, destroy 0x%x",
-            X(rn), j->width, j->height, X(rg2), X(rd2));
+        rep(FN(IMP_FrameSource_CreateJoint), rn, rn == 0 && rg2 == 0 && rd2 == 0 && r5 == 0 && r5b == (int)0x80010004 && r5d == 0 ? V_PASS : V_FAIL,
+            "empty board 0x%x (%dx%d), get by its handler 0x%x, destroy 0x%x; chn 5 0x%x, chn 5 again 0x%x, destroy 0x%x",
+            X(rn), j->width, j->height, X(rg2), X(rd2), X(r5), X(r5b), X(r5d));
         rep(FN(IMP_FrameSource_DestroyJoint), rd, rd == (int)0x80010008 && rd2 == 0 ? V_PASS : V_FAIL, "unknown handler 99 0x%x, created one 0x%x", X(rd), X(rd2));
         rep(FN(IMP_FrameSource_GetJointByHandler), rg, rg == (int)0x80010008 && rg2 == 0 ? V_PASS : V_FAIL, "unknown handler 99 0x%x, created one 0x%x", X(rg), X(rg2));
         gfree(j);

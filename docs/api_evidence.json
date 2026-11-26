@@ -20924,7 +20924,7 @@
       "ref": {
         "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.., used by VBMCreateJointPool -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.., used by VBMCreateJointPool -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): CreateJoint refuses a channel already in a joint 0x80010004 as the vendor (QEMU apitest t33pass, same lines on vendor and OpenIMP; OpenIMP frees the channels at DestroyJoint, the vendor keeps a stale mark). Applying a joint (one shared buffer, channel frames at offsets, stride ALIGN16(joint width), background memset) is a feature gap: port later (decision 2026-11-26), no streamer uses it."
     },
     "FrameSource_DestroyJoint": {
       "area": "FrameSource",
@@ -20944,7 +20944,7 @@
       "ref": {
         "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.. -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.. -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): CreateJoint refuses a channel already in a joint 0x80010004 as the vendor (QEMU apitest t33pass, same lines on vendor and OpenIMP; OpenIMP frees the channels at DestroyJoint, the vendor keeps a stale mark). Applying a joint (one shared buffer, channel frames at offsets, stride ALIGN16(joint width), background memset) is a feature gap: port later (decision 2026-11-26), no streamer uses it."
     },
     "FrameSource_GetChnAttr_Expand": {
       "area": "FrameSource",
@@ -21004,7 +21004,7 @@
       "ref": {
         "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.. -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): joint table at fs+0x317c.. -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): CreateJoint refuses a channel already in a joint 0x80010004 as the vendor (QEMU apitest t33pass, same lines on vendor and OpenIMP; OpenIMP frees the channels at DestroyJoint, the vendor keeps a stale mark). Applying a joint (one shared buffer, channel frames at offsets, stride ALIGN16(joint width), background memset) is a feature gap: port later (decision 2026-11-26), no streamer uses it."
     },
     "FrameSource_PM_Resume": {
       "area": "FrameSource",
@@ -21145,7 +21145,7 @@
       "ref": {
         "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
       },
-      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): fs+0x31b0 read by VBMCreateJointPool -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): fs+0x31b0 read by VBMCreateJointPool -> the vendor applies it; still cache in OpenIMP (port open in #784). 2026-11-26 (#784): CreateJoint refuses a channel already in a joint 0x80010004 as the vendor (QEMU apitest t33pass, same lines on vendor and OpenIMP; OpenIMP frees the channels at DestroyJoint, the vendor keeps a stale mark). Applying a joint (one shared buffer, channel frames at offsets, stride ALIGN16(joint width), background memset) is a feature gap: port later (decision 2026-11-26), no streamer uses it."
     },
     "FrameSource_SetSubStreamOnlineMode": {
       "area": "FrameSource",
