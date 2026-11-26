@@ -20,6 +20,7 @@
  */
 #define _GNU_SOURCE
 #include <pthread.h>
+#include <sys/prctl.h>
 #include <sched.h>
 #include <time.h>
 #include <errno.h>
@@ -227,14 +228,32 @@ int VBMGetFrame(int chn, void **frame)
 }
 
 int IMP_FrameSource_GetFrame(int chn, void **frame) { (void)chn; (void)frame; return -1; }
+/* #934: who gives the capture frame back, in which order */
+static pthread_t rel_thread[SRCS];
+static int rel_policy[SRCS] = { -1, -1 };
+static char rel_name[SRCS][16];
+static void *rel_order[SRCS][64];
+static int rel_sleep_us;
+
 int IMP_FrameSource_ReleaseFrame(int chn, void *frame)
 {
-    (void)frame;
+    int us;
+
     if (chn < 0 || chn >= SRCS)
         return -1;
     pthread_mutex_lock(&vq);
+    us = rel_sleep_us;
+    pthread_mutex_unlock(&vq);
+    if (us)
+        usleep((useconds_t)us);
+    pthread_mutex_lock(&vq);
+    rel_thread[chn] = pthread_self();
+    rel_policy[chn] = sched_getscheduler(0);
+    (void)prctl(PR_GET_NAME, rel_name[chn]);
+    rel_order[chn][released[chn] % 64] = frame;
     held[chn]--;
     released[chn]++;
+    pthread_cond_broadcast(&vcond);
     pthread_mutex_unlock(&vq);
     return 0;
 }
@@ -338,6 +357,9 @@ static pthread_mutex_t cm = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t ccond = PTHREAD_COND_INITIALIZER;
 static int codecs, proc_count[4], proc_inside[4], gate[4], proc_sleep_us[4];
 static int enc_policy = -1;
+static pthread_t enc_thread[4];
+static void *enc_order[4][64];
+static int enc_n[4];
 static uint32_t hw_stream[4][32];
 
 int AL_Codec_Encode_Create(void **codec, void *params)
@@ -368,6 +390,10 @@ int AL_Codec_Encode_Process(void *codec, void *f, void *u)
         pthread_cond_wait(&ccond, &cm);
     us = proc_sleep_us[c->id];
     enc_policy = sched_getscheduler(0);
+    enc_thread[c->id] = pthread_self();
+    if (enc_n[c->id] < 64)
+        enc_order[c->id][enc_n[c->id]] = f;
+    enc_n[c->id]++;
     pthread_mutex_unlock(&cm);
     if (us)
         usleep((useconds_t)us);
@@ -614,6 +640,89 @@ static void test_two_channels(void)
 }
 
 /* the capture worker at sensor rate, as fast as the test runs */
+static int wait_released(int s, int v)
+{
+    uint64_t end = now_ms() + 2000u;
+    int ok;
+
+    for (;;) {
+        ok = atomic_read(&released[s]) >= v;
+        if (ok || now_ms() > end)
+            return ok;
+        usleep(1000);
+    }
+}
+
+/* #934: the encoded picture's capture frame goes back in the channel's
+ * release thread (vendor ENC(%d)-update_frmstrm), in encode order, with the
+ * normal policy; OPENIMP_T20_PUSH_RELEASE_THREAD=0 keeps it in Encoder-N. */
+static void test_release_thread(int own_thread)
+{
+    int base = count_of(&proc_count[0]);
+    int rel = atomic_read(&released[0]);
+    int i, same;
+
+    drain_streams(0);
+    pthread_mutex_lock(&cm);
+    enc_n[0] = 0;
+    pthread_mutex_unlock(&cm);
+    for (i = 0; i < 6; i++) {
+        usleep(INTERVAL_US);
+        frame_tick(0);
+        CHECK(wait_count(&proc_count[0], base + i + 1));
+        CHECK(drain_streams(0) >= 0);
+    }
+    CHECK(wait_released(0, rel + 6));
+    settle();
+    CHECK(atomic_read(&released[0]) == rel + 6);
+    CHECK(atomic_read(&held[0]) == 0);
+    pthread_mutex_lock(&vq);
+    pthread_mutex_lock(&cm);
+    same = pthread_equal(rel_thread[0], enc_thread[0]);
+    for (i = 0; i < 6; i++)
+        CHECK(rel_order[0][(rel + i) % 64] == enc_order[0][i]);
+    pthread_mutex_unlock(&cm);
+    CHECK(rel_policy[0] == SCHED_OTHER);
+    if (own_thread) {
+        CHECK(!same);
+        CHECK(strcmp(rel_name[0], "ENC(0)-update_f") == 0);
+    } else {
+        CHECK(same);
+        CHECK(strcmp(rel_name[0], "Encoder-0") == 0);
+    }
+    pthread_mutex_unlock(&vq);
+}
+
+/* #934: StopRecvPic returns only after the queued frame went back (the
+ * source channel may be disabled right after it) */
+static void test_stop_waits_for_release(void)
+{
+    int base = count_of(&proc_count[0]);
+    int rel = atomic_read(&released[0]);
+
+    drain_streams(0);
+    usleep(INTERVAL_US);
+    pthread_mutex_lock(&vq);
+    rel_sleep_us = 150000;
+    pthread_mutex_unlock(&vq);
+    frame_tick(0);
+    CHECK(wait_count(&proc_count[0], base + 1));
+    CHECK(IMP_Encoder_StopRecvPic(0) == 0);
+    CHECK(atomic_read(&released[0]) == rel + 1);
+    CHECK(atomic_read(&held[0]) == 0);
+    pthread_mutex_lock(&vq);
+    rel_sleep_us = 0;
+    pthread_mutex_unlock(&vq);
+    CHECK(IMP_Encoder_StartRecvPic(0) == 0);
+    drain_streams(0);
+    base = count_of(&proc_count[0]);
+    usleep(INTERVAL_US);
+    frame_tick(0);
+    CHECK(wait_count(&proc_count[0], base + 1));    /* encoding resumed */
+    CHECK(wait_released(0, rel + 2));
+    drain_streams(0);
+}
+
 static volatile int ticker_run;
 static void *ticker(void *arg)
 {
@@ -708,6 +817,13 @@ int main(void)
     test_no_giveback_while_reader();
     test_two_channels();
     test_stop_start_cycles();
+    {
+        const char *e = getenv("OPENIMP_T20_PUSH_RELEASE_THREAD");
+
+        settle();
+        test_release_thread(!(e && e[0] == '0'));
+        test_stop_waits_for_release();
+    }
     if (failures) {
         fprintf(stderr, "p2_push_t20_test: %d failure(s)\n", failures);
         return 1;

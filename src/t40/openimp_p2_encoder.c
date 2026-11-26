@@ -452,6 +452,9 @@ typedef struct {
     uint64_t tel_first_us, tel_last_us;
     int closing;                    /* teardown waits: refuse new polls */
     pthread_cond_t poll_idle;       /* signalled when in_poll drops to 0 */
+#if defined(PLATFORM_T20)
+    int push_rel_pending;           /* #934: frames queued for the release thread */
+#endif
     pthread_mutex_t poll_serial;    /* one PollingStream encodes at a time */
     int yuv_claimed;                /* hidden slot held by IMP_Encoder_YuvInit */
     pthread_mutex_t lock;
@@ -3392,8 +3395,15 @@ static void p2_wait_poll_idle(P2EncoderChannel *ch)
 #if defined(PLATFORM_T20)
     pthread_cond_broadcast(&ch->push_cond);
 #endif
+#if defined(PLATFORM_T20)
+    /* #934: and the capture frames its release thread still has to give
+     * back (they belong to the source channel that is about to stop) */
+    while (ch->in_poll > 0 || ch->push_rel_pending > 0)
+        pthread_cond_wait(&ch->poll_idle, &ch->lock);
+#else
     while (ch->in_poll > 0)
         pthread_cond_wait(&ch->poll_idle, &ch->lock);
+#endif
     ch->closing--;
 }
 
@@ -3599,6 +3609,9 @@ int IMP_Encoder_StopRecvPic(int channel)
 
 static int p2_polling_stream(int channel, uint32_t timeout_ms, int push);
 #if defined(PLATFORM_T20)
+static int p2_push_release_async(P2EncoderChannel *ch, int channel, void *frame);
+#endif
+#if defined(PLATFORM_T20)
 /* Finished streams the push model may keep: the codec's stream buffers
  * less the one the application holds. */
 static unsigned int p2_push_cap(const P2EncoderChannel *ch)
@@ -3770,6 +3783,146 @@ static void *p2_push_thread(void *arg)
         }
     }
     return NULL;
+}
+
+/* #934: the capture frame of an encoded picture goes back to the driver in
+ * a thread of its own, as in vendor libimp 3.12.0: there the group thread
+ * Encoder-N only encodes (do_channel_process_h264e 0x412fc) and the channel
+ * thread "ENC(%d)-update_frmstrm" (update_frmstrm 0x43dbc ->
+ * update_one_frmstrm 0x439dc) takes the bitstream and unlocks the source
+ * frame (VBMUnlockFrameByVaddr -> QBUF).  The QBUF of tx-isp-t10/t20
+ * invalidates the cache of the whole buffer (buf_prepare,
+ * dma_sync_single_for_device): 0.25 ms CPU for 1280x720 on the T10, measured
+ * in both stacks (vendor ENC(0)-update_f 0.25 ms per frame, Encoder-0
+ * 0.82 ms; OpenIMP Encoder-0 with the release 1.10 ms, of it 0.25 ms the
+ * release).  Under CFS a nice-0 thread keeps running against a burst of
+ * nice -20 work only while its sleeper credit lasts, so the thread with the
+ * most CPU per frame decides how many frames get through a burst.  T10,
+ * 120 s with about 90 bursts, interleaved runs (#934): release in Encoder-N
+ * 12.4 gaps per run (9 runs), release thread 8.8 (9), vendor lib 8.8 (9).
+ * OPENIMP_T20_PUSH_RELEASE_THREAD=0 gives the frame back in the encode
+ * thread. */
+#define P2_PUSH_REL_MAX 8
+typedef struct {
+    pthread_mutex_t mx;
+    pthread_cond_t kick;
+    struct {
+        int source;
+        void *frame;
+    } q[P2_PUSH_REL_MAX];
+    unsigned int head;
+    unsigned int count;
+    int started;            /* 1 running, -1 could not start */
+} P2PushRelease;
+
+static P2PushRelease p2_push_rel[P2_ALL_CHANNELS];
+static pthread_once_t p2_push_rel_once = PTHREAD_ONCE_INIT;
+
+static void p2_push_rel_init(void)
+{
+    int i;
+
+    for (i = 0; i < P2_ALL_CHANNELS; i++) {
+        pthread_mutex_init(&p2_push_rel[i].mx, NULL);
+        pthread_cond_init(&p2_push_rel[i].kick, NULL);
+    }
+}
+
+static int p2_push_release_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T20_PUSH_RELEASE_THREAD");
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+
+static void *p2_push_release_thread(void *arg)
+{
+    int i = (int)(intptr_t)arg;
+    P2PushRelease *r = &p2_push_rel[i];
+    P2EncoderChannel *ch = &p2_channels[i];
+    char name[32];
+
+    /* the vendor's name; the kernel keeps 15 characters */
+    snprintf(name, sizeof(name), "ENC(%d)-update_frmstrm", i);
+    name[15] = '\0';
+    prctl(PR_SET_NAME, name);
+    for (;;) {
+        int source;
+        void *frame;
+
+        pthread_mutex_lock(&r->mx);
+        while (!r->count)
+            pthread_cond_wait(&r->kick, &r->mx);
+        source = r->q[r->head].source;
+        frame = r->q[r->head].frame;
+        r->head = (r->head + 1u) % P2_PUSH_REL_MAX;
+        r->count--;
+        pthread_mutex_unlock(&r->mx);
+        (void)p2_release_source_frame(source, frame);
+        pthread_mutex_lock(&ch->lock);
+        if (--ch->push_rel_pending == 0 && ch->in_poll == 0)
+            pthread_cond_broadcast(&ch->poll_idle);
+        pthread_mutex_unlock(&ch->lock);
+    }
+    return NULL;
+}
+
+/* Hand the capture frame of channel `channel` to its release thread.
+ * Returns 1 when the thread took it, 0 when the caller has to release it
+ * (switched off, thread not available, queue full).  Frames go back in the
+ * order they were encoded.  StopRecvPic and the teardown paths wait for the
+ * queued frames (p2_wait_poll_idle). */
+static int p2_push_release_async(P2EncoderChannel *ch, int channel, void *frame)
+{
+    P2PushRelease *r;
+    int queued = 0;
+
+    if (!p2_push_release_on() || channel < 0 || channel >= P2_ALL_CHANNELS)
+        return 0;
+    pthread_once(&p2_push_rel_once, p2_push_rel_init);
+    r = &p2_push_rel[channel];
+    /* counted before the thread can see the frame; ch->lock is never taken
+     * with r->mx held */
+    pthread_mutex_lock(&ch->lock);
+    ch->push_rel_pending++;
+    pthread_mutex_unlock(&ch->lock);
+    pthread_mutex_lock(&r->mx);
+    if (!r->started) {
+        pthread_t th;
+        pthread_attr_t a;
+        struct sched_param sp = { .sched_priority = 0 };
+
+        pthread_attr_init(&a);
+        pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+        /* normal policy like the vendor thread (#920 L2) */
+        pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
+        pthread_attr_setschedpolicy(&a, SCHED_OTHER);
+        pthread_attr_setschedparam(&a, &sp);
+        r->started = pthread_create(&th, &a, p2_push_release_thread,
+                                    (void *)(intptr_t)channel) == 0 ? 1 : -1;
+        pthread_attr_destroy(&a);
+    }
+    if (r->started > 0 && r->count < P2_PUSH_REL_MAX) {
+        unsigned int slot = (r->head + r->count) % P2_PUSH_REL_MAX;
+
+        r->q[slot].source = ch->source_channel;
+        r->q[slot].frame = frame;
+        r->count++;
+        queued = 1;
+        pthread_cond_signal(&r->kick);
+    }
+    pthread_mutex_unlock(&r->mx);
+    if (!queued) {
+        pthread_mutex_lock(&ch->lock);
+        if (--ch->push_rel_pending == 0 && ch->in_poll == 0)
+            pthread_cond_broadcast(&ch->poll_idle);
+        pthread_mutex_unlock(&ch->lock);
+    }
+    return queued;
 }
 
 static int p2_push_thread_on(void)
@@ -4881,8 +5034,15 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
 #endif
     openimp_profile_count(OPENIMP_PROFILE_GETSTREAM_RETRIES,
                           (uint64_t)retry);
+#if defined(PLATFORM_T20)
+    /* #934: the push model gives the picture back in the channel's release
+     * thread (vendor update_one_frmstrm), not in the encode thread */
+    if (push && frame && frame != &ch->synthetic_frame &&
+        p2_push_release_async(ch, channel, frame))
+        frame = NULL;
+#endif
     if (p2_capture_release_policy() == P2_CAPTURE_RELEASE_AFTER_COMPLETION &&
-        frame != &ch->synthetic_frame &&
+        frame && frame != &ch->synthetic_frame &&
         p2_release_source_frame(ch->source_channel, frame) == 0)
         frame = NULL;
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30) /* T30: T21, T20 and the real T30 */

@@ -410,6 +410,7 @@ check: p2_push_t20_test p2_t30_enc_test isp_t1x_test_t20 isp_t1x_test_t21 isp_t3
 	./isp_t31_awbzone_test
 	./p2_t1x_test_t20
 	./p2_push_t20_test
+	OPENIMP_T20_PUSH_RELEASE_THREAD=0 ./p2_push_t20_test
 	./p2_t1x_test_t21
 	./p2_t30_enc_test
 	./rmem_highwater_test
