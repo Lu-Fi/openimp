@@ -2927,6 +2927,7 @@ int enc_push_run(void) { return -1; }
  * Lines "carrier: ..." carry only timing-independent values, so the vendor library and OpenIMP can be diffed (QEMU, fresh boot each).
  * CARRIER_PARTS=a2,a3,a5,a7,a9 selects (default all). Never a blocking GetStream on a channel without a frame (vendor hangs).
  * ------------------------------------------------------------------------------------------ */
+#if HAS_IMP_Encoder_GetFd && HAS_IMP_Encoder_SetMaxStreamCnt && HAS_IMP_Encoder_GetMaxStreamCnt && HAS_IMP_Encoder_FlushStream
 #ifdef ENC_NEW
 # define CAR_SIZE(a, w_, h_) do { (a)->encAttr.uWidth = (w_); (a)->encAttr.uHeight = (h_); } while (0)
 #else
@@ -2934,7 +2935,12 @@ int enc_push_run(void) { return -1; }
 #endif
 static int car_on(const char *p)
 {
-    const char *v = getenv("CARRIER_PARTS");
+    const char *v = getenv("CARRIER_PARTS"), *c = getenv("APITEST_CASES");
+    char nm[16];
+
+    snprintf(nm, sizeof(nm), "carrier_%s", p);       /* case alias carrier_a3: one part, own log in qemu_run */
+    if (c && strstr(c, nm)) return 1;
+    if (c && strstr(c, "carrier_") && !strstr(c, "carrier,") ) return 0;
     return !v || !*v || strstr(v, p);
 }
 
@@ -2948,15 +2954,15 @@ static int car_up(int grp, int fs_ch, int chn, int w, int h, int maxstream, int 
     if (!r) r = IMP_System_Bind(&fs, &enc);
     fill_attr(a, CODEC_H264, EGOP);
     CAR_SIZE(a, w, h);
-    if (!r && IMP_Encoder_SetPool && !getenv("APITEST_NOPOOL")) {
 #if defined(APITEST_T32)
+    if (!r && IMP_Encoder_SetPool && !getenv("APITEST_NOPOOL")) {
         static int pool_req[3];
         int pid = ENC_POOL_ID + 1 + (chn & 1);
         if (!pool_req[chn & 1] && IMP_System_MemPoolRequest) pool_req[chn & 1] = IMP_System_MemPoolRequest(pid, 8u << 20, "carrier-enc") == 0 ? 1 : -1;
         if (getenv("CARRIER_V")) printf("carrier-v: pool %d req %d SetPool chn %d -> %d\n", pid, pool_req[chn & 1], chn, IMP_Encoder_SetPool(chn, pid));
         else IMP_Encoder_SetPool(chn, pid);
-#endif
     }
+#endif
     if (!r && maxstream > 0 && IMP_Encoder_SetMaxStreamCnt) r = IMP_Encoder_SetMaxStreamCnt(chn, maxstream);
     if (!r) r = IMP_Encoder_CreateChn(chn, a);
     if (!r) r = IMP_Encoder_RegisterChn(grp, chn);
@@ -3227,6 +3233,7 @@ static void car_a9(void)
 
 int enc_carrier_run(void)
 {
+    setvbuf(stdout, NULL, _IOLBF, 0);      /* a vendor abort must not eat the lines before it */
     wdog("cases", 240);
     if (car_on("a2")) car_a2();
     wdog("cases", 240);
@@ -3239,3 +3246,6 @@ int enc_carrier_run(void)
     if (car_on("a9")) car_a9();
     return 0;
 }
+#else
+int enc_carrier_run(void) { return -1; }     /* the SoC API has no GetFd / SetMaxStreamCnt / FlushStream */
+#endif

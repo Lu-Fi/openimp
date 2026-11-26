@@ -8088,7 +8088,7 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("hskip")) enc_hskip_run();               /* explicit only: HSkip/ChangeRef stream dump (#3 #5 #7) */
     if (getenv("APITEST_CASES") && cs_on("fisheye")) enc_fisheye_run();           /* explicit only: Fisheye ROI stream dump (#3 #5) */
     if (getenv("APITEST_CASES") && cs_on("push")) enc_push_run();                 /* explicit only: push model next to the vendor (#916 #917 #918) */
-    if (getenv("APITEST_CASES") && cs_on("carrier")) enc_carrier_run();      /* explicit only (#931) */
+    if (getenv("APITEST_CASES") && (cs_on("carrier") || cs_on("carrier_a2") || cs_on("carrier_a3") || cs_on("carrier_a5") || cs_on("carrier_a7") || cs_on("carrier_a9"))) enc_carrier_run();      /* explicit only (#931) */
     if (getenv("APITEST_CASES") && cs_on("transcfg")) enc_transcfg_run();         /* explicit only: H264TransCfg returns + PPS chroma offset stream dump (#3 #5 #7) */
     if (getenv("APITEST_CASES") && cs_on("gopfps")) enc_gopfps_run();             /* explicit only: GOP / frame rate at run time (#367) */
     if (getenv("APITEST_CASES") && cs_on("rctrig")) enc_rctrig_run();             /* explicit only: RcTrigLevel starved CBR stream dump (#3 #5) */
