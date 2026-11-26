@@ -21,6 +21,10 @@ if nopush:
 if "--outdir" in a:
     i = a.index("--outdir"); outdir = a[i + 1]; del a[i:i + 2]
 port, soc, sensor, i2c, W, H, binary = a[:7]
+# guard (2026-11-26, #922): "i2c0" (the QEMU bus name) given as I2C made apitest AddSensor at address 0x00 -> SETUP-FAIL, no case ran
+if not re.match(r"^0x[0-9a-fA-F]{1,2}$", i2c):
+    print("QEMU %s: ARG-FAULT (I2C must be the sensor address like 0x30, got %r) -- test fault, no case ran" % (soc, i2c))
+    sys.exit(2)
 cases = a[7:]
 if binary == "auto":     # the per-SoC build of tools/apitest/build.sh
     binary = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build", "apitest_" + soc.lower())
@@ -90,6 +94,11 @@ def push(path, dest, mode="755"):
             break
         print("push attempt %d: size %s, expected %d - retrying slower" % (attempt, got[-1:], len(data) + (len(data) + CH - 1) // CH))
         pace *= 3
+    else:
+        # guard (2026-11-26, #922): a push right after the guest boot lost lines three times; the run then went on (or was
+        # killed by the caller's timeout) without a summary line.  Stop with a clear test-fault line instead.
+        print("QEMU %s: GUEST-FAULT (push of %s failed 3 times; guest still booting or console busy) -- test fault, no case ran" % (soc, dest))
+        sys.exit(3)
     return sh("base64 -d /tmp/at/b.b64 | gunzip > /tmp/at/%s && chmod %s /tmp/at/%s && rm /tmp/at/b.b64; ls -l /tmp/at/%s" % (dest, mode, dest, dest), 120, 10)
 
 

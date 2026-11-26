@@ -162,6 +162,13 @@ int IMP_FrameSource_EnableChn(int chnNum);
 void DMA_RmemStreamStarted(void);   /* dma_alloc.h */
 int32_t on_framesource_group_data_update(int32_t *arg1);
 static void *frame_pooling_thread(void *arg);
+#if defined(PLATFORM_T20)
+/* #922: T10/T20 frame-depth list (vendor libimp 3.12.0), below */
+#define FS_DEPTH_COPY 1
+static void fs_depth_copy(int chn, const void *frame);
+static void fs_depth_set(int chn, int depth);
+static int fs_depth_active(int chn);
+#endif
 static int framesource_bind(void *src_module, void *dst_module, void *output_ptr);
 static int framesource_unbind(void *src_module, void *dst_module, void *output_ptr);
 static void fs_bind_trace(const char *fmt, ...);
@@ -350,7 +357,7 @@ void *list_del_FSDepth(void *arg1)
 
 /* IMP_FrameSource_ReleaseDepthList.isra.5 — walks list, optionally frees
  * the internal buffer at node+0x1c, then frees the node. HLIL 0x9a48c. */
-static void fs_release_depth_list(int32_t *arg1, void *arg2, int32_t *arg3)
+static __attribute__((unused)) void fs_release_depth_list(int32_t *arg1, void *arg2, int32_t *arg3)
 {
     void *picked = NULL;
 
@@ -1415,6 +1422,12 @@ t20_listen:
 #endif
 #endif
                     FS_STEP(chn, FS_STEP_DQBUF);
+#if defined(FS_DEPTH_COPY)
+                    /* #922: the depth list takes every frame (vendor), so
+                     * the pool's pull-idle recycle must not drop them */
+                    if (fs_depth_active(chn))
+                        VBMNotePull(chn);
+#endif
                     dq_ret = VBMKernelDequeue(chn, ctx->fd, &frame);
                     fs_trace("libimp/FS: pooling dequeue ch=%d fd=%d ret=%d frame=%p\n",
                              chn, ctx->fd, dq_ret, frame);
@@ -1466,6 +1479,10 @@ t20_listen:
                 no_frame_cycles = 0;
                 drained++;
                 openimp_video_drop_note_frame();
+#if defined(FS_DEPTH_COPY)
+                /* #922: vendor 0x636f8, before the bound group gets it */
+                fs_depth_copy(chn, frame);
+#endif
 
                 m = g_modules[0][chn];
                 if (m != NULL) {
@@ -1508,6 +1525,9 @@ t20_listen:
             continue;
         }
         openimp_video_drop_note_frame();
+#if defined(FS_DEPTH_COPY)
+        fs_depth_copy(chn, frame);
+#endif
 
         m = g_modules[0][chn];
         if (m != NULL) {
@@ -1821,6 +1841,9 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             s6 = *(int32_t *)(chan + 0x1cc);
             if (s6 <= 0) {
                 pthread_mutex_unlock(chan_lock);
+#if defined(FS_DEPTH_COPY)
+                fs_depth_set(chnNum, 0);
+#endif
                 return 0;
             }
 
@@ -1829,6 +1852,13 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
              * libimp's node lists: with none there is nothing to count, and
              * the check below made every SetFrameDepth(chn, 0) fail and
              * leave frame_depth set (EnableChn then sized the pool for it). */
+#if UINTPTR_MAX > 0xffffffffu
+            /* 64-bit host test build: +0x220 lies inside the 40-byte mutex
+             * at +0x208 (24 bytes on the 32-bit target); OpenIMP never
+             * fills these lists (#922 host test) */
+            lists = 0;
+            (void)released;
+#else
             lists = *(void **)(chan + 0x220) != NULL ||
                     *(void **)(chan + 0x224) != NULL ||
                     *(void **)(chan + 0x228) != NULL;
@@ -1841,6 +1871,7 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             *(void **)(chan + 0x220) = NULL;
             *(void **)(chan + 0x224) = NULL;
             *(void **)(chan + 0x228) = NULL;
+#endif
 
             if (lists && released != s6) {
                 imp_log_fun(6, IMP_Log_Get_Option(), 2, "Framesource",
@@ -1854,6 +1885,9 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             __atomic_store_n(&g_fs_ctx[chnNum].frame_depth, 0,
                              __ATOMIC_RELAXED);
             pthread_mutex_unlock(chan_lock);
+#if defined(FS_DEPTH_COPY)
+            fs_depth_set(chnNum, 0);
+#endif
             return 0;
         }
 
@@ -1861,12 +1895,17 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
          * `depth` nodes + calloc(0x30) per-node state + calloc(size) for
          * the buffer at +0x1c when copy_type==0. For openimp we store the
          * depth in the ctx and let the kernel pool carry the frame-depth
-         * via fs_set_depth. This matches existing imp_framesource.c. */
+         * via fs_set_depth. This matches existing imp_framesource.c.
+         * T10/T20 (#922): fs_depth_set builds the vendor list (copies in
+         * the capture thread, see fs_depth_copy). */
         pthread_mutex_lock(chan_lock);
         __atomic_store_n(&g_fs_ctx[chnNum].frame_depth, depth,
                          __ATOMIC_RELAXED);
         *(int32_t *)(chan + 0x1cc) = depth;
         pthread_mutex_unlock(chan_lock);
+#if defined(FS_DEPTH_COPY)
+        fs_depth_set(chnNum, depth);    /* #922: the vendor depth list */
+#endif
         /* The fd belongs to Enable/DisableChn: check the state and use the
          * fd under g_fs_lock, or the ioctl can land on a closed (or already
          * reused) descriptor. */
@@ -2101,6 +2140,9 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     VBMReleaseParked(chnNum);
 #if defined(PLATFORM_T30)
     fs_cpy_trim(chnNum);
+#endif
+#if defined(FS_DEPTH_COPY)
+    fs_depth_set(chnNum, 0);    /* vendor DestroyChn: SetFrameDepth(chn, 0) */
 #endif
     *(int32_t *)((char *)gFrameSource + 0x14) -= 1;
 #if defined(PLATFORM_T23)
@@ -3146,7 +3188,9 @@ struct fs_cpy_slot {
 
 static struct fs_cpy_slot g_fs_cpy[FS_MAX_CHANNELS][FS_CPY_SLOTS];
 static pthread_mutex_t g_fs_cpy_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
+#if defined(FS_GETFRAME_COMPACT) || defined(FS_DEPTH_COPY)
 static uint32_t fs_rec_u32(const void *rec, unsigned int off)
 {
     uint32_t v;
@@ -3155,7 +3199,7 @@ static uint32_t fs_rec_u32(const void *rec, unsigned int off)
     return v;
 }
 
-static void fs_rec_set_u32(void *rec, unsigned int off, uint32_t v)
+static __attribute__((unused)) void fs_rec_set_u32(void *rec, unsigned int off, uint32_t v)
 {
     memcpy((uint8_t *)rec + off, &v, sizeof(v));
 }
@@ -3199,7 +3243,319 @@ static void fs_cpy_free(void *p, size_t size)
     free(p);
 #endif
 }
+#endif
 
+#if defined(FS_DEPTH_COPY)
+/* #922: the frame-depth list of vendor libimp 3.12.0 (T10 da38e940 / T20,
+ * T10 addresses; T20 is the same code at +0x10000).
+ * - SetFrameDepth(chn, n) 0x658ac: three list heads (free +0x188, ready
+ *   +0x180, held +0x184) and n nodes, each a calloc(0x28) IMPFrameInfo with
+ *   a calloc(frame size) buffer at +0x1c; a second SetFrameDepth(chn, m > 0)
+ *   while the lists exist changes nothing, SetFrameDepth(chn, 0) frees them.
+ * - on_framesource_group_data_update 0x63558, run by frame_pooling_thread
+ *   0x63168 for every dequeued frame BEFORE the bound group gets it
+ *   (0x636f8: depth > 0): under the channel lock a free node, else the
+ *   oldest ready one, gets the 0x28-byte record (size, phyAddr, virAddr of
+ *   the node kept, phyAddr stays 0) and a CPU memcpy of the picture
+ *   (NV12/NV21: luma w*h, chroma from w*ALIGN16(h), size w*h*3/2;
+ *   0x637bc), goes to the head of the ready list (0x63814) and the
+ *   GetFrame cond is signalled.  The capture buffer itself goes on to the
+ *   bound encoder.
+ * - GetFrame 0x68f54: the NEWEST ready node (head) moves to the held list;
+ *   empty: one 2 s cond wait, then -1.  ReleaseFrame 0x6983c: a held node
+ *   goes back to the free list.
+ * So GetFrame and a bound encoder both get every frame; the ready queue of
+ * the capture pool is not shared any more.  Depth 0 keeps the OpenIMP pull
+ * of the pool (the vendor returns 0 without a frame there). */
+enum { FS_DN_FREE = 0, FS_DN_READY, FS_DN_HELD };
+
+struct fs_dnode {
+    IMPFrameInfo info;              /* first: GetFrame hands out &info */
+    uint8_t *buf;
+    size_t   cap;
+    unsigned int seq;
+    int      state;
+};
+
+struct fs_depth {
+    pthread_mutex_t lock;
+    pthread_cond_t  cond;
+    struct fs_dnode *nodes;
+    int n;
+    unsigned int seq;
+    unsigned int copies;
+    uint32_t max_copy_us;
+    uint64_t sum_copy_us;
+};
+
+static struct fs_depth g_fs_depth[FS_MAX_CHANNELS];
+static pthread_once_t g_fs_depth_once = PTHREAD_ONCE_INIT;
+
+static void fs_depth_init_once(void)
+{
+    int i;
+
+    for (i = 0; i < FS_MAX_CHANNELS; i++) {
+        pthread_condattr_t ca;
+
+        pthread_mutex_init(&g_fs_depth[i].lock, NULL);
+        pthread_condattr_init(&ca);
+        pthread_condattr_setclock(&ca, CLOCK_MONOTONIC);
+        pthread_cond_init(&g_fs_depth[i].cond, &ca);
+        pthread_condattr_destroy(&ca);
+    }
+}
+
+static struct fs_depth *fs_depth_of(int chn)
+{
+    pthread_once(&g_fs_depth_once, fs_depth_init_once);
+    return &g_fs_depth[chn];
+}
+
+static int fs_depth_is_nv12(uint32_t fmt)
+{
+    return fmt == FS_FOURCC_NV12 || fmt == FS_FOURCC_NV21 ||
+           fmt == (uint32_t)PIX_FMT_NV12 || fmt == (uint32_t)PIX_FMT_NV21;
+}
+
+static size_t fs_depth_frame_bytes(uint32_t w, uint32_t h, uint32_t fmt,
+                                   uint32_t size)
+{
+    return fs_depth_is_nv12(fmt) ? nv12_compact_size(w, h) : size;
+}
+
+static void fs_depth_free_nodes(struct fs_dnode *nodes, int n)
+{
+    int i;
+
+    for (i = 0; nodes != NULL && i < n; i++)
+        fs_cpy_free(nodes[i].buf, nodes[i].cap);
+    free(nodes);
+}
+
+/* SetFrameDepth / DestroyChn: depth 0 frees the list (an application that
+ * still holds a frame of it loses it, as in the vendor), depth > 0 builds it
+ * once (buffers for the channel's NV12 size; the capture thread grows one
+ * that is too small). */
+static void fs_depth_set(int chn, int depth)
+{
+    struct fs_depth *d = fs_depth_of(chn);
+    struct fs_dnode *nodes = NULL, *old = NULL;
+    int i, n_old = 0;
+
+    if (depth > 0) {
+        const IMPFSChnAttr *a = &g_fs_ctx[chn].attr;
+        size_t need = a->picWidth > 0 && a->picHeight > 0 ?
+            nv12_compact_size((uint32_t)a->picWidth, (uint32_t)a->picHeight) : 0;
+
+        pthread_mutex_lock(&d->lock);
+        i = d->n;
+        pthread_mutex_unlock(&d->lock);
+        if (i > 0)
+            return;                 /* vendor: lists exist, nothing changes */
+        nodes = calloc((size_t)depth, sizeof(*nodes));
+        if (nodes == NULL)
+            goto nomem;
+        for (i = 0; i < depth && need > 0; i++) {
+            nodes[i].buf = fs_cpy_alloc(need);
+            if (nodes[i].buf == NULL) {
+                fs_depth_free_nodes(nodes, depth);
+                goto nomem;
+            }
+            nodes[i].cap = need;
+        }
+        pthread_mutex_lock(&d->lock);
+        if (d->n == 0) {
+            d->nodes = nodes;
+            __atomic_store_n(&d->n, depth, __ATOMIC_RELEASE);
+            d->copies = 0;
+            d->max_copy_us = 0;
+            d->sum_copy_us = 0;
+            nodes = NULL;
+        }
+        pthread_mutex_unlock(&d->lock);
+        fs_depth_free_nodes(nodes, depth);   /* lost a race: keep the first */
+        return;
+nomem:
+        IMP_LOG_ERR("Framesource", "SetFrameDepth(%d, %d): no memory for the depth list",
+                    chn, depth);
+        return;
+    }
+    pthread_mutex_lock(&d->lock);
+    old = d->nodes;
+    n_old = d->n;
+    if (n_old > 0 && d->copies > 0)
+        IMP_LOG_INFO("Framesource", "chn%d: depth list: %u copies, avg %u us, max %u us",
+                     chn, d->copies, (unsigned)(d->sum_copy_us / d->copies),
+                     (unsigned)d->max_copy_us);
+    d->nodes = NULL;
+    __atomic_store_n(&d->n, 0, __ATOMIC_RELEASE);
+    pthread_cond_broadcast(&d->cond);
+    pthread_mutex_unlock(&d->lock);
+    fs_depth_free_nodes(old, n_old);
+}
+
+static uint32_t fs_depth_now_us(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)ts.tv_sec * 1000000u + (uint32_t)(ts.tv_nsec / 1000L);
+}
+
+static int fs_depth_active(int chn)
+{
+    return __atomic_load_n(&fs_depth_of(chn)->n, __ATOMIC_RELAXED) > 0;
+}
+
+/* Capture thread, every dequeued frame, before the bound group gets it. */
+static void fs_depth_copy(int chn, const void *frame)
+{
+    struct fs_depth *d = fs_depth_of(chn);
+    const uint8_t *rec = (const uint8_t *)frame;
+    uint32_t w, h, fmt, size, virt;
+    struct fs_dnode *nd = NULL;
+    size_t need;
+    uint32_t t0;
+    int i;
+
+    if (__atomic_load_n(&d->n, __ATOMIC_RELAXED) <= 0 || rec == NULL)
+        return;
+    w = fs_rec_u32(rec, 0x08);
+    h = fs_rec_u32(rec, 0x0c);
+    fmt = fs_rec_u32(rec, 0x10);
+    size = fs_rec_u32(rec, 0x14);
+    virt = fs_rec_u32(rec, 0x1c);
+    if (virt == 0)
+        return;
+    if (fs_depth_is_nv12(fmt) && size < nv12_compact_src_size(w, h))
+        fmt = 0;                    /* not the capture layout: plain copy */
+    need = fs_depth_frame_bytes(w, h, fmt, size);
+    if (need == 0)
+        return;
+
+    pthread_mutex_lock(&d->lock);
+    for (i = 0; i < d->n; i++) {
+        if (d->nodes[i].state == FS_DN_FREE) {
+            nd = &d->nodes[i];
+            break;
+        }
+    }
+    if (nd == NULL) {                               /* else the oldest ready one */
+        for (i = 0; i < d->n; i++) {
+            struct fs_dnode *c = &d->nodes[i];
+
+            if (c->state == FS_DN_READY && (nd == NULL || (int)(c->seq - nd->seq) < 0))
+                nd = c;
+        }
+    }
+    if (nd == NULL) {               /* every node held by the application */
+        pthread_mutex_unlock(&d->lock);
+        return;
+    }
+    if (nd->cap < need) {
+        uint8_t *nb = fs_cpy_alloc(need);
+
+        if (nb == NULL) {
+            pthread_mutex_unlock(&d->lock);
+            return;
+        }
+        fs_cpy_free(nd->buf, nd->cap);
+        nd->buf = nb;
+        nd->cap = need;
+    }
+    t0 = fs_depth_now_us();
+    memcpy(&nd->info, rec, sizeof(nd->info));
+    if (fs_depth_is_nv12(fmt))
+        nv12_compact_copy(nd->buf, (const uint8_t *)(uintptr_t)virt, w, h);
+    else
+        memcpy(nd->buf, (const uint8_t *)(uintptr_t)virt, need);
+    nd->info.size = (uint32_t)need;
+    nd->info.phyAddr = 0;           /* vendor: the node has no physical address */
+    nd->info.virAddr = (uint32_t)(uintptr_t)nd->buf;
+    nd->state = FS_DN_READY;
+    nd->seq = ++d->seq;
+    {
+        uint32_t dt = fs_depth_now_us() - t0;
+
+        d->copies++;
+        d->sum_copy_us += dt;
+        if (dt > d->max_copy_us)
+            d->max_copy_us = dt;
+    }
+    pthread_cond_broadcast(&d->cond);
+    pthread_mutex_unlock(&d->lock);
+}
+
+/* GetFrame with a depth: 1 (result in *ret) when the depth list served it. */
+static int fs_depth_get(int chn, void **frame, int *ret)
+{
+    struct fs_depth *d = fs_depth_of(chn);
+    struct timespec until;
+    struct fs_dnode *nd;
+    int i, waited = 0;
+
+    if (__atomic_load_n(&d->n, __ATOMIC_RELAXED) <= 0)
+        return 0;
+    clock_gettime(CLOCK_MONOTONIC, &until);
+    until.tv_sec += FS_GETFRAME_TIMEOUT_MS / 1000u;
+    pthread_mutex_lock(&d->lock);
+    for (;;) {
+        if (d->n <= 0) {            /* SetFrameDepth(chn, 0) meanwhile */
+            pthread_mutex_unlock(&d->lock);
+            return 0;
+        }
+        nd = NULL;
+        for (i = 0; i < d->n; i++) {                /* newest ready one */
+            struct fs_dnode *c = &d->nodes[i];
+
+            if (c->state == FS_DN_READY && (nd == NULL || (int)(c->seq - nd->seq) > 0))
+                nd = c;
+        }
+        if (nd != NULL || waited)
+            break;
+        if (pthread_cond_timedwait(&d->cond, &d->lock, &until) != 0)
+            waited = 1;
+    }
+    if (nd == NULL) {
+        pthread_mutex_unlock(&d->lock);
+        *frame = NULL;
+        IMP_LOG_LIMITED(LOG_ERR, "Framesource",
+                        "GetFrame(%d): no frame within %u ms", chn,
+                        FS_GETFRAME_TIMEOUT_MS);
+        *ret = -1;
+        return 1;
+    }
+    nd->state = FS_DN_HELD;
+    *frame = &nd->info;
+    pthread_mutex_unlock(&d->lock);
+    *ret = 0;
+    return 1;
+}
+
+/* ReleaseFrame: 1 when `frame` was a held node of the depth list. */
+static int fs_depth_release(int chn, const void *frame)
+{
+    struct fs_depth *d = fs_depth_of(chn);
+    int i, found = 0;
+
+    if (__atomic_load_n(&d->n, __ATOMIC_RELAXED) <= 0)
+        return 0;
+    pthread_mutex_lock(&d->lock);
+    for (i = 0; i < d->n; i++) {
+        if ((const void *)&d->nodes[i].info == frame) {
+            if (d->nodes[i].state == FS_DN_HELD)
+                d->nodes[i].state = FS_DN_FREE;
+            found = 1;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&d->lock);
+    return found;
+}
+#endif
+
+#if defined(FS_GETFRAME_COMPACT)
 /* Frees the buffers of the slots no consumer holds (channel destroyed). */
 static void fs_cpy_trim(int chnNum)
 {
@@ -3322,6 +3678,14 @@ int IMP_FrameSource_GetFrame(int chnNum, void **frame)
         return -1;
     }
 #endif
+#if defined(FS_DEPTH_COPY)
+    if (frame != NULL && chnNum >= 0 && chnNum < FS_MAX_CHANNELS) {
+        int ret;
+
+        if (fs_depth_get(chnNum, frame, &ret))
+            return ret;
+    }
+#endif
 #if defined(FS_GETFRAME_COMPACT)
     return fs_getframe_impl(chnNum, frame, 1);
 #else
@@ -3381,6 +3745,10 @@ int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
         if (fs_cpy_release(chnNum, frame, &ret))
             return ret;
     }
+#endif
+#if defined(FS_DEPTH_COPY)
+    if (fs_depth_release(chnNum, frame))
+        return 0;
 #endif
     return VBMReleaseFrame(chnNum, frame);
 }

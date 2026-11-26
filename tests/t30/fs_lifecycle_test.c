@@ -2440,6 +2440,10 @@ extern int VBMExpireReady(int chn, uint32_t max_age_ms, int query);
 static int fake_push, fake_push_probe, probe_keep = -1, probe_left = -1,
            probe_give = -1, probe_after = -1;
 static unsigned int fake_push_kicks;
+/* #922: the fake encode thread takes the frame from the ready queue like
+ * the real one (VBMGetFrame) and counts it per channel */
+static int fake_push_take;
+static unsigned int push_kicks_chn[2], push_taken_chn[2];
 
 int OpenIMP_FS_PushEncode(int source_channel)
 {
@@ -2456,6 +2460,18 @@ int OpenIMP_FS_PushEncode(int source_channel)
         probe_give = VBMExpireReadyUpTo(source_channel, tag);
         probe_after = VBMExpireReady(source_channel, 0u, 1);
         return 1;
+    }
+    if (__atomic_load_n(&fake_push_take, __ATOMIC_ACQUIRE) &&
+        source_channel >= 0 && source_channel < 2) {
+        void *f = NULL;
+
+        __atomic_add_fetch(&push_kicks_chn[source_channel], 1u, __ATOMIC_RELAXED);
+        while (VBMGetFrame(source_channel, &f) == 0 && f) {
+            __atomic_add_fetch(&push_taken_chn[source_channel], 1u, __ATOMIC_RELAXED);
+            VBMReleaseFrame(source_channel, f);
+            f = NULL;
+        }
+        return 0;
     }
     if (!VBMFrameReaderActive(source_channel))
         (void)VBMExpireReadyUpTo(source_channel, tag);
@@ -2555,6 +2571,161 @@ static void test_push_reader(void)
 }
 #endif
 
+#if defined(PLATFORM_T20)
+/* #922: GetFrame on a channel with a frame depth next to a bound encoder
+ * at full rate, two channels.  Vendor libimp 3.12.0 copies every frame into
+ * the depth list before the encoder gets it, so both get every frame; the
+ * old OpenIMP split one ready queue between them. */
+struct depth_rd {
+    int chn, stop;
+    unsigned int got, distinct, fail, bad;
+};
+
+static void *depth_reader(void *arg)
+{
+    struct depth_rd *r = arg;
+    int64_t last = -1;
+
+    while (!__atomic_load_n(&r->stop, __ATOMIC_RELAXED)) {
+        IMPFrameInfo *fi = NULL;
+
+        if (IMP_FrameSource_GetFrame(r->chn, (void **)&fi) == 0 && fi) {
+            const uint8_t *p = (const uint8_t *)(uintptr_t)fi->virAddr;
+
+            r->got++;
+            if (fi->timeStamp != last)
+                r->distinct++;
+            last = fi->timeStamp;
+            /* the copy: compact NV12, no physical address, readable */
+            if (fi->phyAddr != 0 || p == NULL ||
+                fi->size != fi->width * fi->height * 3u / 2u)
+                r->bad++;
+            else
+                (void)*(volatile const uint8_t *)(p + fi->size - 1u);
+            IMP_FrameSource_ReleaseFrame(r->chn, fi);
+        } else {
+            r->fail++;
+        }
+    }
+    return NULL;
+}
+
+/* the application polls both encoders (PollingStream marks the pull) */
+static void sleep_polling2(unsigned int ms)
+{
+    unsigned int t;
+
+    for (t = 0; t < ms; t += 10) {
+        VBMNotePull(0);
+        VBMNotePull(1);
+        sleep_ms(10);
+    }
+}
+
+static void test_depth_copy(void)
+{
+    IMPFSChnAttr a0 = attr_for(1280, 720, 2), a1 = attr_for(640, 360, 2);
+    struct depth_rd rd[2];
+    pthread_t th[2];
+    unsigned int k0[2], t0[2], kicks[2], taken[2];
+    int c;
+
+    fake_dqbuf_delay_us = 10000;    /* ~100 frames/s per channel */
+    CHECK(IMP_FrameSource_CreateChn(0, &a0) == 0, "depth copy: create 0");
+    CHECK(IMP_FrameSource_CreateChn(1, &a1) == 0, "depth copy: create 1");
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 1) == 0 &&
+          IMP_FrameSource_SetFrameDepth(1, 1) == 0, "depth copy: depth 1");
+    /* vendor: a second SetFrameDepth > 0 keeps the list */
+    CHECK(IMP_FrameSource_SetFrameDepth(1, 3) == 0, "depth copy: depth again");
+    __atomic_store_n(&fake_push_take, 1, __ATOMIC_RELEASE);
+    __atomic_store_n(&fake_push, 1, __ATOMIC_RELEASE);
+    CHECK(IMP_FrameSource_EnableChn(0) == 0 && IMP_FrameSource_EnableChn(1) == 0,
+          "depth copy: enable");
+    memset(rd, 0, sizeof(rd));
+    for (c = 0; c < 2; c++) {
+        rd[c].chn = c;
+        pthread_create(&th[c], NULL, depth_reader, &rd[c]);
+    }
+    sleep_polling2(200);
+    for (c = 0; c < 2; c++) {
+        k0[c] = __atomic_load_n(&push_kicks_chn[c], __ATOMIC_RELAXED);
+        t0[c] = __atomic_load_n(&push_taken_chn[c], __ATOMIC_RELAXED);
+        rd[c].distinct = 0;
+    }
+    sleep_polling2(1000);
+    for (c = 0; c < 2; c++) {
+        kicks[c] = __atomic_load_n(&push_kicks_chn[c], __ATOMIC_RELAXED) - k0[c];
+        taken[c] = __atomic_load_n(&push_taken_chn[c], __ATOMIC_RELAXED) - t0[c];
+    }
+    for (c = 0; c < 2; c++) {
+        __atomic_store_n(&rd[c].stop, 1, __ATOMIC_RELAXED);
+        pthread_join(th[c], NULL);
+    }
+    for (c = 0; c < 2; c++) {
+        CHECK(kicks[c] >= 30, "depth copy: chn%d %u frames in 1 s", c, kicks[c]);
+        CHECK(taken[c] + 2u >= kicks[c],
+              "depth copy: chn%d encoder got %u of %u frames", c, taken[c], kicks[c]);
+        CHECK(rd[c].distinct * 10u >= kicks[c] * 8u,
+              "depth copy: chn%d GetFrame got %u of %u frames", c, rd[c].distinct, kicks[c]);
+        CHECK(rd[c].bad == 0, "depth copy: chn%d %u bad copies", c, rd[c].bad);
+    }
+    /* all nodes held: the next GetFrame waits the vendor 2 s and fails */
+    {
+        IMPFrameInfo *f1 = NULL, *f2 = NULL;
+        uint64_t t;
+
+        CHECK(IMP_FrameSource_GetFrame(1, (void **)&f1) == 0 && f1, "depth copy: hold");
+        t = now_ms();
+        CHECK(IMP_FrameSource_GetFrame(1, (void **)&f2) == -1 && f2 == NULL,
+              "depth copy: second frame with depth 1");
+        t = now_ms() - t;
+        CHECK(t >= 1800 && t < 3000, "depth copy: wait %llu ms", (unsigned long long)t);
+        CHECK(IMP_FrameSource_ReleaseFrame(1, f1) == 0, "depth copy: release");
+        CHECK(IMP_FrameSource_GetFrame(1, (void **)&f2) == 0 && f2, "depth copy: after release");
+        IMP_FrameSource_ReleaseFrame(1, f2);
+    }
+    /* no encoder pulls (push encoder, or none bound): the pool's pull-idle
+     * recycle must not starve the depth list (QEMU T10 2026-11-26: every
+     * GetFrame timed out) */
+    __atomic_store_n(&fake_push_take, 0, __ATOMIC_RELEASE);
+    __atomic_store_n(&fake_push, 0, __ATOMIC_RELEASE);
+    sleep_ms(1500);
+    {
+        int n, ok = 0;
+        int64_t last = -1;
+
+        for (n = 0; n < 5; n++) {
+            IMPFrameInfo *f = NULL;
+
+            if (IMP_FrameSource_GetFrame(1, (void **)&f) == 0 && f) {
+                ok += f->timeStamp != last;
+                last = f->timeStamp;
+                IMP_FrameSource_ReleaseFrame(1, f);
+            }
+        }
+        CHECK(ok == 5, "depth copy: %d of 5 frames without a pulling encoder", ok);
+    }
+    /* depth 0: GetFrame pulls the capture pool again */
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 0) == 0, "depth copy: depth 0");
+    {
+        IMPFrameInfo *f = NULL;
+
+        __atomic_store_n(&fake_push_take, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&fake_push, 0, __ATOMIC_RELEASE);
+        CHECK(IMP_FrameSource_GetFrame(0, (void **)&f) == 0 && f && f->phyAddr != 0,
+              "depth copy: depth 0 pool frame");
+        if (f)
+            IMP_FrameSource_ReleaseFrame(0, f);
+    }
+    CHECK(IMP_FrameSource_DisableChn(1) == 0 && IMP_FrameSource_DisableChn(0) == 0,
+          "depth copy: disable");
+    CHECK(IMP_FrameSource_DestroyChn(1) == 0 && IMP_FrameSource_DestroyChn(0) == 0,
+          "depth copy: destroy");
+    fake_dqbuf_delay_us = 0;
+    check_clean("depth copy");
+}
+#endif
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -2594,6 +2765,7 @@ int main(void)
 #if defined(PLATFORM_T20)
     RUN(listen_buf);
     RUN(push_reader);
+    RUN(depth_copy);
 #endif
 #if !defined(PLATFORM_T31)
     /* T31 stamps frames from its own clock (fs_frame_timestamp), the
