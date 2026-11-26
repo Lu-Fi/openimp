@@ -1272,7 +1272,12 @@ void OpenIMP_T23_HelixExit(T23HelixBridge *bridge)
     if (!bridge)
         return;
     pthread_mutex_lock(&t23_ipc_lock);
-    t23_stop_worker(bridge);
+    /* Every channel's teardown comes here. Zeroed memory is a bridge that never
+     * had a worker (any native or JPEG channel) or one already stopped; its
+     * socket_fd of 0 is not its own, and stopping it would send EXIT to whatever
+     * holds descriptor 0 and close that. Setup leaves worker_pid -1 or a child. */
+    if (bridge->worker_pid != 0)
+        t23_stop_worker(bridge);
     free(bridge->cache);
     memset(bridge, 0, sizeof(*bridge));
     pthread_mutex_unlock(&t23_ipc_lock);

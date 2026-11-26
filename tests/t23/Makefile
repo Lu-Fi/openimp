@@ -84,6 +84,7 @@ check: $(ISP_TUNING_TEST_BIN) $(ACODEC_TEST_BIN) $(ZERO_COPY_TEST_BIN) \
 	$(ACODEC_TEST_BIN)
 	$(ZERO_COPY_TEST_BIN) zero-copy "$(abspath $(FAKE_HELIXD_BIN))"
 	$(ZERO_COPY_TEST_BIN) copy "$(abspath $(FAKE_HELIXD_BIN))"
+	$(ZERO_COPY_TEST_BIN) exit-no-worker "$(abspath $(FAKE_HELIXD_BIN))"
 	$(IVS_DIGEST_T31) > $(BUILD)/t23-ivs-digest-t31abi.txt
 	$(IVS_DIGEST_T23) > $(BUILD)/t23-ivs-digest-t23abi.txt
 	cat $(BUILD)/t23-ivs-digest-t23abi.txt

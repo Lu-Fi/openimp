@@ -1,13 +1,18 @@
 /* Host test of the T23 Helix bridge input path: frames in OpenIMP's
  * reserved memory go to the worker by physical address (no copy), others
- * and OPENIMP_T23_HELIX_COPY=1 are copied, and a worker that cannot reach
- * a frame turns zero-copy off with that frame still encoded. */
+ * and OPENIMP_T23_HELIX_COPY=1 are copied, a worker that cannot reach a
+ * frame turns zero-copy off with that frame still encoded, and an exit with
+ * no worker leaves descriptor 0 alone. */
 #define _GNU_SOURCE
 #include <assert.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "dma_alloc.h"
 #include "t23/openimp_t23_helix_bridge.h"
@@ -141,6 +146,30 @@ int main(int argc, char **argv)
 
     assert(argc > 2);
     setenv("OPENIMP_T23_HELIX_HELPER", argv[2], 1);
+    if (!strcmp(argv[1], "exit-no-worker")) {
+        /* A channel that never had a worker tears down with a zeroed bridge. If
+         * descriptor 0 is a client's socket, it gets no EXIT and stays open. */
+        int pair[2], rc;
+        struct pollfd peer;
+
+        rc = socketpair(AF_UNIX, SOCK_STREAM, 0, pair);
+        assert(rc == 0);
+        rc = dup2(pair[0], 0);
+        assert(rc == 0);
+        memset(&bridge, 0, sizeof(bridge));
+        OpenIMP_T23_HelixExit(&bridge);
+        OpenIMP_T23_HelixExit(&bridge); /* and again, as a stopped bridge */
+        rc = fcntl(0, F_GETFD);
+        assert(rc != -1);
+        peer.fd = pair[1];
+        peer.events = POLLIN;
+        peer.revents = 0;
+        rc = poll(&peer, 1, 0);
+        assert(rc == 0);
+        (void)rc;
+        puts("An exit with no worker sends nothing and closes nothing");
+        return 0;
+    }
     if (copy_mode)
         setenv("OPENIMP_T23_HELIX_COPY", "1", 1);
     pool = frame_memory();
