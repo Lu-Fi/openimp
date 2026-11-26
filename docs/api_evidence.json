@@ -21096,15 +21096,15 @@
         "T30": "n.a.",
         "T31": "rt",
         "T32": "aud",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
         "T31": "apitest rc3cov 2026-10-29 .26 (and .33) (refusal path only)",
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run"
+        "T33": "QEMU 0731 GetFrame A/B vendor 2.0.2.1 vs OpenIMP 2026-11-26 (#784, audit issue784/dc.sh, direct_mode=0); apitest t33pass 2026-11-13 QEMU"
       },
-      "note": "T31 libimp 1.1.6 (disassembly): channel below 5; allowed only while the channel frame depth is 0 (stores bNoCopy != 0), otherwise logs and returns -1; OpenIMP matches this, any non-zero value counts as 1. Device (apitest, SetFrameDepth was 2 at that point): the refusal path and the invalid channel are proven; the success path (depth reset to 0, then set and clear) passes in the QEMU T31 only and has not run on a camera yet, and OpenIMP records the flag without a separate zero-copy frame path, so the cell stays an API round trip. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): fs chn+0x24c (only while the depth is 0, else 0x80010020), read by GetFrame / ReleaseFrame / SetFrameDepth -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T31 libimp 1.1.6 (disassembly): channel below 5; allowed only while the channel frame depth is 0 (stores bNoCopy != 0), otherwise logs and returns -1; OpenIMP matches this, any non-zero value counts as 1. Device (apitest, SetFrameDepth was 2 at that point): the refusal path and the invalid channel are proven; the success path (depth reset to 0, then set and clear) passes in the QEMU T31 only and has not run on a camera yet, and OpenIMP records the flag without a separate zero-copy frame path, so the cell stays an API round trip. T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): fs chn+0x24c (only while the depth is 0, else 0x80010020), read by GetFrame / ReleaseFrame / SetFrameDepth -> the vendor applies it; still cache in OpenIMP (port open in #784). T33 (2026-11-26, #784, ported): with no copy the vendor SetFrameDepth takes the channel nrVBs as depth (argument ignored, a set depth stays), the frame thread hands GetFrame the capture buffer itself, held until ReleaseFrame (VBMLockFrameByPaddr / VBMUnlockFrameByPaddr), height rounded up to 16, and takes a free node only (no replacement of a waiting frame); OpenIMP does the same (capture buffer held, requeued at the release). QEMU A/B, buffered channel 0, 12 GetFrame frames: copy depth 1 both; no copy depth 2 (= nrVBs) both, 1920x1088 both, pa = a capture buffer both (vendor alternates its two buffers, OpenIMP returns one: our frame-rate drop requeues every second buffer, same in copy mode, not DepthCopy). With I2D on, OpenIMP keeps copying."
     },
     "FrameSource_SetIvdcMemLine": {
       "area": "FrameSource",

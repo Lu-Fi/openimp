@@ -60,6 +60,7 @@
 int OpenIMP_T32_FsChnState(int chn, int *depth);   /* openimp_t32_fs.c */
 int OpenIMP_T32_EncChnCreated(int encChn);           /* openimp_t32_encoder.c */
 int OpenIMP_T32_FsChnSize(int chn, int *w, int *h);  /* openimp_t32_fs.c */
+void OpenIMP_T32_FsSetNoCopy(int chn, int on);       /* openimp_t32_fs.c */
 
 static pthread_mutex_t ext_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -83,6 +84,7 @@ int IMP_FrameSource_SetFrameDepthCopyType(int chnNum, int b_nocopy_depth)
     pthread_mutex_lock(&ext_lock);
     fs_ext[chnNum].nocopy_depth = b_nocopy_depth != 0;
     pthread_mutex_unlock(&ext_lock);
+    OpenIMP_T32_FsSetNoCopy(chnNum, b_nocopy_depth);
     return 0;
 }
 

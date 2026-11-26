@@ -1184,11 +1184,19 @@ again:
                 got = -1;
         }
         MUST(IMP_FrameSource_SetFrameDepth(0, 1));
+        if (getenv("T32_FS_NOCOPY")) {  /* #784: the depth the library took (no copy = nrVBs) */
+            int d = -1;
+            IMP_FrameSource_GetFrameDepth(0, &d);
+            printf("T32N depth %d\n", d);
+        }
         if (mark)
             mark("frames");
         for (i = 0; i < streams; i++) {
             if (IMP_FrameSource_GetFrame(0, (void **)&frame))
                 continue;
+            if (getenv("T32_FS_NOCOPY"))        /* #784: per frame: copy slot or capture buffer */
+                printf("T32N %d idx %d pool %d %ux%u size %u pa 0x%08x\n", i, frame->index, frame->pool_idx,
+                       frame->width, frame->height, frame->size, frame->phyAddr);
             if (got == 0) {
                 frame_report("frame", frame);
                 printf("T32F snap pa=0x%08x size=%u w=%u h=%u\n", frame->phyAddr,

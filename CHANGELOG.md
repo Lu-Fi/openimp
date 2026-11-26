@@ -10,6 +10,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: T32/T33 SetFrameDepthCopyType no-copy GetFrame like the vendor (#784)
+
+- Vendor 2.0.2.1 (SetFrameDepth 0x14948c, frame thread 0x144eb4, GetFrame 0x14d0dc, ReleaseFrame 0x14db2c): with `SetFrameDepthCopyType(chn, 1)` the depth is the channel's nrVBs (the argument is ignored, a set depth stays), GetFrame gets the capture buffer itself, held until ReleaseFrame, the height rounded up to 16; a frame only goes to a free node.
+- OpenIMP now does the same: the depth slot holds the capture buffer (no copy, no own memory) and queues it again at the release; with I2D on it keeps copying. Before, the flag was stored only.
+- QEMU 0731 A/B (buffered channel 0, `direct_mode=0`, 12 GetFrame frames, t32_trace_sample `T32_FS_NOCOPY`): copy depth 1 both; no copy depth 2 = nrVBs both, 1920x1088 both, a capture-buffer address both. Cell T33 cache -> qemu.
+
 ## 2026-11-26: T10 light-box gate passed (#230)
 
 - Secuplug SP1 (T10, jxh42), cam .31, 5000 K and 3000 K: both reports GATE PASS (worse 0, invalid 0), `release.yaml` `lightbox_runs.T10` set. The 3000 K report has one row accepted by the user on 2026-11-26 (`cmp: AEC speech-like`, bimodal on both stacks: open bad 3 of 6 runs, vendor 2 of 6, median gap 0.1 dB, 2:2 tie under the repeat rule); it is shown as "accepted by the user 2026-11-26" and counted as equal.

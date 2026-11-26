@@ -113,6 +113,7 @@ struct t32_fs_slot {
     IMPFrameInfo frame;
     int state;
     uint32_t seq;
+    struct t32_fs_buf *nb;      /* no-copy depth (#784): the capture buffer this slot holds */
 };
 
 struct t32_fs_chn {
@@ -136,6 +137,7 @@ struct t32_fs_chn {
      * handed out a 3 s old copy after a fresh one; it also starts over after a stream restart) */
     uint32_t dseq;
     int depth;
+    int nocopy;                 /* SetFrameDepthCopyType(chn, 1) (#784) */
     struct t32_fs_slot slot[T32_FS_MAX_DEPTH];
     pthread_cond_t ready;
     uint32_t frames, dropped, copied, sink_frames;
@@ -323,6 +325,17 @@ static uint32_t fs_slot_size(const struct t32_fs_chn *c)
     return c->i2d_on && c->i2d_geom.dst_size > c->alloc ? c->i2d_geom.dst_size : c->alloc;
 }
 
+/* no-copy depth (#784): give the slot's capture buffer back (queued again once nobody holds it) */
+static void fs_nocopy_put_locked(struct t32_fs_chn *c, struct t32_fs_slot *s)
+{
+    struct t32_fs_buf *b = s->nb;
+
+    s->nb = NULL;
+    s->state = SLOT_FREE;
+    if (b && b->holds > 0 && --b->holds == 0 && b->out && c->run && !c->direct)
+        fs_qbuf(c, b);
+}
+
 static void fs_slots_sync_locked(struct t32_fs_chn *c)
 {
     int i;
@@ -331,6 +344,19 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
         struct t32_fs_slot *s = &c->slot[i];
         int want = c->enabled && i < c->depth;
 
+        if (s->nb) {
+            /* no-copy slot: no memory of its own, it only holds a capture buffer */
+            if (!want && s->state == SLOT_READY)
+                fs_nocopy_put_locked(c, s);
+            continue;
+        }
+        if (c->nocopy && !c->i2d_on) {
+            if (s->dma.phys_addr && s->state != SLOT_USER && s->state != SLOT_FILLING)
+                fs_free_dma(&s->dma);
+            if (s->state != SLOT_USER && s->state != SLOT_FILLING)
+                s->state = SLOT_FREE;
+            continue;
+        }
         if (want && !s->dma.phys_addr && c->alloc) {
             if (fs_alloc(&s->dma, fs_slot_size(c), "fs-depth") == 0)
                 s->state = SLOT_FREE;
@@ -373,8 +399,11 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
     int i;
 
     for (i = 0; i < c->depth && i < T32_FS_MAX_DEPTH; i++)
-        if (c->slot[i].dma.phys_addr && c->slot[i].state == SLOT_FREE)
+        if ((c->slot[i].dma.phys_addr || (c->nocopy && !c->i2d_on)) && c->slot[i].state == SLOT_FREE)
             return &c->slot[i];
+    /* no copy: the vendor takes a free node only (the capture buffers held for GetFrame stay held) */
+    if (c->nocopy && !c->i2d_on)
+        return NULL;
     /* none free: replace the oldest waiting copy */
     for (i = 0; i < c->depth && i < T32_FS_MAX_DEPTH; i++) {
         struct t32_fs_slot *s = &c->slot[i];
@@ -739,8 +768,21 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
     nsinks = fs_collect_sinks_locked(chn, c->direct, fn, ctx, T32_FS_MAX_BINDS);
     fs_ex_offer_locked(c, b);
     slot = c->direct ? NULL : fs_pick_slot_locked(c);
-    if (slot)
+    if (slot && c->nocopy && !c->i2d_on) {
+        /* SetFrameDepthCopyType(chn, 1) (#784, vendor 2.0.2.1 0x144eb4 / GetFrame 0x14d0dc / ReleaseFrame 0x14db2c):
+         * GetFrame gets the capture buffer itself, held (VBMLockFrameByPaddr) until ReleaseFrame, the height rounded
+         * up to 16 (the UV plane follows ALIGN16(height) rows); no copy */
+        slot->nb = b;
+        b->holds++;
+        slot->frame = b->frame;
+        slot->frame.height = ALIGN_UP(slot->frame.height, 16);
+        slot->seq = ++c->dseq;
+        slot->state = SLOT_READY;
+        pthread_cond_broadcast(&c->ready);
+        slot = NULL;
+    } else if (slot) {
         slot->state = SLOT_FILLING;
+    }
     pthread_mutex_unlock(&fs_lock);
 
     if (slot) {
@@ -1298,10 +1340,31 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
                     chnNum);
         return -1;
     }
+    if (c->nocopy && depth > 0) {
+        /* vendor 2.0.2.1 SetFrameDepth (0x14948c): with no copy the depth is the channel's nrVBs, whatever the
+         * argument, and a set depth stays */
+        if (c->depth > 0) {
+            pthread_mutex_unlock(&fs_lock);
+            return 0;
+        }
+        depth = c->attr.nrVBs < T32_FS_MAX_DEPTH ? c->attr.nrVBs : T32_FS_MAX_DEPTH;
+    }
     c->depth = depth;
     fs_slots_sync_locked(c);
     pthread_mutex_unlock(&fs_lock);
     return 0;
+}
+
+/* SetFrameDepthCopyType (openimp_t32_fs_enc_ext.c, depth checked there) */
+void OpenIMP_T32_FsSetNoCopy(int chn, int on)
+{
+    struct t32_fs_chn *c = fs_get(chn);
+
+    if (!c)
+        return;
+    pthread_mutex_lock(&fs_lock);
+    c->nocopy = on != 0;
+    pthread_mutex_unlock(&fs_lock);
 }
 
 int IMP_FrameSource_GetFrameDepth(int chnNum, int *depth)
@@ -1381,6 +1444,8 @@ int IMP_FrameSource_ReleaseFrame(int chnNum, void *frame)
         struct t32_fs_slot *s = &c->slot[i];
 
         if (frame == &s->frame && s->state == SLOT_USER) {
+            if (s->nb)
+                fs_nocopy_put_locked(c, s);     /* vendor: VBMUnlockFrameByPaddr */
             s->state = SLOT_FREE;
             rc = 0;
             break;
