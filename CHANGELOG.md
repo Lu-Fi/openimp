@@ -14,6 +14,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 - SU_Base_Shutdown host -> dev on T10 .31, T21 .24, T23 .30, T31 .21, T40 .184: LD_PRELOAD shim over sync()/kill(); image and vendor libsysutils both call sync() then kill(1, 17) and return 0. Real call on T21 .24: board powered down and the HW watchdog rebooted it after about 25 s.
 - SU_Base_Suspend aud -> dev on T10, T21, T23, T31 (3.10 kernel, no /sys/power, no RTC): image and vendor libsysutils both return -1/ENOENT. T40 (4.4, `mem` offered, no wake source) was not called. T20 (light box busy), T30 (ABUS cams only) and T41 (board off) are not run.
+- SU_Base_Suspend host -> dev on T40 .184 (Eufy, 4.4.94, `mem` offered, no wake source): called once with the image and once with the vendor ISVP 1.3.1 libsysutils, both -1/EINVAL, camera stayed up (no suspend started). Shutdown on T40 re-run with the extended shim (also blocks connect/send/exec/popen/open of tty): same sync(), kill(1,17), 0.
 - Evidence and test programs: `audit/su-cells-1125/` (pm_call.c, shim.c, run_cam.sh, out-*-su.txt).
 
 ## 2026-11-26: T32/T33 SetFrameDepthCopyType no-copy GetFrame like the vendor (#784)
