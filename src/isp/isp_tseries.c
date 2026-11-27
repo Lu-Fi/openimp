@@ -131,8 +131,9 @@ static IMPISPTemperDenoiseAttr tseries_temper_dns = {
  *  - SetTemperDnsAttr (0xd6520) / GetTemperDnsAttr (0xd66f8): tuning SET/GET 0x8000083 with the 8-byte attr.
  * NCU engine (#701, src/t30/t30_ncu.c, docs/T30_NCU.md): an ncu bin in the vendor 1.0.4 layout (stock ABUS
  * firmware libimp 1.0.4, AddSensor 0xc5ed0) selects the 3D mode (flags >> 16 & 3): 0 NCU always on, 1 Temper by
- * day and NCU at night (SetISPRunningMode), 2 Temper.  A 1.0.5-layout bin (0xec8 bytes) is not supported yet
- * and falls back to Temper.
+ * day and NCU at night (SetISPRunningMode), 2 Temper.  The vendor 1.0.5 layout (0xec8 bytes, version byte 1,
+ * EnableSensor 0xd3fe4, the generic ncu_*.bin of the ingenic-sdk sensor-iq/t30) is read the same way (#703);
+ * there every mode but 0 and 1 is Temper only (1.0.4: mode 3 is an error).
  */
 #define TSERIES_T30_CID_TEMPER_ATTR 0x8000083
 #define TSERIES_T30_CID_TEMPER_BUF  0x8000084
@@ -5859,6 +5860,7 @@ static void tseries_t30_temper_alloc(ISPDevice *isp)
     uint32_t w = tseries_t30_vi_max_wh >> 16;
     uint32_t h = tseries_t30_vi_max_wh & 0xffffu;
     uint32_t frame, total, mode3d = 2;
+    int probe;
     char path[64];
     void *buf;
 
@@ -5868,20 +5870,19 @@ static void tseries_t30_temper_alloc(ISPDevice *isp)
         return;
     }
     snprintf(path, sizeof(path), "/etc/sensor/ncu_%s.bin", (const char *)(isp_b + 0x28));
-    switch (t30_ncu_bin_probe(path, &mode3d)) {
+    probe = t30_ncu_bin_probe(path, &mode3d);
+    switch (probe) {
     case T30_NCU_BIN_104:
+    case T30_NCU_BIN_105:
         printf("flags = 0x%x\n", (unsigned)mode3d);
         if (mode3d == 0 || mode3d == 1) {
             tseries_t30_ncu_alloc(isp, (int)mode3d, w, h);
             return;
         }
-        if (mode3d != 2) {
+        if (mode3d != 2 && probe == T30_NCU_BIN_104) {
             printf("error: do not support this 3d mode %u\n", (unsigned)mode3d);
             return;   /* vendor 1.0.4: no buffer, mode stays 0 (temper off) */
         }
-        break;
-    case T30_NCU_BIN_105:
-        printf("warn: %s has the 1.0.5 NCU layout, not supported: use temper\n", path);
         break;
     case T30_NCU_BIN_INVALID:
         printf("warn: %s: unknown NCU bin layout: use temper\n", path);

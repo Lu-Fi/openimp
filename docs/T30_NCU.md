@@ -25,20 +25,36 @@ Bin layout 1.0.4: 0x1548 bytes = size word, day set (0xaa0 bytes) at +4, night s
 Each set: flags (+0), function enables (+4, to 0x24 bits 31:8), 9 gain points (+0x08..+0x28),
 then tuning values (mostly 9-point tables).
 
-## Not supported
+## Bin layout 1.0.5 (#703)
 
-- The vendor 1.0.5 layout (0xec8 bytes, version byte 1; the generic `ncu_*.bin` of the ingenic-sdk
-  `sensor-iq/t30/`, one identical file for every sensor, 3D mode 0). 1.0.5 asserts on 1.0.4 bins,
-  1.0.4 cannot read 1.0.5 bins. OpenIMP logs it and keeps Temper (follow-up issue).
+Vendor libimp 1.0.5 (T30X library, gcc 5.4.0 build, md5 ad636e05): the generic `ncu_*.bin` of the
+ingenic-sdk `sensor-iq/t30/` (one identical file for every sensor, 3D mode 0). 0xec8 bytes =
+size word, day set (0x760 bytes) at +4, night set at +4+0x760, one more word. Each set starts with the
+flags word (bits 31:24 version 1, `(flags & 0x3ffff) >> 16` = 3D mode, bits 1-2 debug logging, bit 3
+also writes 0x04 = 2, bit 4 also writes 0x24, bit 0 stops the 1 s update).
+
+| Step | Vendor 1.0.5 (nm address) | OpenIMP |
+|---|---|---|
+| bin probe | EnableSensor 0xd3fe4: 2 words, `flags >> 24 == 1` else assert | `t30_ncu_bin_probe` (no assert: invalid = Temper) |
+| load | `ncu_load_param` 0xde400 fread 0xec8, `ncu_set_params` 0xd7f28 | `t30_ncu_hal_init` (layout from the probe) |
+| active set | `ncu_ctrl_update_param` 0xd80a0: day or night set to `g_ncu_t30_param`, download with `isp_get_total_gain` | same |
+| bypass 0 | `ncu_func_bypass` 0xd834c: enables from set+4, engine word set+0x30, bit set+0x2c | same, offsets of the layout |
+| per-gain download | `ncu_func_par_download` 0xd86d8 (0x5b2c bytes) | `t30_ncu_par105.c` (transcribed, oracle-checked) |
+| mode 2 / 3 / no file | Temper only (mode 3 not an error as in 1.0.4) | Temper only |
+
+1.0.5 asserts on 1.0.4 bins and 1.0.4 cannot read 1.0.5 bins; OpenIMP reads both (beyond vendor).
 - The NCU debug server (`/tmp/ncudbg.cfg`) and `/tmp/ncu_sta_get_flag`.
 
 ## Test
 
-- `tests/t30/ncu_test.c`: the whole sequence (init, buffers, bypass, night and day sets, 10 gains)
+- `tests/t30/ncu_test.c`: (1.0.4 and 1.0.5, `fixtures/ncu105_synth_mode{0,1}.txt` recorded from the 1.0.5
+  library with the same oracle tool) the whole sequence (init, buffers, bypass, night and day sets, 10 gains)
   against the vendor register trace in `tests/t30/fixtures/ncu104_synth_mode{0,1}.txt`, recorded by
   `tools/t30_ncu/ncu_oracle.c` (vendor libimp 1.0.4 under qemu-mipsel, register accessors
   preempted) on the synthetic bin of `tests/t30/ncu_synth_bin.h`. Write for write identical, also
   when cross-built for mipsel and run under qemu-mipsel.
+- 1.0.5 during development: an SDK sensor-iq bin (private, not published) at 19 gains and 145 randomised
+  bins (flags, sizes, modes) identical (`tools/t30_ncu/ncu_host_trace.c` against the oracle).
 - During development: the ABUS bin at 19 gains (day and night) and 75 randomised bins identical.
 
 ## Firmware
