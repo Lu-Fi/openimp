@@ -78,5 +78,7 @@ typedef struct {
     uint32_t qpg;               /* P+0x194 */
 } T32E1Rc;
 int OpenIMP_T32_E1RcTake(int encChn, int idr, T32E1Rc *r);
+/* #788: Color2Grey active for the next picture (H.264 and H.265): 1 = chroma source is a grey plane */
+int OpenIMP_T32_E1GreyChroma(int encChn);
 
 #endif
