@@ -11,6 +11,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+
+## 2026-11-27: T33 IMP_ISP_Set/GetFrameDropOnce (#929)
+- `IMP_ISP_SetFrameDropOnce` / `IMP_ISP_GetFrameDropOnce` are now exported on T33 as well (they were T32 only, the carrier-server reference application failed to link). Vendor T33 SDK 2.0.0 / 2.1.0 libimp (uclibc 0x1151d4 / 0x1157a8): same checks and codes (ISP not open f008, NULL f009, VI >= 4 f00c, line size above 15 f004, ioctl error f001), same requests 0xc00454cd / 0xc00454ce, same clamp of the returned line sizes to 15 as the T32 path; one source for both. The vendor 2.0.2.1 libimp has no such export.
+- The open-tx-isp module served neither request on T32 or T33 (answered f001): it now keeps the vendor once table per output and answers as the vendor T32 / T33 modules (T33 vendor module `tx_isp_unlocked_ioctl` 0x17b80 / 0x17da0). Branch `claude/919-otx-lows` in open-tx-isp carries it (needed for the device).
+- QEMU (`-M ingenic-t33`, cv2005): new explicit apitest case `t33drop`, return codes and the read-back as expected (lines in audit/issue929/q/ours); no vendor-library A/B on T33 (the 2.0.2.1 library has no export, the 2.0.0 library does not run on that userland).
+- api_evidence: `ISP_GetFrameDropOnce` / `ISP_SetFrameDropOnce` T33 `n.a.` -> `qemu`; matrix regenerated.
+
 ## 2026-11-27: T32 API follows vendor 2.2.0: SetMaxStreamCnt before CreateChn, PollingStream / FlushStream codes, SetChnAttr on a running channel (#936, #937, #938)
 
 - Reference build: the QEMU T32 rootfs libimp 2.2.0 (md5 98071ecd0c). The PRJ007 production libimp 1.0.5 (afe092fb, #856) differs: its SetMaxStreamCnt only logs. The 2.2.0 build is the one the issues name and the newer API, so the T32 now follows it.
@@ -88,7 +95,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `IMP_Encoder_SetAutoVui` (vendor 2.2.0 0xf4118 + the encode loop 0xf1730 / 0xf2bd8): with it on, the encode loop reads the ISP colour gamut per frame and, when it changed, updates the VUI video signal (full range, colour description, matrix 5 / 9 / 1, primaries and transfer 1) through the Get/Set VUI path. QEMU A/B: SPS bytes and VUI read-back of H.264 and H.265 identical to the vendor library.
 - The T32 SPS / H.265 SPS now carry the VUI colour description the application sets (vendor 2.2.0 writes it; T33 2.0.2.1 does not, unchanged).
 - `IMP_ISP_LDC_OnlineInit` on T32 accepts only func 4 like the PRJ007 branch of the vendor library (I2D / HLDC 0xfffff004); T33 unchanged (#933).
-- #929 (GetFrameDropOnce) is done for T32 (batch 1); T33 has no such export in 2.0.2.1.
+- #929 (GetFrameDropOnce) is done for T32 (batch 1); T33 follows on 2026-11-27 (the 2.0.2.1 library has no such export, SDK 2.0.0 / 2.1.0 have).
 
 ## 2026-11-26: T32 API gap cells batch 1: FrameDropOnce, OneShotDropCnt, OneByOne callback, online LDC state calls (#99)
 
