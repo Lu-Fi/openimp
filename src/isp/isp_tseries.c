@@ -2424,14 +2424,90 @@ int ISP_EnsureLinkStreamOn(int32_t sensor_idx)
 }
 
 #if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
+#if defined(PLATFORM_T20)
+static int tseries_t20_tuning_ready(void);
+
+/*
+ * T20/T10 3.12.0 SetISPHflip (0x5ceec), SetISPVflip (0x5d2a0) and
+ * SetISPHVflip (0x5d684): tuning must be enabled (else -1); with Temper in
+ * AUTO the vendor switches it to MANUAL strength 0x28 for the flip, sleeps
+ * 120 ms (usleep(120000) at 0x5d0b4 / 0x5d4d8 / 0x5d858) and then restores
+ * the saved Temper attribute.  The single flips add the GetTemperDnsAttr
+ * result to the flip result.
+ *
+ * The sleep also orders the start-up: IMP_ISP_EnableTuning opens the tuning
+ * node, and the driver reloads the day IQ tables at the next frame end.  An
+ * app that flips right after EnableTuning (timps applies hflip and vflip
+ * before its other image settings) therefore sends HiLightDepress & co.
+ * after that reload, as on the vendor.  Without the wait the reload came
+ * after HiLightDepress 0 and put the bin's AE highlight weight (knee 7)
+ * back: the AE settled 8-20 % darker than the vendor (openimp #944).
+ */
+static int tseries_t20_flip_begin(IMPISPTemperDenoiseAttr *saved, int *get_result)
+{
+    IMPISPTemperDenoiseAttr manual;
+
+    memset(saved, 0, sizeof(*saved));
+    *get_result = IMP_ISP_Tuning_GetTemperDnsAttr(saved);
+    if (*get_result == 0 && saved->type == IMPISP_TEMPER_AUTO) {
+        memset(&manual, 0, sizeof(manual));
+        manual.type = IMPISP_TEMPER_MANUAL;
+        manual.temper_strength = 0x28;
+        if (IMP_ISP_Tuning_SetTemperDnsAttr(&manual) != 0) {
+            IMP_LOG_ERR("IMP-ISP", "flip: SetTemperDnsAttr(manual 0x28) failed");
+        }
+    }
+    return saved->type == IMPISP_TEMPER_AUTO;
+}
+
+static int tseries_t20_flip_end(IMPISPTemperDenoiseAttr *saved, int guarded, int result)
+{
+    if (!guarded) {
+        return result;
+    }
+    usleep(120000);
+    result += IMP_ISP_Tuning_SetTemperDnsAttr(saved);
+    if (result != 0) {
+        IMP_LOG_ERR("IMP-ISP", "flip: Temper restore / flip failed (%d)", result);
+    }
+    return result;
+}
+
+static int tseries_t20_flip_one(int32_t cid, IMPISPTuningOpsMode mode)
+{
+    IMPISPTemperDenoiseAttr saved;
+    int get_result;
+    int guarded;
+    int result;
+
+    if (!tseries_t20_tuning_ready()) {
+        return -1;
+    }
+    guarded = tseries_t20_flip_begin(&saved, &get_result);
+    result = tseries_v4l2_set(cid, mode);
+    if (result == 0) {
+        if (cid == TISP_V4L2_CID_HFLIP) {
+            tseries_hvflip = (tseries_hvflip & 2) | (mode ? 1 : 0);
+        } else {
+            tseries_hvflip = (tseries_hvflip & 1) | (mode ? 2 : 0);
+        }
+    }
+    return tseries_t20_flip_end(&saved, guarded, result + get_result);
+}
+#endif
+
 int IMP_ISP_Tuning_SetISPHflip(IMPISPTuningOpsMode mode)
 {
+#if defined(PLATFORM_T20)
+    return tseries_t20_flip_one(TISP_V4L2_CID_HFLIP, mode);
+#else
     int result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, mode);
 
     if (result == 0) {
         tseries_hvflip = (tseries_hvflip & 2) | (mode ? 1 : 0);
     }
     return result;
+#endif
 }
 
 int IMP_ISP_Tuning_GetISPHflip(IMPISPTuningOpsMode *pmode)
@@ -2455,12 +2531,16 @@ int IMP_ISP_Tuning_GetISPHflip(IMPISPTuningOpsMode *pmode)
 
 int IMP_ISP_Tuning_SetISPVflip(IMPISPTuningOpsMode mode)
 {
+#if defined(PLATFORM_T20)
+    return tseries_t20_flip_one(TISP_V4L2_CID_VFLIP, mode);
+#else
     int result = tseries_v4l2_set(TISP_V4L2_CID_VFLIP, mode);
 
     if (result == 0) {
         tseries_hvflip = (tseries_hvflip & 1) | (mode ? 2 : 0);
     }
     return result;
+#endif
 }
 
 int IMP_ISP_Tuning_GetISPVflip(IMPISPTuningOpsMode *pmode)
@@ -2491,12 +2571,26 @@ int IMP_ISP_Tuning_GetISPVflip(IMPISPTuningOpsMode *pmode)
  * flip stays the same, only the control it travels on differs. */
 int IMP_ISP_Tuning_SetISPHVflip(IMPISPTuningOpsMode hmode, IMPISPTuningOpsMode vmode)
 {
-    int result = IMP_ISP_Tuning_SetISPHflip(hmode);
+    /* one Temper guard and one 120 ms wait for both flips, as the vendor
+     * (0x5d684); the GetTemperDnsAttr result is not added here */
+    IMPISPTemperDenoiseAttr saved;
+    int get_result;
+    int guarded;
+    int result;
 
-    if (result != 0) {
-        return result;
+    if (!tseries_t20_tuning_ready()) {
+        return -1;
     }
-    return IMP_ISP_Tuning_SetISPVflip(vmode);
+    guarded = tseries_t20_flip_begin(&saved, &get_result);
+    result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, hmode);
+    if (result == 0) {
+        tseries_hvflip = (tseries_hvflip & 2) | (hmode ? 1 : 0);
+        result = tseries_v4l2_set(TISP_V4L2_CID_VFLIP, vmode);
+        if (result == 0) {
+            tseries_hvflip = (tseries_hvflip & 1) | (vmode ? 2 : 0);
+        }
+    }
+    return tseries_t20_flip_end(&saved, guarded, result);
 }
 
 int IMP_ISP_Tuning_GetISPHVflip(IMPISPTuningOpsMode *phmode, IMPISPTuningOpsMode *pvmode)
