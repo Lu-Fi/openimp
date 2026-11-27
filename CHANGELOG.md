@@ -2,6 +2,7 @@
 
 **Where to read what**
 
+- T20 .107 (light-box camera, 2026-11-27): SU_Key_EnableEvent, SU_Base_Suspend and SU_Base_Shutdown cells host/aud -> dev in docs/api_evidence.json (key round trip Enable 0 / Disable -1 EINVAL like T10/T21/T23; suspend -1 ENOENT and shutdown sync()+kill(1, 17) equal to the vendor libsysutils). #916 smoke on the T20X: push 2 channels 300 s, 4501 pictures each, 0 gaps, 20/20 stop/start cycles, no oops. High burst T20 (8 interleaved rounds, flashed ko): open 25 gaps / 37 lost frames vs vendor 21 / 26, within the Poisson rule, no gap train.
 - **This file**: release-oriented summary per area (what changed against the vendor stack and against the original upstream line, [opensensor/openimp](https://github.com/opensensor/openimp)), followed by the condensed OpenIMP-only log by date.
 - **Full campaign log**: [docs/OPEN_STACK_CHANGELOG.md](docs/OPEN_STACK_CHANGELOG.md): every change of OpenIMP, open-tx-isp and the thingino integration since 2026-09-30, per session, with device-test evidence and numbers (condensed for 2026-10-25 to 2026-11-11). The wiki page *Changelog* carries the per-day log of both repositories up to the newest release.
 - **Current state per feature and SoC**: [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) (HTML view: [docs/feature-matrix.html](docs/feature-matrix.html)); what goes beyond the vendor: [docs/OPENIMP_BEYOND_VENDOR.md](docs/OPENIMP_BEYOND_VENDOR.md).
