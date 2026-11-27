@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-26",
+  "asof": "2026-11-27",
   "socs": [
     "T10",
     "T20",
@@ -3431,7 +3431,8 @@
         "T40": "apitest agg47 2026-10-26 .184",
         "T23": "apitest rc3-cases 2026-10-26 .30",
         "T31": "apitest next+ko/libimp swap 2026-10-27 .26"
-      }
+      },
+      "note": " 2026-11-27 (#944 #948): SetISPHflip/Vflip/HVflip follow the vendor Temper guard and 120 ms wait on T10/T20/T21/T30 (host test; T20 light-box gate run, no gap train)."
     },
     "ISP_Tuning_GetISPBypass": {
       "area": "ISP tuning",
@@ -7772,7 +7773,7 @@
           "r†"
         ]
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetMaxStreamCnt: ret=0 4; Encoder_SetMaxStreamCnt: ret=0 set 3, read back 3). T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c); the #297 apitest listed the encoder max-stream-count case as FAIL on the pre-merge build.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetMaxStreamCnt: ret=0 4; Encoder_SetMaxStreamCnt: ret=0 set 3, read back 3). T32 (2026-11-11 #300 follow-up): implemented (not a stub) in OpenIMP's T32 build; no QEMU call in tools/t32 samples or the #297 apitest run (src/t32/openimp_t32_encoder.c); the #297 apitest listed the encoder max-stream-count case as FAIL on the pre-merge build. T31 (2026-11-27, #942, device-tested on the T31 test camera): vendor 1.1.6 CreateChn does sem_init(chn+0x178, 0, N) and the encode thread sem_trywaits it per picture; OpenIMP now holds N distinct streams (default 2): held 2/1/2/3 for default/1/2/3 like the vendor, host test tests/t31/p2_hold_test. T32/T33 (#936 #937 #957): count stored before CreateChn, PollingStream / FlushStream vendor return codes (QEMU).",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -8462,7 +8463,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (H264 chn 0, timeout 3000 ms -> 0 (0 = frame ready)).",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #16): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (H264 chn 0, timeout 3000 ms -> 0 (0 = frame ready)). 2026-11-27: T31 (#942) with N held streams the poll waits for a ReleaseStream and times out (-1) like the vendor; T32 (#936 #937 #938) / T33 (#957) vendor return codes for PollingStream / FlushStream, SetChnAttr on a running channel (QEMU, vendor libimp 2.2.0 / 2.0.2.1 A/B).",
       "ref": {
         "T10": "apitest agg63 2026-10-31 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -10325,7 +10326,7 @@
           "t†"
         ]
       },
-      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (ch0). Host test fs_lifecycle_test_t30. Same 0x5c-versus-0x4c descriptor note as CreateChn.",
+      "note": "audit: reaches the driver/kernel. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #17): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (ch0). Host test fs_lifecycle_test_t30. Same 0x5c-versus-0x4c descriptor note as CreateChn. T32/T33 (2026-11-27, #960): EnableChn on an already enabled channel returns 0x80010040 like the vendor (T32 2.2.0 0x144c0c, T33 2.1.0 0x13f174; QEMU carrier case A1); T31 stays 0 like vendor 1.1.6.",
       "ref": {
         "T10": "apitest t10wrench 2026-11-03 .31",
         "T20": "apitest agg63 2026-10-31 .107",
@@ -10853,7 +10854,7 @@
           "r†"
         ]
       },
-      "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (16 frames 640x360 luma 137 (first frame 137) ts monotonic 1, 19.3 fps (wall), ts span 735659 us). FIXED: the T30 build did not wait; the vendor 1.0.5 (0xe4118) waits up to 2 s on the depth list like T20/T21/T23/T31. QEMU: the case failed before ('0 frames') and passes now (16 frames at 19 fps). Host test fs_lifecycle_test_t30.",
+      "note": "audit: reaches the driver/kernel; userspace implementation; used by: T10/T20/T21/T31/T41: raptor†; T23: raptor, timps; all: GetFrame/SnapFrame wait up to 2 s like the vendor libimp (T20 REQBUFS/SET_BANKS fix, T21/T23/T31 wait), apitest PASS. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #25): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (16 frames 640x360 luma 137 (first frame 137) ts monotonic 1, 19.3 fps (wall), ts span 735659 us). FIXED: the T30 build did not wait; the vendor 1.0.5 (0xe4118) waits up to 2 s on the depth list like T20/T21/T23/T31. QEMU: the case failed before ('0 frames') and passes now (16 frames at 19 fps). Host test fs_lifecycle_test_t30. 2026-11-27 (#932, #940): T21/T23/T30/T31 GetFrame with a frame depth gets every frame next to a bound encoder (vendor frame-depth list); T10/T20 capture, encode and release path without malloc (#940), DisableChn ends the LISTEN_BUF wait like the vendor (#956).",
       "ref": {
         "T10": "apitest agg47 2026-10-26 .31",
         "T20": "apitest agg47 2026-10-26 .107",

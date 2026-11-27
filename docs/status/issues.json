@@ -1791,7 +1791,7 @@
   },
   {
    "number": 107,
-   "title": "Release 1: 14-day fleet soak on the release image",
+   "title": "Release 1: light-box run per SoC + 72 h stable on the release image (gate changed 2026-11-21, #760)",
    "state": "open",
    "url": "https://github.com/Lu-Fi/openimp/issues/107",
    "labels": [
@@ -3419,7 +3419,7 @@
   {
    "number": 258,
    "title": "T31 kernel 7: audio in/out needs an ALSA backend (no /dev/dsp on mainline)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/258",
    "labels": [
     "area:Audio",
@@ -3795,7 +3795,7 @@
   {
    "number": 295,
    "title": "T32: rate control (eprc T32/T33 defaults, CBR/VBR/capped, statistics read-back)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/295",
    "labels": [
     "soc:T32"
@@ -4779,7 +4779,7 @@
   {
    "number": 437,
    "title": "T33: AF block (algorithm, statistics, register write) not ported (tx-isp-t33.ko)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/437",
    "labels": [
     "prio:long-term",
@@ -5330,7 +5330,7 @@
   {
    "number": 509,
    "title": "T33 HW: direct_mode=1 (IVDC) hard hang after ivdc_frame_channel_reqbufs",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/509",
    "labels": [
     "area:Driver",
@@ -5426,7 +5426,7 @@
   {
    "number": 516,
    "title": "T33 HW: OpenIMP FrameSource needs more rmem than the vendor (raptor sub stream dropped), SetFrameDepth before EnableChn refused",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/516",
    "labels": [
     "area:FrameSource",
@@ -5509,7 +5509,7 @@
   {
    "number": 521,
    "title": "[T40] Night matched exposure: open frame mean 2.8 codes darker than vendor (shadow ratio now 0.988)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/521",
    "labels": [
     "area:ISP",
@@ -5585,7 +5585,7 @@
   {
    "number": 526,
    "title": "T33 HW: IVDC soft reset never completes on the thingino platform (vendor tx-isp-t33.ko spins too)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/526",
    "labels": [
     "area:Driver",
@@ -5669,7 +5669,7 @@
   {
    "number": 531,
    "title": "T33: JPEG quality above ~78 is not applied (q95 gives the q78 table), JPEG channel idle for 2 s after a streamer restart",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/531",
    "labels": [
     "area:Encoder",
@@ -5736,7 +5736,7 @@
   {
    "number": 535,
    "title": "T32: recheck the T33 silicon findings on T32 hardware (D-PHY words, IPC init, JPEG control word, settle)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/535",
    "labels": [
     "area:Driver",
@@ -5796,7 +5796,7 @@
   {
    "number": 542,
    "title": "T20 kernel 7: main channel fails, VIDIOC_CROPCAP returns ENOTTY (no selection ops in the 7.x frame channel)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/542",
    "labels": [],
    "created": "2026-11-14T17:40:32Z",
@@ -5806,7 +5806,7 @@
   {
    "number": 543,
    "title": "T20 kernel 7: no audio, jz4740-i2s probe fails with -22",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/543",
    "labels": [],
    "created": "2026-11-14T17:41:17Z",
@@ -5832,7 +5832,7 @@
   {
    "number": 545,
    "title": "T32/T33 OpenIMP lacks the OpenIMP marker exports timps checks: OpenIMP-flavour timpsd refuses to start",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/545",
    "labels": [
     "area:System",
@@ -5896,7 +5896,7 @@
   {
    "number": 555,
    "title": "[T10] first stream after a ko restore shows one non-monotonic DTS line in the muxer (repeatable, rerun clean)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/555",
    "labels": [
     "area:Encoder",
@@ -5961,7 +5961,7 @@
   {
    "number": 560,
    "title": "[T40] IMP_ISP_Tuning_GetAwbAttr returns CT 0 on the open stack (vendor returns the AWB CT estimate)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/560",
    "labels": [
     "area:ISP",
@@ -6333,7 +6333,7 @@
   {
    "number": 603,
    "title": "[T10/T20] Default AE is our own bounded histogram AE (t20_simple_ae=Y), not the recovered vendor AE state graph",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/603",
    "labels": [
     "area:AE-AWB",
@@ -6382,7 +6382,7 @@
   {
    "number": 606,
    "title": "T20 k7: no video after open-tx-isp 91fec5399 (vb2_v4l2_buffer overlays the #467 FIFO entry)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/606",
    "labels": [
     "area:System",
@@ -6398,7 +6398,7 @@
   {
    "number": 607,
    "title": "open-tx-isp: move kernel-7 fixes (thingino patches 0050-0053) into open-tx-isp next",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/607",
    "labels": [
     "area:System",
@@ -6569,7 +6569,7 @@
   {
    "number": 620,
    "title": "[T30] simple_3a=0 has no vendor AWB path (vendor 3A flow not complete on T30)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/620",
    "labels": [
     "area:AE-AWB",
@@ -6583,7 +6583,7 @@
   {
    "number": 625,
    "title": "[T33] Root cause of the missing SRBC stop ack (fallback from #544 fires on ~50 % of warm boots)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/625",
    "labels": [
     "area:Driver",
@@ -6613,7 +6613,7 @@
   {
    "number": 630,
    "title": "QEMU 0.7.22 follow-ups: T32 AWB buffer interiors all zero, T40 snapshots +22 %, T33 'ours' ko not rebuilt",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/630",
    "labels": [
     "area:tests",
@@ -6626,7 +6626,7 @@
   {
    "number": 640,
    "title": "[T10/T20] AEC tuning vs vendor: OpenIMP AECM residual 3.9 dB vs vendor AEC 2.3 dB",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/640",
    "labels": [
     "area:Audio",
@@ -6702,7 +6702,7 @@
   {
    "number": 654,
    "title": "Light box: chart rows C/D come out 10-15 L* too dark on every camera and stack (light fall-off in the box)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/654",
    "labels": [
     "area:tests",
@@ -6747,7 +6747,7 @@
   {
    "number": 662,
    "title": "[T10] Light-box aeresp: lamps-off settle row stays INVALID (clip window 40 s shorter than the dark AE settle of ~43.5 s, both stacks)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/662",
    "labels": [],
    "created": "2026-11-17T10:06:23Z",
@@ -6774,7 +6774,7 @@
   {
    "number": 665,
    "title": "[T10][T20] full vendor AWB (t20_simple_awb=0) as default: light-box run first",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/665",
    "labels": [
     "area:AE-AWB",
@@ -6807,7 +6807,7 @@
   {
    "number": 671,
    "title": "[T33L] h264 fixqp qp 15 1080p: RTSP DESCRIBE 503, no stream (open and vendor both; vendor tagged n/a)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/671",
    "labels": [
     "bug"
@@ -6819,7 +6819,7 @@
   {
    "number": 678,
    "title": "[T33] kernel sound/oss3 PRJ008 sources differ from the vendor audio.ko release (codec power-up, clock parents, Ref-Loop FIFO)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/678",
    "labels": [
     "area:Audio",
@@ -6850,7 +6850,7 @@
   {
    "number": 685,
    "title": "[T33] IMP_ISP_Tuning_SetFaceAe: target 40 / 180 has no picture effect (Y 60.7 both)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/685",
    "labels": [
     "area:ISP",
@@ -6962,7 +6962,7 @@
   {
    "number": 708,
    "title": "[T32 kernel] ipu v13: ipu_start error path drops the open file's IPU clock reference (ingenic_ipu_v13.c:1006)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/708",
    "labels": [
     "area:OSD",
@@ -7042,7 +7042,7 @@
   {
    "number": 713,
    "title": "[T10] noisecurve: open analog gain lands one jxh42 table step under the pinned gain (3.75x vs 4x), vendor on the step",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/713",
    "labels": [],
    "created": "2026-11-20T23:26:14Z",
@@ -7514,7 +7514,7 @@
   {
    "number": 751,
    "title": "[T32] online LDC at ISP init not wired (library branch + module dma cfg)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/751",
    "labels": [
     "soc:T32",
@@ -7527,7 +7527,7 @@
   {
    "number": 752,
    "title": "[T32/T33] Encoder_Yuv*/InputJpege/QpgAI_Yuv not exported: port or mark n.a.",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/752",
    "labels": [
     "soc:T32",
@@ -7540,7 +7540,7 @@
   {
    "number": 753,
    "title": "[T33] api_evidence.json cells stale after 2026-11-20/21 merges; resolve T33 ? rows",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/753",
    "labels": [
     "soc:T32",
@@ -7553,7 +7553,7 @@
   {
    "number": 755,
    "title": "[T33] MDNS / CSCCR register lists run fewer times than the vendor (QEMU, /proc/tisp counters)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/755",
    "labels": [
     "area:Driver",
@@ -7570,7 +7570,7 @@
   {
    "number": 756,
    "title": "T33/T32 IVDC: unbounded soft-reset poll locks the streamer thread when the IVDC reset does not complete",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/756",
    "labels": [
     "area:Driver",
@@ -7583,6 +7583,911 @@
    "created": "2026-11-21T13:45:37Z",
    "closed": null,
    "milestone": null
+  },
+  {
+   "number": 765,
+   "title": "[T23DL] open-stack image for 32 MB boards (A12/QC3), QEMU proof",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/765",
+   "labels": [
+    "area:System",
+    "severity:medium",
+    "soc:T23",
+    "type:wip"
+   ],
+   "created": "2026-11-21T23:03:46Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 767,
+   "title": "[T23] OpenIMP has no IVDC direct mode: H.264 does not fit into the vendor rmem=8M on 32 MB T23DL boards",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/767",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:high",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-11-21T23:57:56Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 776,
+   "title": "[T21] open stack: ISP stays Night 180 s after the lamps come on (light box d1d4 D4)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/776",
+   "labels": [
+    "repo:openimp",
+    "type:bug"
+   ],
+   "created": "2026-11-22T06:33:29Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 784,
+   "title": "T33: close the 49 cache + 2 err API cells (vendor 2.0.2.1 apply-or-store audit)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/784",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-22T08:57:31Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 785,
+   "title": "[T23N] QC6 32 MB board: open-stack image",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/785",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "soc:T23",
+    "type:wip"
+   ],
+   "created": "2026-11-22T08:59:01Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 788,
+   "title": "T33: vendor 2.0.2.1 Color2Grey writes a user-space address as the HERA chroma source (EFE_RAWC)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/788",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-22T09:40:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 792,
+   "title": "[T20] Vendor-vs-open AE A/B with the vendor AE graph default (split from #603)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/792",
+   "labels": [
+    "area:AE-AWB",
+    "severity:medium",
+    "soc:T20"
+   ],
+   "created": "2026-11-22T11:13:12Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 798,
+   "title": "[T41] MSCA flip update: per-channel 0xf0010 requests back-to-back, may be dropped like #795 (unverified)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/798",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-11-22T12:21:59Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 799,
+   "title": "[T23] rmem: main+sub H.264 do not fit in rmem=8M (OEM runs both in 7.5M); second channel to start fails",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/799",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:high",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-11-22T12:34:00Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 800,
+   "title": "[T23] QC3 32 MB: silent WDT resets (preview, RTSP churn, timps restart, thrash)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/800",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:high",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-11-22T12:35:47Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 803,
+   "title": "[T33] Vendor 2.0.2.1 SetYuvAlign fails EnableChn, SetFrameDepthCopyType(1) frames unreadable (QEMU); OpenIMP only stores both",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/803",
+   "labels": [
+    "area:FrameSource",
+    "repo:openimp",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-22T13:14:40Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 815,
+   "title": "Light-box runner: ISP trace has no samples on the T21 vendor stack (aeresp)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/815",
+   "labels": [
+    "soc:T21",
+    "type:bug"
+   ],
+   "created": "2026-11-22T20:13:45Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 819,
+   "title": "[T10] Light-box gate: AE compensation settle slower than vendor (comp 40/160/200: 12-19 s vs 9-12 s)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/819",
+   "labels": [
+    "area:AE-AWB",
+    "repo:openimp",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-11-22T21:14:10Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 820,
+   "title": "[T10] Light-box gate: AWB auto at 5000 K settles in 36 s vs vendor 17 s",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/820",
+   "labels": [
+    "area:AE-AWB",
+    "repo:openimp",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-11-22T21:14:11Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 821,
+   "title": "[T40] Light-box gate: awbattr AWB auto settles in 25 s vs vendor 18 s (5000 K)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/821",
+   "labels": [
+    "area:AE-AWB",
+    "repo:openimp",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-11-22T21:14:12Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 835,
+   "title": "WHEP sub stream (chn=1): video stalls while audio keeps flowing (QC3, host client)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/835",
+   "labels": [
+    "repo:openimp",
+    "severity:low",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-11-23T11:51:22Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 844,
+   "title": "[T23] QC3: sub channel drops ~1.4 s of frames at the day->night running-mode switch after a timps restart",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/844",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:low",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-11-23T23:34:54Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 848,
+   "title": "T23 QC3 (gc1084, IVDC direct mode): encoder test patterns 1-3 do not reach the main stream; sensor pattern (mode 4) missing for gc1084",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/848",
+   "labels": [
+    "area:System",
+    "repo:openimp",
+    "severity:low",
+    "soc:T23",
+    "type:gap"
+   ],
+   "created": "2026-11-24T12:34:23Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 865,
+   "title": "QEMU T32: apitest enc area sometimes stops delivering pictures from SetChnQpBounds on (2 of 5 runs)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/865",
+   "labels": [
+    "soc:T32"
+   ],
+   "created": "2026-11-24T22:15:37Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 874,
+   "title": "timps: three RequestIDR in the first frames of a stream start give three IDR pictures (vendor-equal in libimp)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/874",
+   "labels": [
+    "area:Encoder",
+    "prio:streamer",
+    "severity:low",
+    "soc:T21",
+    "type:bug"
+   ],
+   "created": "2026-11-25T00:29:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 888,
+   "title": "T31 ko on kernel >= 4.20 (k7): frame stamps use CLOCK_MONOTONIC, vendor and OpenIMP use CLOCK_MONOTONIC_RAW",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/888",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-11-25T04:18:32Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 891,
+   "title": "T30: device check of the AHB1 gate hold during an IPU op (kernel patch 0011, follow-up of #875)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/891",
+   "labels": [
+    "area:OSD",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-25T06:58:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 907,
+   "title": "[T23] Snapshot 503: JPEG jobs wait up to 6 s for the shared Helix bitstream area (H.264 channels win the mutex)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/907",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:high",
+    "soc:T23",
+    "type:bug"
+   ],
+   "created": "2026-11-25T12:49:22Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 909,
+   "title": "neo-sysutils su_key: key ranges parsed wrongly; 4.4.94 gpio_keys refuses every disabled_keys write",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/909",
+   "labels": [],
+   "created": "2026-11-25T18:18:04Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 912,
+   "title": "[T33] Stand-alone H.265 (YuvEncode) first picture: HERA list differs from the vendor (QP field 0, intra/size words)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/912",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-25T21:02:27Z",
+   "closed": "2026-11-27T20:28:15Z",
+   "milestone": null
+  },
+  {
+   "number": 915,
+   "title": "[T32] VIC error restart has no stream-state gate (vendor vic_start_ok), VIC can restart after stream-off",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/915",
+   "labels": [
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-26T08:00:47Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 920,
+   "title": "openimp: low findings of the 2026-11-26 code check (#896 push model)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/920",
+   "labels": [
+    "repo:openimp",
+    "severity:low",
+    "soc:T10",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-26T08:01:47Z",
+   "closed": "2026-11-27T12:46:18Z",
+   "milestone": null
+  },
+  {
+   "number": 921,
+   "title": "T33: FrameSource dequeues 23 buffers for 12 GetFrame frames (vendor 12)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/921",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-26T08:01:52Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 923,
+   "title": "[T32] gc4653 sensor port never stops streaming: stream-on/off lists empty, vendor PRJ007 stops MIPI at stream-off",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/923",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-26T10:31:17Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 924,
+   "title": "[T32] gc4653 sensor port exposure/gain limits differ from vendor PRJ007: max integration vts-1 (vendor vts-8), digital gain above 32x (vendor analog to 75.8x)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/924",
+   "labels": [
+    "area:AE-AWB",
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-26T10:32:54Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 925,
+   "title": "[T33] cv2005 vendor sensor ko: again table codes 0x0d-0x0f out of order (SDK 2.1.0 fixed), non-monotonic gain near 1.05x",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/925",
+   "labels": [
+    "area:Driver",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-26T10:34:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 926,
+   "title": "[T32/T33] online-LDC mode stays latched after the client dies; SDK 2.1.0 tx_isp_release resets it (tx_isp_ldc_online_reset)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/926",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-26T10:36:01Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 927,
+   "title": "[T33] stream-on register-list wait bounded to ~1 ms and ISP started on timeout; SDK 2.1.0 waits up to 5 s (msleep 5) and skips 0x1040",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/927",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-26T10:36:12Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 928,
+   "title": "[T32/T33] SDK 2.1.0 ISP driver deltas to decide: clock defaults, T33 MEMORY_MALLOC slot reuse, T33 TMO flip at frame done, T32 SDNS ratio",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/928",
+   "labels": [
+    "area:ISP",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-26T10:36:20Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 931,
+   "title": "apitest/runner: cover the vendor reference-app (carrier-server, SDK 2.1.0) usage patterns",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/931",
+   "labels": [
+    "repo:openimp",
+    "severity:low",
+    "type:gap"
+   ],
+   "created": "2026-11-26T12:07:48Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 932,
+   "title": "[T21/T23/T30/T31] GetFrame next to a bound encoder shares the frames (cross-SoC of #922, vendor depth-list copy)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/932",
+   "labels": [
+    "area:FrameSource",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T21",
+    "soc:T23",
+    "soc:T30",
+    "soc:T31",
+    "type:gap"
+   ],
+   "created": "2026-11-26T12:09:49Z",
+   "closed": "2026-11-27T15:45:43Z",
+   "milestone": null
+  },
+  {
+   "number": 935,
+   "title": "[T33] QEMU: vendor libimp 2.0.2.1 hangs the guest in AddSensor with an online LDC LUT file (no vendor A/B for the online LDC setters)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/935",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-26T13:18:24Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 936,
+   "title": "T32: IMP_Encoder_SetMaxStreamCnt before CreateChn is ignored; Get reads 3 and 3 streams can be held (vendor 2.2.0 QEMU: the stored count 1/2/3)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/936",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-26T14:16:04Z",
+   "closed": "2026-11-27T13:38:34Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 937,
+   "title": "T32: error codes differ from vendor 2.2.0: PollingStream timeout and FlushStream on a channel that does not exist return -1 (vendor 0x80044000 / 0x80040008)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/937",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-26T14:17:25Z",
+   "closed": "2026-11-27T13:38:47Z",
+   "milestone": null
+  },
+  {
+   "number": 938,
+   "title": "T32: IMP_FrameSource_SetChnAttr on an enabled channel returns -1, vendor 2.2.0 accepts it (0)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/938",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-26T14:18:14Z",
+   "closed": "2026-11-27T13:38:59Z",
+   "milestone": null
+  },
+  {
+   "number": 939,
+   "title": "[T10] episodes of about 3 s with every 5th main-channel frame lost (80 ms gaps 200 ms apart), encode-side hold normal",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/939",
+   "labels": [
+    "area:FrameSource",
+    "repo:openimp",
+    "severity:low",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-11-26T14:40:29Z",
+   "closed": "2026-11-27T07:54:27Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 940,
+   "title": "[T10] push model: gaps under a nice -20 burst are longer than the vendor's (lost frames per run 26 vs 19, gap count equal)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/940",
+   "labels": [
+    "area:FrameSource",
+    "repo:openimp",
+    "severity:low",
+    "soc:T10",
+    "type:gap"
+   ],
+   "created": "2026-11-26T15:32:55Z",
+   "closed": "2026-11-27T17:43:41Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 942,
+   "title": "T31: Encoder SetMaxStreamCnt(1) does not limit the streams an application can hold (vendor 1.1.6 holds 1, OpenIMP 6 or more)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/942",
+   "labels": [
+    "severity:low",
+    "soc:T31"
+   ],
+   "created": "2026-11-26T16:01:16Z",
+   "closed": "2026-11-27T20:44:11Z",
+   "milestone": null
+  },
+  {
+   "number": 944,
+   "title": "[T20] jxf23 light box: open auto AE settles 8-20 % darker than vendor (frame Y at comp 128/160/200), NV12 noise/Y rows worse at gain 2/4/16",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/944",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-26T21:33:05Z",
+   "closed": "2026-11-27T06:23:00Z",
+   "milestone": null
+  },
+  {
+   "number": 945,
+   "title": "[T20] jxf23 light box 5000 K: WB gain + CCM registers settle 11-25 s after WB preset 1 (vendor 4 s)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/945",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-26T23:06:04Z",
+   "closed": "2026-11-27T06:23:12Z",
+   "milestone": null
+  },
+  {
+   "number": 946,
+   "title": "[T20] jxf23 light box 5000 K: AE overshoot after lamp switch 3.9 / 5.2 % vs vendor 1.7 / 2.8 %",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/946",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-26T23:06:46Z",
+   "closed": "2026-11-27T12:04:31Z",
+   "milestone": null
+  },
+  {
+   "number": 947,
+   "title": "[T20] jxf23 light box 3000 K: open sharpness lower than vendor (MTF50 -9 %, 10-90 rise +23 %)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/947",
+   "labels": [
+    "area:AE-AWB",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-26T23:49:38Z",
+   "closed": "2026-11-27T06:23:24Z",
+   "milestone": null
+  },
+  {
+   "number": 948,
+   "title": "[T21][T30] ISP flips lack the vendor Temper guard + 120 ms wait (cross-SoC from #944)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/948",
+   "labels": [
+    "area:ISP",
+    "repo:openimp",
+    "severity:low",
+    "soc:T21",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-27T01:32:21Z",
+   "closed": "2026-11-27T12:49:26Z",
+   "milestone": null
+  },
+  {
+   "number": 949,
+   "title": "[T41] .34 (Cinnado T41NQ, open stack image ap1126) rebooted 3x unplanned in 14 h",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/949",
+   "labels": [
+    "repo:openimp",
+    "severity:high",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-11-27T06:42:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 950,
+   "title": "[T41] kernel slab (SUnreclaim) leak ~2 KB/s on 4.4.94 image ap1126 -> OOM after ~4 h, then reset (#949 cause)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/950",
+   "labels": [
+    "repo:open-tx-isp",
+    "severity:high",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-11-27T06:51:01Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 951,
+   "title": "[T41] mmc0 (ingenic_sdhci_sdio) IRQ storm ~47/s and SDIO init retry loop with no card on Cinnado .34 (4.4.94)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/951",
+   "labels": [
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T41",
+    "type:bug"
+   ],
+   "created": "2026-11-27T06:52:21Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 952,
+   "title": "[T41] no reset-surviving diagnostics (lastpanic/ramoops/sled) on T41 4.4.94 image",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/952",
+   "labels": [
+    "repo:open-tx-isp",
+    "severity:medium",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-11-27T06:53:48Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 954,
+   "title": "[T10/T20] JPEG picture runs as 12 VPU jobs with a CPU parse (86-98 ms), vendor runs one job (5 ms)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/954",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:medium",
+    "soc:T10",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-11-27T08:29:06Z",
+   "closed": "2026-11-27T15:06:51Z",
+   "milestone": null
+  },
+  {
+   "number": 955,
+   "title": "[T20] light box: open pass runs on a reloaded tx-isp module, vendor after a reboot (ISP 0x204 0 vs 0x400)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/955",
+   "labels": [
+    "area:tests",
+    "found:lightbox",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T20",
+    "type:bug"
+   ],
+   "created": "2026-11-27T09:49:15Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 956,
+   "title": "[T10/T20] STREAMOFF does not end a pending LISTEN_BUF wait (EncoderExit/DisableChn wait 0.5 s + 1 s)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/956",
+   "labels": [
+    "area:FrameSource",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T10",
+    "soc:T20",
+    "type:gap"
+   ],
+   "created": "2026-11-27T12:46:44Z",
+   "closed": "2026-11-27T17:43:55Z",
+   "milestone": null
+  },
+  {
+   "number": 957,
+   "title": "T33: PollingStream/FlushStream return -1 where the vendor returns 0x80044000 / 0x80040008 / 0x80040001 (cross-SoC of #937)",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/957",
+   "labels": [
+    "severity:low",
+    "soc:T33",
+    "type:bug"
+   ],
+   "created": "2026-11-27T14:46:23Z",
+   "closed": "2026-11-27T15:22:45Z",
+   "milestone": null
+  },
+  {
+   "number": 958,
+   "title": "[T21/T30] Helix 0x4010c channel field: cross-check the T23 rule (soc_vpu channel_id in bits 24..27) on the vendor T21/T30 libs",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/958",
+   "labels": [
+    "area:Encoder",
+    "soc:T21",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-27T16:30:35Z",
+   "closed": "2026-11-27T18:17:26Z",
+   "milestone": null
+  },
+  {
+   "number": 960,
+   "title": "T32: IMP_FrameSource_EnableChn on an already enabled channel returns 0, vendor 2.2.0 returns an error",
+   "state": "closed",
+   "url": "https://github.com/Lu-Fi/openimp/issues/960",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-27T18:48:30Z",
+   "closed": "2026-11-27T20:12:20Z",
+   "milestone": "Release 1"
+  },
+  {
+   "number": 961,
+   "title": "T32: a second IMP_FrameSource_GetFrame before ReleaseFrame is refused by OpenIMP, vendor 2.2.0 returns 0",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/961",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-27T18:49:51Z",
+   "closed": null,
+   "milestone": "Release 1"
   }
  ]
 }

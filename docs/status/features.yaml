@@ -51,7 +51,11 @@ features:
       text: first open bring-up, ISP core = lifted vendor code
     T23:
       sym: ✅
-      text: exposure readback live, ~45 empty CIDs wired up, unknown CIDs return -EINVAL
+      text: '2026-11-27 (#4, #5, #6): new read-only /proc/jz/isp/isp-ivdc with the vendor IVDC counter set (open-tx-isp #4), direct-mode frame-drop counter wraps only at the period (#5), ccm/csccr/msca init write the real objects instead of placeholder statics (#6); node and counters verified on the T23N camera, no symbol change. exposure readback live, ~45 empty CIDs wired up, unknown CIDs return -EINVAL'
+      issues:
+      - 4
+      - 5
+      - 6
     T30:
       sym: ✅
       text: '2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): the open stack brings up the SC4236 and streams on every batch b16-b51 with 0 oopses: first picture Y 99.3 / U 126.2 / V 128.4 against the vendor stack 100.7 / 127.8 / 128.5 in the same scene (b26), 102.1 vs 101.3 (b29); timps H.265 1920x1080 + H.264 640x360 20 s decode with 0 errors and 1920x1080 JPEG snapshots of the real scene (b47 a1); #218 default graph before/after the bypass clean. Earlier: open-tx-isp T30 core builds against a T30 kernel and had a hardware bring-up earlier (open-tx-isp README); the T30 contributor ran the ISP + FrameSource path live (`docs/T30_STATUS.md`); not run by us (no T30 camera)'
@@ -62,16 +66,19 @@ features:
       text: reference SoC; tuning gaps closed (RGB coefficients, AE ROI, SensorAttr)
     T32:
       sym: ✅
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); ISP open / AddSensor / EnableSensor / tuning enable dev, the module streams since 2026-11-24 with 0 oops. in development (T32, not a release gate): ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-27 (#923, #924, #926): gc4653 sensor port follows the vendor PRJ007 stream-on/off lists (MIPI stops at stream-off), vts-8 integration limit and analog again table (open-tx-isp, merged to next; device proof pending, so the cell stays in progress); online-LDC state is reset on the last close like SDK 2.1.0 (#926). 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): 🔧 -> ✅: device apitest on the T32 PRJ007 module (open stack since 2026-11-24, #99): 258 of 258 streamer functions device-proven (openimp next 0b8561db), vendor libimp 2.2.0 A/B on the same module as reference (#855); ISP open / AddSensor / EnableSensor / tuning enable dev, the module streams since 2026-11-24 with 0 oops. in development (T32, not a release gate): ISP open, AddSensor, EnableSensor, System_Init and the userspace IQ-bin load run in QEMU (#288, #289); EnableTuning and the tuning layer are in OpenIMP (#296 partial, driver ids open). QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 97
       - 288
       - 289
       - 296
       - 99
+      - 923
+      - 924
+      - 926
     T33:
       sym: ✅
-      text: '2026-11-22 (T33 re-judge, 🔧 -> ✅): device evidence on the T33L module covers the row: apitest PASS 476 / FAIL 11 / N/A 13 / SKIP 37 (2026-11-17, #99; all 8 ISP open / sensor / tuning-enable API cells dev), IVDC core init + direct_mode=1 streaming 4/4 and 3/3 restarts with a real picture (2026-11-21, #509), boot guard (#739). #625 (cause of the missing SRBC stop ack, the fallback works) stays a tracked diagnostics item.) 2026-11-21 (#509, open-tx-isp next 28a3e96dd, T33L module runtime insmod): IVDC core init runs before the sensor stream-on like the vendor (AddSensor); direct_mode=1 streams 4/4 and 3/3 restarts, 1080p decode clean, real picture. The cell symbol stays in development (T33 not a release gate). Earlier: 2026-11-21 (T33L module, QEMU; open-tx-isp next 9b046f603): /proc/tisp debug view like the vendor (#589, levels 0-4, QEMU layout equal), isp-m0 node prints the vendor ISP INFO block (#659), MSCA channel path with attribute publish under lock, gated stream-off and snapshot stop wait (#658); `srbc_debug` CPM diagnostics around the ISP reset (#625, cause narrowed, stays open). No symbol change (T33 stays in development). Earlier: 2026-11-17 (#99, device API test on the T33L module, bench, no light box; installed ko = open-tx-isp next f96210bc, OpenIMP libimp next 42bb79db and the installed 11-14 libimp, same result; no flash, no reboot, apitest all areas): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 227 API cells qemu -> dev (streamer functions that work 18 -> 143 of 258), 0 oops; isp-init, sys, ISP open / AddSensor / EnableSensor PASS on the module. No symbol change. Evening 2026-11-14 (#393; image OpenIMP next 224f420f, open-tx-isp next 2dd01aa6b): the MIPI D-PHY words after stream-on equal the vendor module''s on 10 of 10 planned boots and on every restart (open-tx-isp 3fff6a55), clock parents after open as the vendor (ISP 325 MHz, ISPA 475 MHz); the IQ bin append types 3 / 7 are logged as unsupported at init, 0 oops. T33L module, 2026-11-14 (#393): open stack on hardware (thingino image, OpenIMP next ec769173, open-tx-isp 3cbecef7b): cv2005 on MCLK0 registered, ISP up with the IQ bin, frames on 3 channels, per-frame AE/AWB/LCE paths running (isp-m0), D-PHY settle 0x16 = vendor module 0x16; /proc/jz/sensor vendor-shaped since #513 (next f54d05990); open: SRBC stop-ack timeout on some first loads (#514, 1 of 4 boots), IVDC direct mode (#509/#526). 2026-11-14 (#444 closed): the per-frame LCE / LSF path is ported in open-tx-isp next c3029f52 (Unicorn oracle against the vendor tx-isp-t33.ko: 1500 leaf cases and 12 init chains equal, 16 of 16 mutations caught; QEMU: the 16/37 behaviour and buffers equal to the vendor module, 0 oops); the LCE exposure update and the LCE tuning / day-night parts are open (#500). The cell is in development (not a release gate). Earlier: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      text: '2026-11-27 (#925, #926, #927): cv2005 vendor-ko again table order patched like SDK 2.1.0 (#925), stream-on register-list wait 1001 x msleep(5) with no ISP start on timeout (#927), online-LDC reset on the last close (#926); merged to next, device proof pending on the T33L module, cell stays in progress. 2026-11-22 (T33 re-judge, 🔧 -> ✅): device evidence on the T33L module covers the row: apitest PASS 476 / FAIL 11 / N/A 13 / SKIP 37 (2026-11-17, #99; all 8 ISP open / sensor / tuning-enable API cells dev), IVDC core init + direct_mode=1 streaming 4/4 and 3/3 restarts with a real picture (2026-11-21, #509), boot guard (#739). #625 (cause of the missing SRBC stop ack, the fallback works) stays a tracked diagnostics item.) 2026-11-21 (#509, open-tx-isp next 28a3e96dd, T33L module runtime insmod): IVDC core init runs before the sensor stream-on like the vendor (AddSensor); direct_mode=1 streams 4/4 and 3/3 restarts, 1080p decode clean, real picture. The cell symbol stays in development (T33 not a release gate). Earlier: 2026-11-21 (T33L module, QEMU; open-tx-isp next 9b046f603): /proc/tisp debug view like the vendor (#589, levels 0-4, QEMU layout equal), isp-m0 node prints the vendor ISP INFO block (#659), MSCA channel path with attribute publish under lock, gated stream-off and snapshot stop wait (#658); `srbc_debug` CPM diagnostics around the ISP reset (#625, cause narrowed, stays open). No symbol change (T33 stays in development). Earlier: 2026-11-17 (#99, device API test on the T33L module, bench, no light box; installed ko = open-tx-isp next f96210bc, OpenIMP libimp next 42bb79db and the installed 11-14 libimp, same result; no flash, no reboot, apitest all areas): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 227 API cells qemu -> dev (streamer functions that work 18 -> 143 of 258), 0 oops; isp-init, sys, ISP open / AddSensor / EnableSensor PASS on the module. No symbol change. Evening 2026-11-14 (#393; image OpenIMP next 224f420f, open-tx-isp next 2dd01aa6b): the MIPI D-PHY words after stream-on equal the vendor module''s on 10 of 10 planned boots and on every restart (open-tx-isp 3fff6a55), clock parents after open as the vendor (ISP 325 MHz, ISPA 475 MHz); the IQ bin append types 3 / 7 are logged as unsupported at init, 0 oops. T33L module, 2026-11-14 (#393): open stack on hardware (thingino image, OpenIMP next ec769173, open-tx-isp 3cbecef7b): cv2005 on MCLK0 registered, ISP up with the IQ bin, frames on 3 channels, per-frame AE/AWB/LCE paths running (isp-m0), D-PHY settle 0x16 = vendor module 0x16; /proc/jz/sensor vendor-shaped since #513 (next f54d05990); open: SRBC stop-ack timeout on some first loads (#514, 1 of 4 boots), IVDC direct mode (#509/#526). 2026-11-14 (#444 closed): the per-frame LCE / LSF path is ported in open-tx-isp next c3029f52 (Unicorn oracle against the vendor tx-isp-t33.ko: 1500 leaf cases and 12 init chains equal, 16 of 16 mutations caught; QEMU: the 16/37 behaviour and buffers equal to the vendor module, 0 oops); the LCE exposure update and the LCE tuning / day-night parts are open (#500). The cell is in development (not a release gate). Earlier: OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
       issues:
       - 98
       - 390
@@ -88,6 +95,9 @@ features:
       - 658
       - 659
       - 625
+      - 925
+      - 926
+      - 927
     T40:
       sym: ✅
       text: '2026-11-01 (#150, device-tested on the Eufy .184): the pipeline-top block `main` is zeroed at ISP open like the vendor (all 31 registers read 0 after open, they kept the hardware defaults 0x200/0x22/2/2 before); the `sec` block keeps its defaults on both stacks; the value stays 0 over 6 reload cycles, 0 oopses. Earlier: 2026-10-24 (Eufy .184, agg43c): the oops at every `S95timps start` is fixed: a stack overflow in `tx_isp_core_ops_s_ctrl` (the antiflicker SET copied 8 bytes over a 4-byte OEM stack slot and smashed the saved register of the caller, BadVA 0x4890) and in `video_s_stream` (`255a46ff`, `f981c6a2`); the IQ bin path now comes from the registered sensor name (`91f41ac7`); with the SDK patch for the Eufy sc830ai 2-lane mode the camera streams 1080p20 from the 4K sensor continuously and survives a second timps start (open-tx-isp next 2c29ce79; the sensor patch itself is firmware-side). Earlier (history): device-tested 2026-10-10 on cam-K (T40XP; vendor kernel driver `tx_isp_t40`, vendor libimp 1.3.0 side by side, OpenIMP via `LD_LIBRARY_PATH`): `AddSensor`/`EnableSensor`, `ISP_Tuning_GetSensorAttr` and `GetCameraInputMode` run like on the vendor library (OpenIMP vs vendor); the T40 contributor''s live gate in `docs/T40_STATUS.md` (2026-07-30). Vendor note: `GetAeExpList` hung the vendor kernel driver; the magenta cast seen with timps stopped was the IR cut left open, not the library. Open driver (`tx_isp_t40`, Eufy sc830ai 4K) since 2026-10-12: devtest 24/35 results with 0 failures, 300 s and 10-min stream runs, 0 oops (2026-10-15..19)'
@@ -643,19 +653,33 @@ features:
   cells:
     T10:
       sym: ✅
-      text: 'device-tested: flipped image correlation 0.964 on both flips; isp-m0 Mirror/Flip line now shows the applied state (was always Enable)'
+      text: '2026-11-27 (#944, #945, #946, #947): ISP Hflip/Vflip/HVflip follow the vendor 3.12.0 Temper guard and the 120 ms wait, AE working point vendor-equal (host test; T20 light-box gate run 2026-11-27 GATE PASS at 5000 K and 3000 K). device-tested: flipped image correlation 0.964 on both flips; isp-m0 Mirror/Flip line now shows the applied state (was always Enable)'
+      issues:
+      - 944
+      - 945
+      - 946
+      - 947
     T20:
       sym: ✅
-      text: vflip UV address + DMA overwrite fixed (pink stripes); isp-m0 Mirror/Flip line now shows the applied state (was always Enable)
+      text: '2026-11-27 (#944, #945, #946, #947): ISP Hflip/Vflip/HVflip follow the vendor 3.12.0 Temper guard and the 120 ms wait, AE working point vendor-equal (host test; T20 light-box gate run 2026-11-27 GATE PASS at 5000 K and 3000 K). vflip UV address + DMA overwrite fixed (pink stripes); isp-m0 Mirror/Flip line now shows the applied state (was always Enable)'
+      issues:
+      - 944
+      - 945
+      - 946
+      - 947
     T21:
       sym: ✅
-      text: flip dispatcher lifted; shvflip=1
+      text: '2026-11-27 (#948): ISP Hflip/Vflip/HVflip follow the vendor Temper guard and the 120 ms wait (host test). flip dispatcher lifted; shvflip=1'
+      issues:
+      - 948
     T23:
       sym: ✅
       text: '2026-11-22 (#787 #795 #796, open-tx-isp next, Tapo C500 T23N runtime insmod, timps): with direct_mode=1 HFLIP stays in the MSCA and VFLIP goes to the sensor (beyond vendor, user OK 2026-11-22); the MSCA flip write waits for a pending update request, so H+V flip really flips both axes (upgrade note in docs/releases/Release-1.md); all four hflip / vflip combinations in direct_mode 0 and 1: no band artefact, direct picture equal to the normal one (luma correlation 0.99). No symbol change. flip, Bayer re-sync, LSC flip locked'
     T30:
       sym: ✅
-      text: '2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): H/V/HV mirror apply and read back like the vendor (b20, b26: hflip h1 v0, vflip h0 v1, hvflip h1 v1 on both stacks); timps hflip/vflip accepted and the snapshot changes (b47 a1). Earlier: 2026-11-03, QEMU only (#177): `Get/SetISPHflip`/`Vflip` are served (V4L2 0x980914/15, before: ENOSYS), toggle 0 -> 1 -> 0 reads back and frames flow; the vendor''s temper-denoise detour around the flip is not replicated. Earlier: `Get/SetISPHflip`/`Vflip` and (2026-10-10, host test) `Get/SetISPHVflip` exported, no device result'
+      text: '2026-11-27 (#948): ISP Hflip/Vflip/HVflip follow the vendor Temper guard and the 120 ms wait (host test). 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): H/V/HV mirror apply and read back like the vendor (b20, b26: hflip h1 v0, vflip h0 v1, hvflip h1 v1 on both stacks); timps hflip/vflip accepted and the snapshot changes (b47 a1). Earlier: 2026-11-03, QEMU only (#177): `Get/SetISPHflip`/`Vflip` are served (V4L2 0x980914/15, before: ENOSYS), toggle 0 -> 1 -> 0 reads back and frames flow; the vendor''s temper-denoise detour around the flip is not replicated. Earlier: `Get/SetISPHflip`/`Vflip` and (2026-10-10, host test) `Get/SetISPHVflip` exported, no device result'
+      issues:
+      - 948
     T31:
       sym: ✅
       text: sc4336p vflip no longer reports an error [-all-13]; MSCA flip takes effect only at the next channel start, as with the vendor
@@ -1032,19 +1056,27 @@ features:
       text: 720p 25 fps 1501 frames error-free; drift bug (margin added twice) fixed; own command list
     T20:
       sym: ✅
-      text: soak 1 h 44, 156,517 frames/stream, 0 errors
+      text: '2026-11-27 (#958): Helix 0x4010c carries the soc_vpu channel_id like the vendor SliceInit (read from the vendor binaries, host test). soak 1 h 44, 156,517 frames/stream, 0 errors'
+      issues:
+      - 958
     T21:
       sym: ✅
-      text: main+sub+MJPEG, 25 fps; EMC scratch as vendor (1080p 996 KiB)
+      text: '2026-11-27 (#958): Helix 0x4010c carries the soc_vpu channel_id like the vendor SliceInit (read from the vendor binaries, host test). main+sub+MJPEG, 25 fps; EMC scratch as vendor (1080p 996 KiB)'
+      issues:
+      - 958
     T23:
       sym: ✅+
-      text: '2026-11-22 (#767 #786, Tapo C500 T23N, tx-isp-t23 direct_mode=1): the main channel runs over the IVDC block like the vendor 1.3.0 (10 min main + sub + JPEG, no hang, decode clean; pictures with IVDC status bit 31 dropped, first 3 frames skipped). The Helix bitstream area is sized to the pictures (#768, beyond vendor, user OK 2026-11-22). No symbol change. native without helixd/OEM libimp: 2 h 34, 231,668 frames, 0 decode errors, ~6 % CPU'
+      text: '2026-11-27 (#799, #767): Helix command list: 0x4010c channel_id and 0x5004c by picture size like the vendor (QEMU vendor-list diff equal, device T23N 720p + 360p 0 decode errors). 2026-11-22 (#767 #786, Tapo C500 T23N, tx-isp-t23 direct_mode=1): the main channel runs over the IVDC block like the vendor 1.3.0 (10 min main + sub + JPEG, no hang, decode clean; pictures with IVDC status bit 31 dropped, first 3 frames skipped). The Helix bitstream area is sized to the pictures (#768, beyond vendor, user OK 2026-11-22). No symbol change. native without helixd/OEM libimp: 2 h 34, 231,668 frames, 0 decode errors, ~6 % CPU'
+      issues:
+      - 799
+      - 767
     T30:
       sym: ✅+
-      text: '2026-11-07 (#216 closed, T30X lab camera b46, defaults): the first stream window is calmer than on the vendor stack (extra beyond vendor: `OPENIMP_T30_START_QP` auto, `OPENIMP_T30_BLACK_START`, `OPENIMP_T30_START_FLOOR`, all default on; `vendor` / `0` restore the vendor start). Peak in the first 2 s, CBR 2000 kbit/s: 1080p15 1787 (vendor stack 2671), 1080p25 1522 (vendor 2475), 2048x1536 15 fps 1295; 2048x1536 25 fps 1000 / 4000: 900 / 3047; 640x360 15 fps 256: 308 (vendor 282); VBR 2048x1536 25 fps 2000: 2393 (vendor VBR 1080p25: 17830). Without the start floor 1080p15 goes back to 3570. Map fitted on the SC4236 only. Earlier: 2026-11-06, T30X lab camera (b35-b39, no flash): H.264 main 2048x1536, 1920x1080 and 1280x720 encode with 0 GetStream errors at 2.5-5 % process CPU; the #209 fix (encoder pulls the capture frame, heights not a multiple of 16 encode) is device-proven (640x360 sub 300/300 at 25 fps and 180/180 at 15 fps, 1920x1080 main). Earlier: Helix H.264 in `docs/T30_STATUS.md`, decoded without errors by the T30 contributor.'
+      text: '2026-11-27 (#958): Helix 0x4010c carries the soc_vpu channel_id like the vendor SliceInit (read from the vendor binaries, host test). 2026-11-07 (#216 closed, T30X lab camera b46, defaults): the first stream window is calmer than on the vendor stack (extra beyond vendor: `OPENIMP_T30_START_QP` auto, `OPENIMP_T30_BLACK_START`, `OPENIMP_T30_START_FLOOR`, all default on; `vendor` / `0` restore the vendor start). Peak in the first 2 s, CBR 2000 kbit/s: 1080p15 1787 (vendor stack 2671), 1080p25 1522 (vendor 2475), 2048x1536 15 fps 1295; 2048x1536 25 fps 1000 / 4000: 900 / 3047; 640x360 15 fps 256: 308 (vendor 282); VBR 2048x1536 25 fps 2000: 2393 (vendor VBR 1080p25: 17830). Without the start floor 1080p15 goes back to 3570. Map fitted on the SC4236 only. Earlier: 2026-11-06, T30X lab camera (b35-b39, no flash): H.264 main 2048x1536, 1920x1080 and 1280x720 encode with 0 GetStream errors at 2.5-5 % process CPU; the #209 fix (encoder pulls the capture frame, heights not a multiple of 16 encode) is device-proven (640x360 sub 300/300 at 25 fps and 180/180 at 15 fps, 1920x1080 main). Earlier: Helix H.264 in `docs/T30_STATUS.md`, decoded without errors by the T30 contributor.'
       issues:
       - 100
       - 216
+      - 958
     T31:
       sym: ✅
       text: soak 2 h 53, 260,648 frames, 1030/1030 snapshots, 0 errors
@@ -1113,12 +1145,13 @@ features:
       - 720
     T33:
       sym: 🔧
-      text: '2026-11-25 (T33 re-judge 2): stays 🔧: #791 closed as vendor-equal (picture type fixed before the wait, docs/T32_RC.md), #793 RequestPskip fixed (QEMU A/B equal to vendor 2.0.2.1, openimp next 0fd4867f, no T33L device run yet); H.265 FixQP sizes and picture quality are still not compared to the vendor on the device. 2026-11-22 (T33 re-judge, stays 🔧): open vendor deviations #791 (RequestIDR / RequestGDR one picture early) and #793 (RequestPskip skips no picture); H.265 CBR / FixQP decode clean on the T33L (2026-11-17) but FixQP sizes differ strongly from the vendor and picture quality is not compared.) 2026-11-21: H.265 MaxPictureSize applied (#714), run-time RC setters keep the controller state like the vendor (#718), MD 0x40500 QP table follows the motion level (#719). No symbol change. Earlier: 2026-11-17 (#99): H.265 encoder cases of the device apitest (VPS / SPS / PPS / IDR parsed) PASS; bench run run-t33-1117-bench2: H.265 CBR 1000 / 2000 and FixQP 25 / 35 decode with 0 errors (CBR 1041 / 2038 kbps); FixQP sizes far below the vendor (QP 25: 1031 vs 15343 kbps), picture quality not compared (no PSNR / SSIM), so no symbol change. in development (T33, not a release gate): H.265 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (66 lists, QP 0..51, 6 sizes, I / P after I / P after P), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene. QEMU (OpenIMP T33 build, vendor 3.10.14 kernel)'
+      text: '2026-11-27 (#912): stand-alone H.265 (YuvInit / YuvEncode) IDR QP like the vendor (QEMU yuv_devtest streams byte-identical to vendor 2.0.2.1; QEMU only, cell stays in progress). 2026-11-25 (T33 re-judge 2): stays 🔧: #791 closed as vendor-equal (picture type fixed before the wait, docs/T32_RC.md), #793 RequestPskip fixed (QEMU A/B equal to vendor 2.0.2.1, openimp next 0fd4867f, no T33L device run yet); H.265 FixQP sizes and picture quality are still not compared to the vendor on the device. 2026-11-22 (T33 re-judge, stays 🔧): open vendor deviations #791 (RequestIDR / RequestGDR one picture early) and #793 (RequestPskip skips no picture); H.265 CBR / FixQP decode clean on the T33L (2026-11-17) but FixQP sizes differ strongly from the vendor and picture quality is not compared.) 2026-11-21: H.265 MaxPictureSize applied (#714), run-time RC setters keep the controller state like the vendor (#718), MD 0x40500 QP table follows the motion level (#719). No symbol change. Earlier: 2026-11-17 (#99): H.265 encoder cases of the device apitest (VPS / SPS / PPS / IDR parsed) PASS; bench run run-t33-1117-bench2: H.265 CBR 1000 / 2000 and FixQP 25 / 35 decode with 0 errors (CBR 1041 / 2038 kbps); FixQP sizes far below the vendor (QP 25: 1031 vs 15343 kbps), picture quality not compared (no PSNR / SSIM), so no symbol change. in development (T33, not a release gate): H.265 on HERA v1.6 in QEMU (#391): command lists equal to vendor libimp 2.0.2.1 word for word (66 lists, QP 0..51, 6 sizes, I / P after I / P after P), FIXQP and CBR streams decode clean with Y SSIM like the vendor''s on the same scene. QEMU (OpenIMP T33 build, vendor 3.10.14 kernel)'
       issues:
       - 391
       - 714
       - 718
       - 719
+      - 912
     T40:
       sym: ✅
       text: '2026-11-15 (#556, #604, #610, Eufy T40XP light box 3000 K, vendor 1.3.1 against open, same exposure): the HEVC command lists (FixQP lambda table, GOP IDR words, cmd[0x17] window, EP1 default scaling lists, EP3 targets) and the CBR start-up now equal the vendor: FixQP 25 I 51097 -> 51956 B (+1.7 %, was +48 %), PSNR 29.16 -> 29.49 dB, SSIM 0.9698 -> 0.9706; CBR 1000 I 54230 -> 54469 B, QP within 2 of the vendor on 147/150 pictures (was 114). Remaining differences: buffer-layout command words only. No symbol change. Earlier: 2026-11-13 (Eufy T40XP, 3000 K light box, both stacks, open-tx-isp next b0716513 + OpenIMP e970f6e1; this is the first H.265 run on the open ISP driver in the matrix text): the H.265 CBR rows decode clean and sit 0.005-0.006 SSIM below the vendor (PSNR gap -0.3..0 dB); 74 of 79 cases pass overall. The AVC encoder part of that gap was fixed in #495; the HEVC FixQP table was not captured against the vendor. Earlier: H.265 on the AVPU with the PPS tool flags of the vendor (`transform_skip`, `cu_qp_delta`) and hardware RC on by default (`claude/t40-h265-rc2`, in next): CBR 4000/1000 about equal to the vendor, SSIM equal, decode clean (the earlier "clean decode" on green pictures is fixed); FixQP lambda tables and 4K throughput (ebe0291, 4K 19.3 vs vendor 19.9 fps). Device-tested on the Eufy with the vendor ISP driver (2026-10-11); not re-run on the open ISP driver'
@@ -1140,10 +1173,16 @@ features:
   cells:
     T10:
       sym: ✅
-      text: snapshots + MJPEG 25 B/5 s; JPEG buffer 1 MiB (−328 KiB)
+      text: '2026-11-27 (#954, #939): a JPEG picture is one VPU job like the vendor (libimp 3.12.0), with a stripe fallback when the job does not fit and the capture frame lent again; the 2026-11-27 copy default (#939) is superseded (user decision, option B); T10 / T20 light-box gate runs PASS. snapshots + MJPEG 25 B/5 s; JPEG buffer 1 MiB (−328 KiB)'
+      issues:
+      - 954
+      - 939
     T20:
       sym: ✅
-      text: HW JPEG, MJPEG 25 B/5 s with/without video consumer
+      text: '2026-11-27 (#954, #939): a JPEG picture is one VPU job like the vendor (libimp 3.12.0), with a stripe fallback when the job does not fit and the capture frame lent again; the 2026-11-27 copy default (#939) is superseded (user decision, option B); T10 / T20 light-box gate runs PASS. HW JPEG, MJPEG 25 B/5 s with/without video consumer'
+      issues:
+      - 954
+      - 939
     T21:
       sym: ✅
       text: 'HW JPEG without vendor lib, 37 ms/job, snapshots 0.05–0.18 s; stripes with RST markers. 2026-11-14 audit: ✅+ -> ✅: the same facts as the ✅ cells of T10, T20 and T23 (hardware JPEG, no vendor library); the T21 beyond-vendor rows (''Adaptive quality ... +5 back after 100 clean frames'', ''Reuse marker for stand-in JPEGs'') are API extras, not this feature. Device: apitest Encoder_Get/SetJpegeQl and FrameSource_SnapFrame dev on .24.'
@@ -1409,36 +1448,59 @@ features:
   cells:
     T10:
       sym: ✅
-      text: 'device-tested: chn0, chn1 and snapshot concurrent, 148/147 frames decoded'
+      text: '2026-11-27 (#940, #956, #920): capture, encode and release path without malloc (no more late DQBUF under a CPU burst), DisableChn ends the LISTEN_BUF wait like the vendor (libimp 3.12.0 pthread_cancel of the capture thread); push model EncoderExit waits for kicks in flight (#920). device-tested: chn0, chn1 and snapshot concurrent, 148/147 frames decoded'
+      issues:
+      - 940
+      - 956
+      - 920
     T20:
       sym: ✅
-      text: 'snapshot debounce no longer polls the JPEG encoder: with 1 snapshot/s on both channels chn0 14.4 / chn1 15.0 fps (was 11.2/14.3); sub-stream height 270 is rounded to 272 with a warning (was: scaler hang) [openimp claude/openimp-t20-jpeg-align, timps claude/timps-jpeg-idle-nopoll]'
+      text: '2026-11-27 (#940, #956, #920): capture, encode and release path without malloc (no more late DQBUF under a CPU burst), DisableChn ends the LISTEN_BUF wait like the vendor (libimp 3.12.0 pthread_cancel of the capture thread); push model EncoderExit waits for kicks in flight (#920). snapshot debounce no longer polls the JPEG encoder: with 1 snapshot/s on both channels chn0 14.4 / chn1 15.0 fps (was 11.2/14.3); sub-stream height 270 is rounded to 272 with a warning (was: scaler hang) [openimp claude/openimp-t20-jpeg-align, timps claude/timps-jpeg-idle-nopoll]'
+      issues:
+      - 940
+      - 956
+      - 920
     T21:
       sym: ✅+
-      text: 'pool parked/reused (release at idle broke later allocations) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Frame source / VBM pool parked and reused at idle'' (T21); device: VBM parking 50 cycles with a stable largest free block on the second T21 board (changelog 2026-10).'
+      text: '2026-11-27 (#932, #942): GetFrame with a frame depth and a bound encoder both get every frame (vendor frame-depth list); T31 SetMaxStreamCnt(N) holds N distinct streams like vendor 1.1.6 (device-tested on the T31 camera). pool parked/reused (release at idle broke later allocations) Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''Frame source / VBM pool parked and reused at idle'' (T21); device: VBM parking 50 cycles with a stable largest free block on the second T21 board (changelog 2026-10).'
+      issues:
+      - 932
+      - 942
     T23:
       sym: ✅
-      text: '2026-11-22 (#767, direct_mode=1): FrameSource channel 0 goes through the IVDC block to the encoder as the vendor libimp 1.3.0 (VBM pool without frame memory, GetFrame on it returns -1); Tapo C500 T23N 564 frames in 40 s, decode clean. No symbol change. frames also recycled for callback pools'
+      text: '2026-11-27 (#932, #942): GetFrame with a frame depth and a bound encoder both get every frame (vendor frame-depth list); T31 SetMaxStreamCnt(N) holds N distinct streams like vendor 1.1.6 (device-tested on the T31 camera). 2026-11-22 (#767, direct_mode=1): FrameSource channel 0 goes through the IVDC block to the encoder as the vendor libimp 1.3.0 (VBM pool without frame memory, GetFrame on it returns -1); Tapo C500 T23N 564 frames in 40 s, decode clean. No symbol change. frames also recycled for callback pools'
+      issues:
+      - 932
+      - 942
     T30:
       sym: ✅
-      text: '2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): FrameSource area 39 PASS / 0 FAIL on the device in every batch b16-b29 and in 38 back-to-back runs (b17); 2048x1536 ch0 without scaler works (#201, the vendor returns -1 there); compact NV12 for heights not divisible by 16 (night U=V=128.00, b26); bypass graph RAW 10/10 + NV12 25/25 (#218). Earlier: 2026-11-07 (#218 closed, T30X lab camera): optional ISP bypass graph (`OPENIMP_T30_BYPASS_GRAPH=1`, default off) in the vendor sample order: RAW channel 10/10 frames 2048x1536 BG12 (12-bit data MSB-aligned in 16 bits), then a new NV12 channel 25/25 with a normal picture; the default graph decodes clean before and after, 0 oopses. Earlier: FrameSource ran as the source of the contributor''s H.264 gate; host test `fs_lifecycle_test`; not run by us. 2026-11-03, QEMU only (no T30 camera): the format ioctl is the 0x5c-byte form of the vendor libimp (#178), the apitest `fs` area passes 39/0 against the open driver in the QEMU T30 machine, 6 driver reload cycles with the second-channel start clean under `slub_debug`'
+      text: '2026-11-27 (#932, #942): GetFrame with a frame depth and a bound encoder both get every frame (vendor frame-depth list); T31 SetMaxStreamCnt(N) holds N distinct streams like vendor 1.1.6 (device-tested on the T31 camera). 2026-11-07 re-judge on device evidence (T30X lab camera, runtime module swap to the open stack, audit batches bNN): FrameSource area 39 PASS / 0 FAIL on the device in every batch b16-b29 and in 38 back-to-back runs (b17); 2048x1536 ch0 without scaler works (#201, the vendor returns -1 there); compact NV12 for heights not divisible by 16 (night U=V=128.00, b26); bypass graph RAW 10/10 + NV12 25/25 (#218). Earlier: 2026-11-07 (#218 closed, T30X lab camera): optional ISP bypass graph (`OPENIMP_T30_BYPASS_GRAPH=1`, default off) in the vendor sample order: RAW channel 10/10 frames 2048x1536 BG12 (12-bit data MSB-aligned in 16 bits), then a new NV12 channel 25/25 with a normal picture; the default graph decodes clean before and after, 0 oopses. Earlier: FrameSource ran as the source of the contributor''s H.264 gate; host test `fs_lifecycle_test`; not run by us. 2026-11-03, QEMU only (no T30 camera): the format ioctl is the 0x5c-byte form of the vendor libimp (#178), the apitest `fs` area passes 39/0 against the open driver in the QEMU T30 machine, 6 driver reload cycles with the second-channel start clean under `slub_debug`'
       issues:
       - 218
+      - 932
+      - 942
     T31:
       sym: ✅
-      text: 'device-tested: concurrent streams ok'
+      text: '2026-11-27 (#932, #942): GetFrame with a frame depth and a bound encoder both get every frame (vendor frame-depth list); T31 SetMaxStreamCnt(N) holds N distinct streams like vendor 1.1.6 (device-tested on the T31 camera). device-tested: concurrent streams ok'
+      issues:
+      - 932
+      - 942
     T32:
       sym: 🔧
-      text: '2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: Joint / copy-type calls cache-only, no device result. 2026-11-11 night: direct mode (IVDC, `IMP_FrameSource_GetDirectMode/SetDirectMode/SetIvdcMemLine`, #301) in QEMU; direct channel 0 refuses SetFrameDepth like the vendor has no picture in memory. Earlier: planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-27 (#936, #937, #938, #960): SetMaxStreamCnt stored before CreateChn, PollingStream / FlushStream and SetChnAttr on a running channel like vendor 2.2.0, EnableChn on an enabled channel returns 0x80010040 (QEMU only, cell stays in progress). 2026-11-25 (T32 re-judge against the PRJ007 device evidence, rule as T33 2026-11-22): stays 🔧: Joint / copy-type calls cache-only, no device result. 2026-11-11 night: direct mode (IVDC, `IMP_FrameSource_GetDirectMode/SetDirectMode/SetIvdcMemLine`, #301) in QEMU; direct channel 0 refuses SetFrameDepth like the vendor has no picture in memory. Earlier: planned: FrameSource on the 2.x framechan ABI (#290) and IMP_Buf pools / MemPool (#299) in QEMU. QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 290
       - 299
       - 479
       - 480
       - 491
+      - 936
+      - 937
+      - 938
+      - 960
     T33:
       sym: 🔧
-      text: '2026-11-22 (T33 re-judge, stays 🔧): FrameSource device-proven (fs area 32 PASS / 0 FAIL, #803 SetYuvAlign beyond vendor on the T33L 2026-11-22), but the Joint calls and SetFrameDepthCopyType are cache-only (#803, open part), no device result.) 2026-11-22 (#803, T33L module, beyond vendor, user OK 2026-11-22): IMP_FrameSource_SetYuvAlign is stored and EnableChn keeps running (vendor 2.0.2.1 EnableChn fails 0x80011000): SetYuvAlign {1,2,2} rc 0, EnableChn rc 0, 10 / 10 H.264 1080p frames decode clean. No symbol change. 2026-11-17 (#99, device API test on the T33L module, bench, no light box; installed ko = open-tx-isp next f96210bc, OpenIMP libimp next 42bb79db and the installed 11-14 libimp, same result; no flash, no reboot, apitest all areas): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 227 API cells qemu -> dev (streamer functions that work 18 -> 143 of 258), 0 oops; fs area 32 PASS / 0 FAIL / 7 SKIP (channel create / enable / attr round trip, frame depth, GetFrame / SnapFrame sizes, luma and timestamps); #516 (rmem demand, SetFrameDepth before EnableChn) and #528 stay open: 🔧. T33L module, 2026-11-14 (#393): open stack on hardware (thingino image, OpenIMP next ec769173, open-tx-isp 3cbecef7b): FrameSource main+sub+JPEG/raw snapshots 10 min 0 drops; buffered path only: the vendor runs ch0 over IVDC (direct mode) and fits 12704K rmem, ours needs rmem 20M (#516) until IVDC works (#509, platform blocker #526). OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
+      text: '2026-11-27 (#957, #960): PollingStream / FlushStream vendor codes, EnableChn on an enabled channel returns 0x80010040 like the vendor (QEMU only, cell stays in progress). 2026-11-22 (T33 re-judge, stays 🔧): FrameSource device-proven (fs area 32 PASS / 0 FAIL, #803 SetYuvAlign beyond vendor on the T33L 2026-11-22), but the Joint calls and SetFrameDepthCopyType are cache-only (#803, open part), no device result.) 2026-11-22 (#803, T33L module, beyond vendor, user OK 2026-11-22): IMP_FrameSource_SetYuvAlign is stored and EnableChn keeps running (vendor 2.0.2.1 EnableChn fails 0x80011000): SetYuvAlign {1,2,2} rc 0, EnableChn rc 0, 10 / 10 H.264 1080p frames decode clean. No symbol change. 2026-11-17 (#99, device API test on the T33L module, bench, no light box; installed ko = open-tx-isp next f96210bc, OpenIMP libimp next 42bb79db and the installed 11-14 libimp, same result; no flash, no reboot, apitest all areas): PASS 476 / FAIL 11 / N/A 13 / SKIP 37, 227 API cells qemu -> dev (streamer functions that work 18 -> 143 of 258), 0 oops; fs area 32 PASS / 0 FAIL / 7 SKIP (channel create / enable / attr round trip, frame depth, GetFrame / SnapFrame sizes, luma and timestamps); #516 (rmem demand, SetFrameDepth before EnableChn) and #528 stay open: 🔧. T33L module, 2026-11-14 (#393): open stack on hardware (thingino image, OpenIMP next ec769173, open-tx-isp 3cbecef7b): FrameSource main+sub+JPEG/raw snapshots 10 min 0 drops; buffered path only: the vendor runs ch0 over IVDC (direct mode) and fits 12704K rmem, ours needs rmem 20M (#516) until IVDC works (#509, platform blocker #526). OpenIMP T33 build exists (build-t33.sh: the T32 platform with PLATFORM_T33 on the libimp 2.0.2.1 API, #390); ISP open, sensor, IQ bin and FrameSource frames run in QEMU on the open tx-isp-t33.ko; the API calls behind this function that the apitest ran in QEMU are marked qemu in the API table (QEMU has no picture, so no picture or hardware result). The open stack runs on the T33L module since 2026-11-14 (#393, main+sub streams, apitest 462/12 on hardware = QEMU)'
       issues:
       - 479
       - 491
@@ -1446,6 +1508,8 @@ features:
       - 509
       - 516
       - 526
+      - 957
+      - 960
     T40:
       sym: ✅
       text: 'ch0 3840x2160 and ch1 640x360 `GetFrame`/`ReleaseFrame` device-tested on cam-K 2026-10-10 (timestamps monotonic, non-zero; OpenIMP vs vendor library); frame size 16-line aligned (353280 B vs 345600 B); open driver 2026-10-18/19: ch0 and ch1 6001/6001 frames in 300 s, 0 gaps above 0.2 s in the 10-min timps run'

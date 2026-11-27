@@ -17,6 +17,13 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: open-tx-isp, aperto and light-box gates of the day (#919 #923-#927, open-tx-isp #4-#7, #950 #952 #953, #230)
+- open-tx-isp next (see its CHANGELOG): #919 low findings of the 2026-11-26 code check plus the frame-drop-once ioctls (#929); T32 gc4653 sensor port with the vendor stream-on/off lists, vts-8 limits and analog again table (#923, #924); T33 cv2005 vendor-ko again table order like SDK 2.1.0 (#925); T32/T33 online-LDC state reset on the last close (#926); T33 stream-on register-list wait 1001 x msleep(5) without starting the ISP on timeout (#927). All merged, device proof on the T32 / T33L modules pending, the issues stay open.
+- open-tx-isp T23: read-only `/proc/jz/isp/isp-ivdc` with the vendor IVDC counters (#4), direct-mode frame-drop counter wraps only at the period (#5), ccm / csccr / msca init write the real objects instead of placeholder statics (#6); #7 (DDR overflow counter rises once per frame) closed after a static check of the vendor ISR: the vendor counts every set status bit per interrupt exactly like the port, no code change.
+- Lu-Fi thingino-firmware aperto (not part of this repository): kernel 4.4.94 sdhci-ingenic clock leak fixed on T41 (#950, device-measured, slab flat after) and T32 (#953, compile-checked), T41 reset-surviving last-panic record (#952, off by default, device proof pending).
+- Light-box gates: T10 and T20 (2026-11-26/27, 5000 K and 3000 K) and T21 (2026-11-23/24) are GATE PASS, `docs/status/release.yaml` `lightbox_runs` names the reports. The T20 rows that first failed (#945 WB settle, #946 AE response, #947 sharpness) were a test-state fault (module reloaded on a camera that had streamed) plus the AE highlight knee, both fixed (runner fresh-boot guard, #944).
+- Not merged, not listed as done: #921 / #961 (T32/T33 frame-depth dequeue count, second GetFrame) wait on their branch.
+
 ## 2026-11-27: T32/T33 IMP_FrameSource_EnableChn on an enabled channel answers like the vendor (#960)
 - `IMP_FrameSource_EnableChn` on a channel that is already enabled returned 0; the vendor libimp (T32 2.2.0 0x144c0c-0x144c14 and 0x145b00, T33 2.1.0 0x13f174-0x13f17c and 0x1400f8) logs an error and returns 0x80010040. OpenIMP now does the same (the running channel is untouched). T31 vendor 1.1.6 answers 0 and stays unchanged. Found by the #931 apitest carrier case A1.
 
