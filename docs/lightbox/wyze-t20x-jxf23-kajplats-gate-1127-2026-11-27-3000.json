@@ -1,0 +1,541 @@
+{
+ "alias": "wyze-t20x-jxf23",
+ "counts": {
+  "beyond": 1,
+  "fail": 1,
+  "fail_by_handling": {
+   "issue": 1
+  },
+  "flaky": 0,
+  "info": 154,
+  "invalid": 0,
+  "n/a": 1,
+  "not_run": 2,
+  "not_run_planned": 2,
+  "not_run_preflight": 0,
+  "pass": 85,
+  "reference": 0,
+  "warn": 4
+ },
+ "date": "2026-11-26",
+ "encoder": {
+  "h264_cbr1000": {
+   "open": {
+    "I_mean_B": 57165.75,
+    "P_mean_B": 6912.7443,
+    "P_over_I": 0.1209,
+    "kbps": 1030.6418,
+    "psnr_mean": 41.914,
+    "psnr_min": 41.3773,
+    "ssim_mean": 0.9855
+   },
+   "vendor": {
+    "I_mean_B": 56219.2308,
+    "P_mean_B": 6973.2759,
+    "P_over_I": 0.124,
+    "kbps": 1049.6448,
+    "psnr_mean": 40.9048,
+    "psnr_min": 40.4616,
+    "ssim_mean": 0.9831
+   }
+  },
+  "h264_cbr2000": {
+   "open": {
+    "I_mean_B": 93317.75,
+    "P_mean_B": 14512.7328,
+    "P_over_I": 0.1555,
+    "kbps": 2056.8626,
+    "psnr_mean": 41.599,
+    "psnr_min": 40.8301,
+    "ssim_mean": 0.9821
+   },
+   "vendor": {
+    "I_mean_B": 96667.3333,
+    "P_mean_B": 14604.8276,
+    "P_over_I": 0.1511,
+    "kbps": 2080.9453,
+    "psnr_mean": 40.4523,
+    "psnr_min": 40.0301,
+    "ssim_mean": 0.9808
+   }
+  },
+  "h264_fixqp25": {
+   "open": {
+    "I_mean_B": 112419.2,
+    "P_mean_B": 14827.7724,
+    "P_over_I": 0.1319,
+    "kbps": 2167.234,
+    "psnr_mean": 41.4601,
+    "psnr_min": 40.795,
+    "ssim_mean": 0.9806
+   },
+   "vendor": {
+    "I_mean_B": 119911.0,
+    "P_mean_B": 14964.1724,
+    "P_over_I": 0.1248,
+    "kbps": 2212.1956,
+    "psnr_mean": 41.1432,
+    "psnr_min": 40.5087,
+    "ssim_mean": 0.9793
+   }
+  },
+  "h264_fixqp35": {
+   "open": {
+    "I_mean_B": 24441.7,
+    "P_mean_B": 376.7414,
+    "P_over_I": 0.0154,
+    "kbps": 141.4641,
+    "psnr_mean": 41.3547,
+    "psnr_min": 40.923,
+    "ssim_mean": 0.9839
+   },
+   "vendor": {
+    "I_mean_B": 26362.4,
+    "P_mean_B": 360.7517,
+    "P_over_I": 0.0137,
+    "kbps": 146.8499,
+    "psnr_mean": 40.4652,
+    "psnr_min": 40.1004,
+    "ssim_mean": 0.9794
+   }
+  }
+ },
+ "gate": {
+  "accepted": 0,
+  "better": 7,
+  "beyond": 1,
+  "equal": 144,
+  "info": 93,
+  "invalid": 0,
+  "invalid_rows": [],
+  "na": 3,
+  "passed": true,
+  "unref": 0,
+  "worse": [],
+  "worse_n": 0
+ },
+ "generated": "2026-11-27 13:02",
+ "generator": "lightbox_report.py",
+ "image": {
+  "BUILD_ID": null,
+  "build": "(kein+e6e5ebd, 2026-11-26 06:37:13 UTC",
+  "commits": {
+   "open-tx-isp": null,
+   "openimp": null
+  },
+  "name": "wyze_cam2_t20x_jxf23_rtl8189ftv"
+ },
+ "lamp_ct": 3000.0,
+ "metrics": {
+  "ae_step.off.overshoot_pct": {
+   "better": "lower",
+   "open": 2.1162,
+   "unit": "%",
+   "vendor": 3.9385
+  },
+  "ae_step.off.settle_s": {
+   "better": "lower",
+   "open": 1.29,
+   "unit": "s",
+   "vendor": 1.22
+  },
+  "ae_step.on.overshoot_pct": {
+   "better": "lower",
+   "open": 0.0367,
+   "unit": "%",
+   "vendor": 0.0571
+  },
+  "ae_step.on.settle_s": {
+   "better": "lower",
+   "open": 3.8,
+   "unit": "s",
+   "vendor": 5.0663
+  },
+  "colour.chroma_ratio": {
+   "better": "one",
+   "open": 0.7672,
+   "unit": "chroma / chart (1 = chart)",
+   "vendor": 0.682
+  },
+  "colour.dE00_grey_normalised": {
+   "better": "lower",
+   "open": 8.7791,
+   "unit": "dE00",
+   "vendor": 9.7225
+  },
+  "colour.dE00_mean": {
+   "better": "lower",
+   "open": 12.4401,
+   "unit": "dE00",
+   "vendor": 13.8666
+  },
+  "colour.dE00_mean_unclipped": {
+   "better": "lower",
+   "open": 12.4401,
+   "unit": "dE00",
+   "vendor": 13.8666
+  },
+  "colour.dE00_open_vs_vendor": {
+   "better": "lower",
+   "unit": "dE00",
+   "value": 3.0071
+  },
+  "colour.saturation_open_over_vendor": {
+   "better": "one",
+   "unit": "ratio (1 = vendor)",
+   "value": 1.1249
+  },
+  "cpu.kernel_threads": {
+   "better": "lower",
+   "open": 2.67,
+   "unit": "%",
+   "vendor": 2.39
+  },
+  "cpu.streamer": {
+   "better": "lower",
+   "open": 1.12,
+   "unit": "% of all CPU",
+   "vendor": 2.85
+  },
+  "cpu.system_busy": {
+   "better": "lower",
+   "open": 11.4,
+   "unit": "%",
+   "vendor": 15.0
+  },
+  "enc.h264_cbr1000.psnr_mean": {
+   "better": "higher",
+   "open": 41.914,
+   "unit": "dB",
+   "vendor": 40.9048
+  },
+  "enc.h264_cbr1000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9855,
+   "unit": "SSIM",
+   "vendor": 0.9831
+  },
+  "enc.h264_cbr2000.psnr_mean": {
+   "better": "higher",
+   "open": 41.599,
+   "unit": "dB",
+   "vendor": 40.4523
+  },
+  "enc.h264_cbr2000.ssim_mean": {
+   "better": "higher",
+   "open": 0.9821,
+   "unit": "SSIM",
+   "vendor": 0.9808
+  },
+  "enc.h264_fixqp25.I_mean_B": {
+   "better": "lower",
+   "open": 112419.2,
+   "unit": "bytes",
+   "vendor": 119911.0
+  },
+  "enc.h264_fixqp25.P_mean_B": {
+   "better": "lower",
+   "open": 14827.7724,
+   "unit": "bytes",
+   "vendor": 14964.1724
+  },
+  "enc.h264_fixqp25.P_over_I": {
+   "better": "lower",
+   "open": 0.1319,
+   "unit": "ratio",
+   "vendor": 0.1248
+  },
+  "enc.h264_fixqp25.psnr_mean": {
+   "better": "higher",
+   "open": 41.4601,
+   "unit": "dB",
+   "vendor": 41.1432
+  },
+  "enc.h264_fixqp25.ssim_mean": {
+   "better": "higher",
+   "open": 0.9806,
+   "unit": "SSIM",
+   "vendor": 0.9793
+  },
+  "enc.h264_fixqp35.I_mean_B": {
+   "better": "lower",
+   "open": 24441.7,
+   "unit": "bytes",
+   "vendor": 26362.4
+  },
+  "enc.h264_fixqp35.P_mean_B": {
+   "better": "lower",
+   "open": 376.7414,
+   "unit": "bytes",
+   "vendor": 360.7517
+  },
+  "enc.h264_fixqp35.P_over_I": {
+   "better": "lower",
+   "open": 0.0154,
+   "unit": "ratio",
+   "vendor": 0.0137
+  },
+  "enc.h264_fixqp35.psnr_mean": {
+   "better": "higher",
+   "open": 41.3547,
+   "unit": "dB",
+   "vendor": 40.4652
+  },
+  "enc.h264_fixqp35.ssim_mean": {
+   "better": "higher",
+   "open": 0.9839,
+   "unit": "SSIM",
+   "vendor": 0.9794
+  },
+  "noise_gain.1.Yrel_pct": {
+   "better": "lower",
+   "open": 1.1905,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.2092
+  },
+  "noise_gain.1.Ytemporal": {
+   "better": "lower",
+   "open": 1.773,
+   "unit": "temporal std",
+   "vendor": 1.8
+  },
+  "noise_gain.16.Yrel_pct": {
+   "better": "lower",
+   "open": 0.9331,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.9812
+  },
+  "noise_gain.16.Ytemporal": {
+   "better": "lower",
+   "open": 1.304,
+   "unit": "temporal std",
+   "vendor": 1.37
+  },
+  "noise_gain.2.Yrel_pct": {
+   "better": "lower",
+   "open": 0.8638,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.8811
+  },
+  "noise_gain.2.Ytemporal": {
+   "better": "lower",
+   "open": 1.26,
+   "unit": "temporal std",
+   "vendor": 1.284
+  },
+  "noise_gain.4.Yrel_pct": {
+   "better": "lower",
+   "open": 1.2325,
+   "unit": "temporal std / mean Y %",
+   "vendor": 1.2441
+  },
+  "noise_gain.4.Ytemporal": {
+   "better": "lower",
+   "open": 1.774,
+   "unit": "temporal std",
+   "vendor": 1.79
+  },
+  "noise_gain.8.Yrel_pct": {
+   "better": "lower",
+   "open": 0.9212,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.9843
+  },
+  "noise_gain.8.Ytemporal": {
+   "better": "lower",
+   "open": 1.074,
+   "unit": "temporal std",
+   "vendor": 1.146
+  },
+  "noise_gain.max.Yrel_pct": {
+   "better": "lower",
+   "open": 0.5202,
+   "unit": "temporal std / mean Y %",
+   "vendor": 0.5431
+  },
+  "noise_gain.max.Ytemporal": {
+   "better": "lower",
+   "open": 0.713,
+   "unit": "temporal std",
+   "vendor": 0.744
+  },
+  "p1.day.luma": {
+   "better": "",
+   "open": 113.6,
+   "unit": "Y 0..255",
+   "vendor": 113.4
+  },
+  "p1.night.luma": {
+   "better": "",
+   "open": 77.5,
+   "unit": "Y 0..255",
+   "vendor": 77.4
+  },
+  "reload.ok_cycles": {
+   "better": "higher",
+   "open": 10,
+   "unit": "of 10 cycles",
+   "vendor": null
+  },
+  "sharpness.mtf50": {
+   "better": "higher",
+   "open": 0.3264,
+   "unit": "cycles/pixel",
+   "vendor": 0.3431
+  },
+  "sharpness.rise_10_90": {
+   "better": "lower",
+   "open": 1.9584,
+   "unit": "px",
+   "vendor": 1.8818
+  },
+  "startup.first_rtsp_s": {
+   "better": "lower",
+   "open": 4.22,
+   "unit": "s",
+   "vendor": 4.57
+  },
+  "startup.first_snapshot_s": {
+   "better": "lower",
+   "open": 0.99,
+   "unit": "s",
+   "vendor": 1.4
+  }
+ },
+ "noise_curve": {
+  "open": [
+   {
+    "Yrel_pct": 1.1905,
+    "Ytemporal": 1.773,
+    "gain_req": "1",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 0.8638,
+    "Ytemporal": 1.26,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 1.2325,
+    "Ytemporal": 1.774,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 0.9212,
+    "Ytemporal": 1.074,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 0.9331,
+    "Ytemporal": 1.304,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": 0.5202,
+    "Ytemporal": 0.713,
+    "gain_req": "max",
+    "gain_x": 29.987
+   }
+  ],
+  "vendor": [
+   {
+    "Yrel_pct": 1.2092,
+    "Ytemporal": 1.8,
+    "gain_req": "1",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 0.8811,
+    "Ytemporal": 1.284,
+    "gain_req": "2",
+    "gain_x": 2.0
+   },
+   {
+    "Yrel_pct": 1.2441,
+    "Ytemporal": 1.79,
+    "gain_req": "4",
+    "gain_x": 4.0
+   },
+   {
+    "Yrel_pct": 0.9843,
+    "Ytemporal": 1.146,
+    "gain_req": "8",
+    "gain_x": 8.0
+   },
+   {
+    "Yrel_pct": 0.9812,
+    "Ytemporal": 1.37,
+    "gain_req": "16",
+    "gain_x": 16.0
+   },
+   {
+    "Yrel_pct": 0.5431,
+    "Ytemporal": 0.744,
+    "gain_req": "max",
+    "gain_x": 29.987
+   }
+  ]
+ },
+ "reload": {
+  "open": {
+   "i2c_released": {
+    "n": 10,
+    "of": 10
+   },
+   "ok_cycles": {
+    "n": 10,
+    "of": 10
+   },
+   "oops_cycles": 0.0
+  }
+ },
+ "runs": [
+  "run-t20-1126-g3000",
+  "run-t20-1126-r1-3000",
+  "run-t20-1126-r2-3000",
+  "run-t20-1126-r3-3000",
+  "run-t20-1126-r4-3000",
+  "run-t20-1127-f1-3000",
+  "run-t20-1127-f2-3000"
+ ],
+ "schema": 1,
+ "sensor": "jxf23",
+ "soc": "T20",
+ "stack": {
+  "open": {
+   "desc": "FINAL 1121 VARIANT B t20_simple_ae=0 (vendor AE graph, default #609/#657): open-tx-isp tx_isp_t20 origin/next bb1e983b (insmod from /tmp, isp_clk=100000000 as flashed) + OpenIMP libimp claude/t20-gate-944 6200aa77 (#944 vendor flip Temper guard + 120 ms wait; T20 build, LD_LIBRARY_PATH /tmp/olib) + streamer b883f7c (dn-609 daynight fix, built against faac 3.0 for this image: faac ABI 3, only audio-build delta vs 0175904) under LD_PRELOAD fair_preload_t20.so",
+   "ko": "tx_isp_t20 md5=ac16e7dc libimp=1acccbba",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=23499d82 version=websocket version 13 required",
+   "streamer": "lb-t20-b883f7c"
+  },
+  "vendor": {
+   "desc": "ingenic-sdk tx-isp-t20.ko (vendor ISP blob 3.12.0, kernel 3.10.14 build) + sensor_jxf23_t20.ko (vendor-compatible rebuild, one_line_expr_in_us 30) + vendor libimp 3.12.0 (da38e940) + streamer b883f7c USE_OPENIMP=0; ends with a reboot",
+   "ko": "tx_isp_t20 md5=ac16e7dc libimp=da38e940",
+   "pieces_md5": [],
+   "streamer": "streamer bin_md5=067e584f version=websocket version 13 required",
+   "streamer": "lb-vendor-t20-b883f7c"
+  }
+ },
+ "stacks": [
+  "open",
+  "vendor"
+ ],
+ "time": "09:40",
+ "versions": {
+  "generator": "2026.11.25.2",
+  "mixed_runner": true,
+  "runner": [
+   "2026.11.25.2 (md5 set 2e401b26)",
+   "2026.11.25.2 (md5 set 3f26aba0)",
+   "2026.11.25.2 (md5 set 6bc02f13)",
+   "2026.11.25.2 (md5 set 840170cc)",
+   "2026.11.25.2 (md5 set ccf95c0f)"
+  ],
+  "tolerances": "2 interim (user OK 2026-11-23)"
+ }
+}
