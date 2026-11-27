@@ -11,6 +11,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T31 SetMaxStreamCnt(1) limits the held stream; T33 PollingStream / FlushStream vendor codes (#942, #957)
+
+- #942 (T31): with `IMP_Encoder_SetMaxStreamCnt(ch, 1)` set before CreateChn, `IMP_Encoder_PollingStream` while the application still holds a stream (GetStream done, ReleaseStream not yet) now waits for the release and returns -1 on timeout, as vendor 1.1.6 (one buffer, held, no free one). Before it returned 0 again and GetStream handed the same stream out repeatedly. Counts 2 and above (and the default 2) are unchanged: OpenIMP holds one stream at a time there, so a slow consumer holds fewer than the vendor.
+- #957 (T33): PollingStream returns 0x80044000 (timeout), 0x80040008 (channel not created), 0x80040001 (channel >= 16); FlushStream 0x80040008 / 0x80040001, as the T32 (#937). Vendor T33 libimp 2.1.0 (SDK): PollingStream 0xe654c (0xe6748, 0xe6754, 0xe675c), FlushStream 0xe7784 (0xe7a5c, 0xe7ac4). T33 SetMaxStreamCnt and SetChnAttr were already vendor-equal.
+
 ## 2026-11-27: T32 API follows vendor 2.2.0: SetMaxStreamCnt before CreateChn, PollingStream / FlushStream codes, SetChnAttr on a running channel (#936, #937, #938)
 
 - Reference build: the QEMU T32 rootfs libimp 2.2.0 (md5 98071ecd0c). The PRJ007 production libimp 1.0.5 (afe092fb, #856) differs: its SetMaxStreamCnt only logs. The 2.2.0 build is the one the issues name and the newer API, so the T32 now follows it.
