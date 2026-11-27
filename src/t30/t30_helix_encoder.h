@@ -52,6 +52,9 @@ int OpenIMP_T30_HelixGetCrop(const T30HelixEncoder *encoder, int *enable,
 int OpenIMP_T30_HelixUpdateParams(T30HelixEncoder *encoder,
                                   const HWEncoderParams *params);
 void OpenIMP_T30_HelixDestroy(T30HelixEncoder *encoder);
+/* #940 (T10/T20): 1 if `stream` came from the stream recycle table and was
+ * given back to it (descriptor and payload are one block); 0 otherwise. */
+int OpenIMP_T30_HelixStreamRelease(void *stream);
 
 /* IMP_Encoder_SetChnROI: the eight i264e ROI table entries (helix_roi.h)
  * for the next pictures.  Call on the encoding thread before a picture. */
