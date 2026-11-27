@@ -11,6 +11,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T32 API follows vendor 2.2.0: SetMaxStreamCnt before CreateChn, PollingStream / FlushStream codes, SetChnAttr on a running channel (#936, #937, #938)
+
+- Reference build: the QEMU T32 rootfs libimp 2.2.0 (md5 98071ecd0c). The PRJ007 production libimp 1.0.5 (afe092fb, #856) differs: its SetMaxStreamCnt only logs. The 2.2.0 build is the one the issues name and the newer API, so the T32 now follows it.
+- #936: `IMP_Encoder_SetMaxStreamCnt` on a channel that is not created stores the count (libimp 0xe084c: `sw s1,500(s0)` at 0xe08b0); CreateChn keeps it over its memset (0xdc0a8 / 0xdc130) and else defaults to 1 (JPEG) / 2 (H.264, H.265) (0xdca60-0xdca7c). The T32 now allocates exactly that many stream buffers, so a slow consumer can hold 1 / 2 / 3 streams as the vendor. Before the count was dropped and the default was 3.
+- #937: T32 `IMP_Encoder_PollingStream` returns 0x80044000 when the wait ends without a picture (0xdf4e0), 0x80040008 for a channel that is not created (0xdf4d4) and 0x80040001 for a channel >= 16 (0xdf54c); `IMP_Encoder_FlushStream` returns 0x80040008 / 0x80040001 (0xe0848 / 0xe07e0). Before: -1. T33 unchanged (no T33 vendor binary at hand to check).
+- #938: `IMP_FrameSource_SetChnAttr` on a created channel stores the attribute and returns 0, enabled or not (vendor 0x13e4f4 copies 0x68 bytes into the channel table, no state check). A running channel keeps the snapshot taken at EnableChn (frame rate, I2D, size), the new attribute applies at the next EnableChn. Before: -1 on an enabled channel unless unchanged. T32 and T33 builds.
+- Test: apitest case `carrier` in QEMU 0731 (T32 PRJ007 image), vendor 2.2.0 vs OpenIMP: all lines equal (A2 poll rc, A3 held streams 1/2/3, A3 Set after CreateChn, A5 flush on unknown chn, A7 SetChnAttr while enabled); one QEMU timing flake in the vendor A2 frame count on the first run.
+
 ## 2026-11-27: T21/T30 ISP flips follow the vendor Temper guard + 120 ms wait (#948)
 
 - Vendor (Ghidra): T21 1.0.33 SetISPHflip 0x63534 / SetISPVflip 0x6391c and T30 1.0.5 SetISPHflip 0xd7e14 / SetISPVflip 0xd822c / SetISPHVflip 0xd8658 check tuning_state==2 (else -1), switch Temper AUTO (type 1) to MANUAL 0x28, send the flip, usleep(120000) and restore the saved Temper attribute (same as T20, #944).

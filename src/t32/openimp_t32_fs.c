@@ -121,6 +121,7 @@ struct t32_fs_chn {
     int direct;                 /* frames over IVDC (#301), set at EnableChn */
     IMPDMABufferInfo ivdc;      /* the IVDC DDR overflow ring */
     IMPFSChnAttr attr;
+    IMPFSChnAttr attr_run;      /* attribute snapshot taken by EnableChn: SetChnAttr on a running channel only stores (#938) */
     int fd;
     /* geometry of the enabled channel */
     uint32_t width, height, stride, length, alloc;
@@ -368,12 +369,15 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
     }
 }
 
+/* attribute the running channel works with: the EnableChn snapshot (vendor 2.2.0 SetChnAttr only stores, #938) */
+#define FS_LIVE(c) ((c)->enabled ? &(c)->attr_run : &(c)->attr)
+
 /* ---- frame thread ------------------------------------------------------- */
 /* frame-rate drop: 1 = deliver (channel rate below the sensor rate) */
 static int fs_rate_pass(struct t32_fs_chn *c, uint32_t fps_word)
 {
     uint64_t in_num = fps_word >> 16, in_den = fps_word & 0xffffu;
-    uint64_t out_num = (uint32_t)c->attr.outFrmRateNum, out_den = (uint32_t)c->attr.outFrmRateDen;
+    uint64_t out_num = (uint32_t)FS_LIVE(c)->outFrmRateNum, out_den = (uint32_t)FS_LIVE(c)->outFrmRateDen;
     uint64_t step, full;
 
     if (!in_num || !in_den || !out_num || !out_den || out_num * in_den >= in_num * out_den)
@@ -688,7 +692,7 @@ static void fs_i2d_arm_locked(struct t32_fs_chn *c, int chn)
 #if defined(PLATFORM_T33)
     fs_rot_arm_locked(c, chn);
 #else
-    const IMPFSI2DAttr *a = &c->attr.i2dattr;
+    const IMPFSI2DAttr *a = &FS_LIVE(c)->i2dattr;
     int i;
 
     c->i2d_on = 0;
@@ -978,8 +982,8 @@ int OpenIMP_T32_FsChnSize(int chn, int *w, int *h)
         return -1;
     pthread_mutex_lock(&fs_lock);
     if (c->created) {
-        *w = c->attr.picWidth;
-        *h = c->attr.picHeight;
+        *w = FS_LIVE(c)->picWidth;
+        *h = FS_LIVE(c)->picHeight;
         rc = 0;
     }
     pthread_mutex_unlock(&fs_lock);
@@ -1097,15 +1101,16 @@ int IMP_FrameSource_SetChnAttr(int chnNum, IMPFSChnAttr *chn_attr)
     if (!c || !fs_attr_ok(chnNum, chn_attr))
         return -1;
     pthread_mutex_lock(&fs_lock);
-    if (c->created && !c->enabled) {
+    if (c->created) {
+        /* vendor T32 2.2.0 (libimp 98071ecd, IMP_FrameSource_SetChnAttr 0x13e4f4): copies the 0x68-byte attribute into the channel
+         * table (0x13e5a0-0x13e5e0) and returns 0 without a state check (#938); the running channel keeps its EnableChn
+         * snapshot (c->attr_run), the new attribute takes effect at the next EnableChn */
         c->attr = *chn_attr;
         rc = 0;
-    } else if (c->created && !memcmp(&c->attr, chn_attr, sizeof(c->attr))) {
-        rc = 0;     /* vendor 2.0.2.1 stores the attribute without a state check; here an unchanged one is accepted on a running channel */
     }
     pthread_mutex_unlock(&fs_lock);
     if (rc)
-        IMP_LOG_ERR(TAG, "SetChnAttr chn %d: %s", chnNum, c->enabled ? "enabled" : "not created");
+        IMP_LOG_ERR(TAG, "SetChnAttr chn %d: %s", chnNum, "not created");
     return rc;
 }
 
@@ -1177,6 +1182,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
                     chnNum, c->attr.picWidth, c->attr.picHeight, sw, sh);
         return -1;
     }
+    c->attr_run = c->attr;
     c->width = (uint32_t)c->attr.picWidth;
     c->height = (uint32_t)c->attr.picHeight;
     c->stride = ALIGN_UP(c->width, 16);

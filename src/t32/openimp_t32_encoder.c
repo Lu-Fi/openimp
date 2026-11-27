@@ -1999,10 +1999,8 @@ static void slot_buf_free(T32VpuBuf *b)
     memset(b, 0, sizeof(*b));
 }
 
-#ifdef PLATFORM_T33
 /* IMP_Encoder_SetMaxStreamCnt before CreateChn (vendor: the channel table field survives the CreateChn memset) */
 static int t33_streams[T32_ENC_CHNS];
-#endif
 
 #ifdef PLATFORM_T33
 /* Stream buffers behind a requested count: never fewer than the T32 default (the app may hold a stream while the
@@ -2012,7 +2010,11 @@ static int alloc_streams(int cnt)
     return cnt < T32_ENC_DEF_STREAMS ? T32_ENC_DEF_STREAMS : cnt > T32_ENC_MAX_STREAMS ? T32_ENC_MAX_STREAMS : cnt;
 }
 #else
-#define alloc_streams(cnt) (cnt)
+/* T32 2.2.0: exactly the stored count (a slow consumer can hold that many streams, #936) */
+static int alloc_streams(int cnt)
+{
+    return cnt < 1 ? 1 : cnt > T32_ENC_MAX_STREAMS ? T32_ENC_MAX_STREAMS : cnt;
+}
 #endif
 
 static void chn_free_bufs(struct t32_enc_chn *e)
@@ -2086,14 +2088,11 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     e->h264 = attr->encAttr.enType == PT_H264 || attr->encAttr.enType == PT_H265;
     e->hevc = attr->encAttr.enType == PT_H265;
     e->qp = e->h264 ? 0 : jpeg_qp_of((int)attr->rcAttr.attrRcMode.attrJPEGFixQp.qp);
-#ifdef PLATFORM_T33
-    /* vendor 2.0.2.1 CreateChn: the count SetMaxStreamCnt stored before the call, else 1 (JPEG) / 2 (H.264, H.265);
-     * the vendor keeps the value in the channel table over Destroy/Create */
+    /* vendor T33 2.0.2.1 and T32 2.2.0 (libimp 98071ecd, CreateChn 0xdbe7c: field +500 saved over the memset at 0xdc0a8/0xdc130,
+     * default 1 for JPEG / 2 for H.264, H.265 at 0xdca60-0xdca7c): the count SetMaxStreamCnt stored before the call, else the
+     * default; the vendor keeps the value in the channel table over Destroy/Create */
     e->max_streams = t33_streams[encChn] > 0 ? t33_streams[encChn] : e->h264 ? 2 : 1;
     t33_streams[encChn] = e->max_streams;
-#else
-    e->max_streams = T32_ENC_DEF_STREAMS;
-#endif
     e->pipefd[0] = e->pipefd[1] = -1;
     e->src_fs = -1;
     chn_info(encChn, e, &ci);
@@ -2395,6 +2394,7 @@ int IMP_Encoder_SetChnAttrRcMode(int encChn, IMPEncoderAttrRcMode *rcMode)
 #define T32_ENC_ERR_PARAM   ((int)0x80040002)
 #define T32_ENC_ERR_NOCHN   ((int)0x80040008)
 #define T32_ENC_ERR_MODE    ((int)0x80040080)
+#define T32_ENC_ERR_TIMEOUT ((int)0x80044000)
 
 static int rc_setter(int encChn, unsigned id, const uint32_t a[4], int fixqp_ok)
 {
@@ -2646,12 +2646,8 @@ int IMP_Encoder_SetMaxStreamCnt(int encChn, int cnt)
     pthread_mutex_lock(&enc_lock);
     if (chn_get(encChn))
         rc = T32_ENC_ERR_MODE;
-#ifdef PLATFORM_T33
     else
         t33_streams[encChn] = cnt;
-#else
-    (void)cnt;
-#endif
     pthread_mutex_unlock(&enc_lock);
     return rc;
 }
@@ -2790,10 +2786,22 @@ int IMP_Encoder_PollingStream(int encChn, uint32_t timeoutMsec)
     struct t32_enc_chn *e;
     int rc = -1;
 
+#ifndef PLATFORM_T33
+    /* vendor T32 2.2.0 (libimp 98071ecd, #937): PollingStream 0xdf2d0 returns 0x80040001 for a channel >= 16 (0xdf54c), 0x80040008
+     * for a channel that is not created (0xdf4d4) and 0x80044000 when the wait ends without a picture (0xdf4e0) */
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+#endif
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e)
         rc = wait_ready_locked(e, (int64_t)timeoutMsec);
+#ifndef PLATFORM_T33
+    else
+        rc = T32_ENC_ERR_NOCHN;
+    if (rc == -1)
+        rc = T32_ENC_ERR_TIMEOUT;
+#endif
     pthread_mutex_unlock(&enc_lock);
     return rc;
 }
@@ -2850,12 +2858,22 @@ int IMP_Encoder_FlushStream(int encChn)
 {
     struct t32_enc_chn *e;
 
+#ifndef PLATFORM_T33
+    /* vendor T32 2.2.0 (libimp 98071ecd, #937): FlushStream 0xe0508 returns 0x80040001 for a channel >= 16 (0xe07e0) and
+     * 0x80040008 for a channel that is not created (0xe0848) */
+    if (encChn < 0 || encChn > 15)
+        return T32_ENC_ERR_CHN;
+#endif
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e)
         chn_notify_drop_locked(e, t32_encq_drop_ready(&e->q));
     pthread_mutex_unlock(&enc_lock);
+#ifndef PLATFORM_T33
+    return e ? 0 : T32_ENC_ERR_NOCHN;
+#else
     return e ? 0 : -1;
+#endif
 }
 
 int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
