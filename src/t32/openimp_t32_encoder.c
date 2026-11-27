@@ -1627,30 +1627,33 @@ static int rate_pass_locked(struct t32_enc_chn *e)
 /* FrameSource sink of an encoder group (runs in the channel's frame thread) */
 static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
 {
-    int grp = (int)(intptr_t)ctx, i, refs = 0, need_rate = 0;
+    int grp = (int)(intptr_t)ctx, i, refs = 0;
     struct t32_enc_grp *g = &enc_grp[grp];
+    uint32_t sn = 0, sd = 0;
 
-    pthread_mutex_lock(&enc_lock);
-    for (i = 0; i < T32_ENC_CHNS; i++) {
-        struct t32_enc_chn *e = &enc_chn[i];
-        if (e->created && e->registered && e->grp == grp && e->recv && e->src_fs != fs_chn)
-            need_rate = 1;
-    }
-    pthread_mutex_unlock(&enc_lock);
-    if (need_rate) {                    /* source rate for the drop, outside the lock */
-        IMPFSChnAttr fa;
-        if (IMP_FrameSource_GetChnAttr(fs_chn, &fa) == 0) {
-            pthread_mutex_lock(&enc_lock);
-            for (i = 0; i < T32_ENC_CHNS; i++) {
-                struct t32_enc_chn *e = &enc_chn[i];
-                if (e->created && e->registered && e->grp == grp) {
-                    e->src_fs = fs_chn;
-                    e->src_num = fa.outFrmRateNum;
-                    e->src_den = fa.outFrmRateDen;
-                }
-            }
-            pthread_mutex_unlock(&enc_lock);
+    /* source rate for the drop, outside the lock (#921): the sensor rate the frame came with, as the vendor
+     * (FrameSource passes every sensor frame on; 2.2.0 encoder_get_fps_mask 0xe6728 (Ghidra) takes the frame's
+     * rate words +0x30 / +0x34, which the T33 2.0.2.1 frame update fills at 0x1353a8 from the sensor fps less the
+     * ISP frame drop), not the FrameSource channel's outFrmRate */
+    if (OpenIMP_FrameSource_SrcRate(fs_chn, &sn, &sd) != 0) {
+        IMPFSChnAttr fa;                /* not a FrameSource capture channel: its attribute rate */
+
+        if (IMP_FrameSource_GetChnAttr(fs_chn, &fa) == 0 && fa.outFrmRateNum > 0 && fa.outFrmRateDen > 0) {
+            sn = (uint32_t)fa.outFrmRateNum;
+            sd = (uint32_t)fa.outFrmRateDen;
         }
+    }
+    if (sn && sd) {
+        pthread_mutex_lock(&enc_lock);
+        for (i = 0; i < T32_ENC_CHNS; i++) {
+            struct t32_enc_chn *e = &enc_chn[i];
+            if (e->created && e->registered && e->grp == grp) {
+                e->src_fs = fs_chn;
+                e->src_num = sn;
+                e->src_den = sd;
+            }
+        }
+        pthread_mutex_unlock(&enc_lock);
     }
 
     pthread_mutex_lock(&enc_lock);

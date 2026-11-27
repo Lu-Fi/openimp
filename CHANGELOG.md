@@ -21,6 +21,27 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 - `IMP_FrameSource_EnableChn` on a channel that is already enabled returned 0; the vendor libimp (T32 2.2.0 0x144c0c-0x144c14 and 0x145b00, T33 2.1.0 0x13f174-0x13f17c and 0x1400f8) logs an error and returns 0x80010040. OpenIMP now does the same (the running channel is untouched). T31 vendor 1.1.6 answers 0 and stays unchanged. Found by the #931 apitest carrier case A1.
 
 
+## 2026-11-27: T32/T33 SetFrameDepth keeps a set depth with copies too (#961)
+
+- Vendor T32 2.2.0 SetFrameDepth (Ghidra 0x14edf4) and T33 2.0.2.1 (Ghidra 0x14948c): with copy type 0 (+0x24c == 0)
+  and a depth already set (+0x248 != 0) the call returns 0 and changes nothing; only SetFrameDepth(chn, 0) frees the
+  depth list (the no-copy rule, depth = nrVBs, was already ported).  OpenIMP set the new depth, so after
+  SetFrameDepth(chn, 1) on a channel with a larger depth a second GetFrame before ReleaseFrame found no copy and
+  returned 0x80012000 (vendor 0).  QEMU T32 carrier A8: vendor and OpenIMP now both rc 0, the whole A8 line equal.
+
+## 2026-11-27: T32/T33 FrameSource passes every sensor frame, the encoder drops against the sensor rate (#921)
+
+- The vendor FrameSource (T33 2.0.2.1, T32 2.2.0) has no frame-rate drop: the DQBUF callback (T33 0x134638, DQBUF
+  0x1346d8) only records the fps word and the frame update (T33 0x134eb4, T32 on_framesource_group_data_update) has no
+  rate test.  OpenIMP dropped frames to the channel's outFrmRate in its frame thread: 23 DQBUF for 12 GetFrame frames
+  (vendor 12) and, behind a lower outFrmRate, a bound encoder coded at that lower rate.
+- Now every frame goes on; the encoder's frame-rate drop takes the sensor rate of the frame (last DQBUF fps word) as
+  its source rate, as the vendor encoder_get_fps_mask takes the frame's rate words (T33 frame update 0x1353a8: sensor
+  fps less the ISP frame drop).  ExternInject / non-capture sources keep the channel attribute rate.
+- QEMU T33 (vendor lib + vendor ko, 30 fps sensor), GetFrame at outFrmRate 5: vendor 14 DQBUF / 12 frames at 33 ms,
+  OpenIMP before 67 DQBUF at 200 ms, now 12 DQBUF at 33 ms.  Bound H.264 15/1 behind outFrmRate 5: vendor 59 DQBUF /
+  30 streams at 67 ms, OpenIMP before 175 DQBUF at 200 ms, now 61 DQBUF at 67 ms.
+- tools/t32/t32_trace_sample.c: T32_FS_FPS (channel rate) and per-frame / per-stream arrival times (#921 A/B).
 
 ## 2026-11-27: T23 Helix H.264 command list: 0x4010c and 0x5004c like the vendor (#799, #767)
 - The last two structural differences of the #799 command-list diff are closed. 0x4010c bits 24..27 now carry the soc_vpu channel_id of the encoder (vendor 1.3.0 H264E_T21_SliceInit L12060-12062 packs slice +0x3a3, which hwicodec_pf_h264e_t21_enc L13679-13688 copies from hwicodec word 0xc53 = node +0x0c of the channel request ioctl 0xc0586300, L13110-13168); OpenIMP wrote 0x00400000 for every channel (vendor QEMU A12: main 0x03400000, sub 0x04400000).

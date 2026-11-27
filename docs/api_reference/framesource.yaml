@@ -46,7 +46,7 @@ functions:
       chnNum: Channel number, normally 0 to 2.
       chn_attr: Size, pixel format, crop, scaler, frame rate and number of buffers of the channel.
     returns: "0 on success, -1 on an invalid channel number, a NULL attribute, a width that is not a multiple of 16 (not for raw), or a channel 0 that is not of type `FS_PHY_CHANNEL`. On T31 a size above 1280x720 is refused. On T40 and T41 a channel that already exists also returns -1."
-    notes: "The width must be a multiple of 16 unless the format is raw, and channel 0 has to be the physical channel. The structure layout differs between SoC families (T40 and T41 put an I2D block in front, T23 and newer add a frame crop), so build against the header of the SoC you target. A frame rate of `outFrmRateNum/outFrmRateDen` below the sensor rate drops frames; it never raises the rate above the sensor rate."
+    notes: "The width must be a multiple of 16 unless the format is raw, and channel 0 has to be the physical channel. The structure layout differs between SoC families (T40 and T41 put an I2D block in front, T23 and newer add a frame crop), so build against the header of the SoC you target. A frame rate of `outFrmRateNum/outFrmRateDen` below the sensor rate drops frames; it never raises the rate above the sensor rate. T32 and T33 (2.x libraries) are different: the FrameSource channel passes every sensor frame on whatever its rate, and a bound encoder drops to its own rate against the sensor rate."
     see_also: [FrameSource_EnableChn, FrameSource_DestroyChn]
   FrameSource_DestroyChn:
     group: life

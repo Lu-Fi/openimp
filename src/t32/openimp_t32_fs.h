@@ -21,6 +21,8 @@ typedef int (*OpenIMP_T32_FrameSink)(void *ctx, int fs_chn, IMPFrameInfo *frame)
 int OpenIMP_FrameSource_RegisterSink(int devID, int grpID, OpenIMP_T32_FrameSink sink, void *ctx);
 /* give back a frame a sink kept (returned 1 for) */
 int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn, IMPFrameInfo *frame);
+/* source rate of a channel (sensor rate of its last frame, else its outFrmRate) for the encoder drop: 0 or -1 */
+int OpenIMP_FrameSource_SrcRate(int fs_chn, uint32_t *num, uint32_t *den);
 /* Y stride of a frame handed out by FrameSource (by physical address), 0 if unknown */
 uint32_t OpenIMP_FS_FramePitch(uint32_t physical);
 

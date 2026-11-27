@@ -17,7 +17,7 @@
  *                 driver takes the channel geometry from these words only),
  *                 FRAME_STREAMON, start the frame thread
  *   frame thread  LISTEN_BUF (blocks, answers the ready count), DQBUF,
- *                 frame-rate drop, deliver (bound sinks, depth copy for
+ *                 deliver every frame (no rate drop, #921; bound sinks, depth copy for
  *                 GetFrame), QBUF the buffer back
  *   DisableChn    FRAME_STREAMOFF, join the thread, REQBUFS 0, free buffers
  *   DestroyChn    close the node
@@ -129,9 +129,8 @@ struct t32_fs_chn {
     struct t32_fs_buf buf[T32_FS_MAX_BUFS];
     pthread_t thread;
     volatile int run;
-    /* frame-rate drop */
+    /* sensor rate of the last DQBUF (fps word num << 16 | den), the encoder's source rate (#921) */
     uint32_t fps_word;
-    uint64_t fps_acc;
     uint32_t seq;
     /* GetFrame depth copies; dseq = own delivery counter: the order of the copies (#826: the driver's
      * sequence is not a usable order - under QEMU it repeats, so GetFrame took slots by index and
@@ -141,7 +140,7 @@ struct t32_fs_chn {
     int nocopy;                 /* SetFrameDepthCopyType(chn, 1) (#784) */
     struct t32_fs_slot slot[T32_FS_MAX_DEPTH];
     pthread_cond_t ready;
-    uint32_t frames, dropped, copied, sink_frames;
+    uint32_t frames, copied, sink_frames;
     /* delay FIFO (#445): Set/GetMaxDelay, Set/GetDelay, Set/GetChnFifoAttr,
      * GetTimedFrame; the newest maxdelay frames, packed NV12 heap copies */
     int maxdelay, delay, fifo_type;
@@ -373,30 +372,13 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
 #define FS_LIVE(c) ((c)->enabled ? &(c)->attr_run : &(c)->attr)
 
 /* ---- frame thread ------------------------------------------------------- */
-/* frame-rate drop: 1 = deliver (channel rate below the sensor rate) */
-static int fs_rate_pass(struct t32_fs_chn *c, uint32_t fps_word)
-{
-    uint64_t in_num = fps_word >> 16, in_den = fps_word & 0xffffu;
-    uint64_t out_num = (uint32_t)FS_LIVE(c)->outFrmRateNum, out_den = (uint32_t)FS_LIVE(c)->outFrmRateDen;
-    uint64_t step, full;
-
-    if (!in_num || !in_den || !out_num || !out_den || out_num * in_den >= in_num * out_den)
-        return 1;
-    step = out_num * in_den;    /* out / in, scaled by in_num * out_den */
-    full = in_num * out_den;
-    if (fps_word != c->fps_word) {
-        c->fps_word = fps_word;
-        c->fps_acc = full;      /* the first frame passes */
-    } else {
-        c->fps_acc += step;
-    }
-    if (c->fps_acc >= full) {
-        c->fps_acc -= full;
-        return 1;
-    }
-    return 0;
-}
-
+/* No frame-rate drop here (#921): the vendor FrameSource hands every sensor frame on, whatever the channel's
+ * outFrmRate.  T33 2.0.2.1: the DQBUF callback 0x134638 (DQBUF at 0x1346d8) only records the fps word
+ * (set_framesource_fps 0x1345e0) and hands the frame to vbm_get_frame; the frame update 0x134eb4 (copies, depth
+ * list, VBMLockFrameByPaddr) has no rate test; SET_FRAME_FORMAT rate bits 0 / mask 1 (0x132be4 / 0x132bec).
+ * T32 2.2.0 on_framesource_group_data_update (Ghidra 0x14a404) likewise.  QEMU T33, vendor lib + vendor ko, 30 fps
+ * sensor: outFrmRate 15 and 5 both gave 12 GetFrame frames for 12 / 14 DQBUF at the sensor rate, and a bound
+ * H.264 channel at 15/1 behind outFrmRate 5 coded 15 fps (the encoder drops against the sensor rate). */
 static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
 {
     struct t32_fs_slot *best = NULL;
@@ -864,7 +846,6 @@ static void *fs_thread(void *arg)
     while (c->run) {
         T32IocBuffer q;
         struct t32_fs_buf *b;
-        int requeue;
 
         if (fs_wait_ioctl(c->fd, OI_T32_IOC_LISTEN_BUF, &count) < 0) {
             if (errno != EINTR && c->run) {
@@ -895,19 +876,17 @@ static void *fs_thread(void *arg)
         pthread_mutex_lock(&fs_lock);
         c->frames++;
         c->seq = q.sequence;
-        requeue = !fs_rate_pass(c, q.fps);
-        if (requeue)
-            c->dropped++;
+        if (q.fps)
+            c->fps_word = q.fps;
         pthread_mutex_unlock(&fs_lock);
 #if defined(PLATFORM_T33)
-        if (!requeue && c->rot_mode)
+        if (c->rot_mode)
             fs_rot_run(chn, c, b);
 #else
-        if (!requeue && c->i2d_on)
+        if (c->i2d_on)
             fs_i2d_run(c, b);
 #endif
-        if (!requeue)
-            fs_deliver(chn, c, b);
+        fs_deliver(chn, c, b);        /* every frame, no rate drop (#921) */
         pthread_mutex_lock(&fs_lock);
         if (c->direct)
             b->out = 0;             /* the driver hands it out again by itself */
@@ -1259,7 +1238,7 @@ int IMP_FrameSource_EnableChn(int chnNum)
         c->cache_cap = c->cache ? c->maxdelay : 0;
         c->cache_next = 0;
     }
-    c->frames = c->dropped = c->copied = c->sink_frames = 0;
+    c->frames = c->copied = c->sink_frames = 0;
     fs_slots_sync_locked(c);
     c->run = 1;
     if (pthread_create(&c->thread, NULL, fs_thread, (void *)(intptr_t)chnNum) != 0) {
@@ -1325,8 +1304,8 @@ int IMP_FrameSource_DisableChn(int chnNum)
     c->enabled = 0;
     c->direct = 0;
     fs_slots_sync_locked(c);
-    IMP_LOG_INFO(TAG, "chn %d off: %u frames, %u dropped (rate), %u copies, %u to sinks",
-                 chnNum, c->frames, c->dropped, c->copied, c->sink_frames);
+    IMP_LOG_INFO(TAG, "chn %d off: %u frames, %u copies, %u to sinks",
+                 chnNum, c->frames, c->copied, c->sink_frames);
     pthread_mutex_unlock(&fs_lock);
     return rc < 0 ? -1 : 0;
 }
@@ -1358,6 +1337,13 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             return 0;
         }
         depth = c->attr.nrVBs < T32_FS_MAX_DEPTH ? c->attr.nrVBs : T32_FS_MAX_DEPTH;
+    } else if (depth > 0 && c->depth > 0) {
+        /* #961: with copies, too, a set depth stays: vendor T32 2.2.0 SetFrameDepth (Ghidra 0x14edf4) and T33
+         * 2.0.2.1 (Ghidra 0x14948c): copy type 0 (+0x24c == 0) and a depth set (+0x248 != 0) -> return 0, no
+         * change; only SetFrameDepth(chn, 0) frees the depth list.  A second GetFrame before ReleaseFrame then finds
+         * the further copies of the depth set first (carrier A8: vendor rc 0, OpenIMP refused with 0x80012000) */
+        pthread_mutex_unlock(&fs_lock);
+        return 0;
     }
     c->depth = depth;
     fs_slots_sync_locked(c);
@@ -1906,6 +1892,29 @@ int OpenIMP_FrameSource_ReleaseSinkFrame(int fs_chn_num, IMPFrameInfo *frame)
 
         if (b->holds > 0 && --b->holds == 0 && b->out && c->run && !c->direct)
             fs_qbuf(c, b);
+        rc = 0;
+    }
+    pthread_mutex_unlock(&fs_lock);
+    return rc;
+}
+
+/* the source rate of a channel for the encoder's frame-rate drop (#921): the sensor rate of its last DQBUF, before
+ * the first frame (or without one, ExternInject) the channel's outFrmRate.  0 or -1 */
+int OpenIMP_FrameSource_SrcRate(int fs_chn_num, uint32_t *num, uint32_t *den)
+{
+    struct t32_fs_chn *c = fs_get(fs_chn_num);
+    int rc = -1;
+
+    if (!c || !num || !den)
+        return -1;
+    pthread_mutex_lock(&fs_lock);
+    if (c->fps_word >> 16 && c->fps_word & 0xffffu) {
+        *num = c->fps_word >> 16;
+        *den = c->fps_word & 0xffffu;
+        rc = 0;
+    } else if (FS_LIVE(c)->outFrmRateNum > 0 && FS_LIVE(c)->outFrmRateDen > 0) {
+        *num = (uint32_t)FS_LIVE(c)->outFrmRateNum;
+        *den = (uint32_t)FS_LIVE(c)->outFrmRateDen;
         rc = 0;
     }
     pthread_mutex_unlock(&fs_lock);
