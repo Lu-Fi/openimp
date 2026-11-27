@@ -69,6 +69,8 @@ int DMA_FreePhys(uint32_t phys) { (void)phys; return 0; }
 int DMA_RmemFlushCache(void *virt, uint32_t size, int dir)
 { (void)virt; (void)size; (void)dir; return 0; }
 int OpenIMP_HelixJpeg_Available(void) { return 0; }
+int OpenIMP_HelixJpeg_OneJobNext(uint32_t width, uint32_t height)
+{ (void)width; (void)height; return 0; }
 int openimp_t23_persist_enabled(void) { return 0; }
 int openimp_t23_persist_write(const char *a, const void *b, unsigned int c)
 { (void)a; (void)b; (void)c; return 0; }

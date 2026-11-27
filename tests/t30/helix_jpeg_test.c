@@ -90,6 +90,9 @@ int IMP_Encoder_SetPoolSize(int size);
 #define HELIX_STRIPES 1
 #endif
 static unsigned int runs, requests, releases;
+#if defined(HELIX_STRIPES)
+static int allow_one_job;          /* #954: one job past the worst case */
+#endif
 static int fail_runs;            /* RUN returns -1 */
 static uint32_t force_status;    /* reported instead of 0x11 */
 static int force_overflow;       /* report a length >= the buffer */
@@ -396,7 +399,7 @@ static uint32_t run_list(const uint32_t *list)
     /* the core may write any stripe's worst case without leaving the
      * buffer */
     assert((uint64_t)mb_width * mb_height * HelixJpeg_McuWorstBytes() + 256u
-           <= writer.capacity);
+           <= writer.capacity || allow_one_job);
 #else
     /* one job buffer: the command list, then the bitstream at +8 KiB */
     assert(reg(0xe000c) == (uint32_t)(uintptr_t)list + 0x2000u);
@@ -1585,6 +1588,97 @@ static void test_mcus_bits(void)
 }
 #endif
 
+#if defined(HELIX_STRIPES) && defined(PLATFORM_T20)
+/* #954: T10/T20 run a picture as ONE job like the stock library while the
+ * last picture of that size and tables used at most a third of the buffer;
+ * the first one, new tables and a large last picture go in stripes. */
+static void encode_one(HelixJpegFrame *frame, const uint8_t qt[128],
+                       unsigned int jobs, unsigned int restarts,
+                       int picture)
+{
+    HWStreamBuffer stream;
+    unsigned int run_count = runs, seen = restarts_seen;
+
+    assert(OpenIMP_HelixJpeg_Encode(frame, qt, &stream) == 0);
+    allow_truncation = jobs == 1u;
+    if (picture) {
+        check_picture(&stream, frame->width, frame->height, 30.0);
+    } else {
+        uint32_t w, h;
+        uint8_t *y, *cb, *cr;
+
+        decode_jpeg((const uint8_t *)(uintptr_t)stream.virt_addr,
+                    stream.length, &w, &h, &y, &cb, &cr);
+        assert(w == frame->width && h == frame->height);
+        free(y);
+        free(cb);
+        free(cr);
+    }
+    allow_truncation = 0;
+    printf("  %u jobs, %u restarts, %u bytes\n", runs - run_count,
+           restarts_seen - seen, stream.length);
+    assert(runs == run_count + jobs && restarts_seen == seen + restarts);
+    if (jobs == 1u)
+        assert(last_mb_rows == (frame->height + 15u) / 16u &&
+               last_raw_y == frame->phys_addr);
+    free((void *)(uintptr_t)stream.virt_addr);
+}
+
+static void test_one_job(void)
+{
+    HelixJpegFrame frame;
+    uint8_t qt[128], fine[128];
+    uint32_t size, i, state = 1u;
+    uint8_t *pixels = make_frame(1920u, 1080u, 1920u * 1088u, &size, 0);
+
+    printf("one job (#954):\n");
+    OpenIMP_HelixJpeg_Shutdown();
+    unsetenv("OPENIMP_HELIX_JPEG_ONE_JOB");
+    allow_one_job = 1;
+    memset(&frame, 0, sizeof(frame));
+    frame.virt_addr = (uint32_t)(uintptr_t)pixels;
+    frame.phys_addr = frame.virt_addr;
+    frame.size = size;
+    frame.width = 1920u;
+    frame.height = 1080u;
+    HelixJpeg_QualityTables(75u, qt);
+    HelixJpeg_QualityTables(90u, fine);
+    assert(!OpenIMP_HelixJpeg_OneJobNext(1920u, 1080u));
+    /* first picture: stripes (nothing known about its size) */
+    encode_one(&frame, qt, 34u, 33u, 1);
+    assert(OpenIMP_HelixJpeg_OneJobNext(1920u, 1080u));
+    assert(!OpenIMP_HelixJpeg_OneJobNext(1280u, 720u));
+    /* then one job: no DRI, no restarts, no cut */
+    encode_one(&frame, qt, 1u, 0u, 1);
+    encode_one(&frame, qt, 1u, 0u, 1);
+    /* new tables: stripes once, then one job */
+    encode_one(&frame, fine, 34u, 33u, 1);
+    encode_one(&frame, fine, 1u, 0u, 1);
+    /* a noisy picture (still one job: the last one was small) takes more
+     * than a third of the 1 MiB buffer (not all of it: the fake core
+     * asserts that), so the next goes in stripes */
+    for (i = 0; i < 1920u * 1080u; i++) {
+        state = state * 1103515245u + 12345u;
+        pixels[i] = (uint8_t)(112u + ((state >> 16) & 31u));
+    }
+    encode_one(&frame, qt, 1u, 0u, 0);
+    assert(!OpenIMP_HelixJpeg_OneJobNext(1920u, 1080u));
+    encode_one(&frame, qt, 34u, 33u, 0);
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
+    /* =0: always the worst-case stripes */
+    OpenIMP_HelixJpeg_Shutdown();
+    setenv("OPENIMP_HELIX_JPEG_ONE_JOB", "0", 1);
+    allow_one_job = 0;
+    pixels = make_frame(1920u, 1080u, 1920u * 1088u, &size, 0);
+    frame.virt_addr = (uint32_t)(uintptr_t)pixels;
+    frame.phys_addr = frame.virt_addr;
+    encode_one(&frame, qt, 34u, 33u, 1);
+    encode_one(&frame, qt, 34u, 33u, 1);
+    assert(!OpenIMP_HelixJpeg_OneJobNext(1920u, 1080u));
+    fake_rmem_unmap(pixels, size + FRAME_SLACK);
+}
+#endif
+
 int main(void)
 {
     /* the stream carries 32-bit addresses: keep the heap low (no PIE, no
@@ -1593,6 +1687,8 @@ int main(void)
     /* the reserve the camera's 23 MiB arena gives (1/16 is 1472 KiB there;
      * the fake arena spans 2 GiB) */
     setenv("OPENIMP_HELIX_JPEG_RMEM_RESERVE_KB", "512", 1);
+    /* the worst-case stripes; test_one_job turns #954 on */
+    setenv("OPENIMP_HELIX_JPEG_ONE_JOB", "0", 1);
     test_tables();
 #if defined(HELIX_JPEG_TEST_REFERENCE)
     test_mcus_bits();
@@ -1614,6 +1710,9 @@ int main(void)
 #endif
 #if defined(HELIX_STRIPES)
     test_stripes();
+#endif
+#if defined(HELIX_STRIPES) && defined(PLATFORM_T20)
+    test_one_job();
 #endif
     test_channel_release();
     test_failures();
