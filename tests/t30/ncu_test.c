@@ -1,9 +1,11 @@
 /*
- * T30 NCU engine (src/t30/t30_ncu.c, t30_ncu_par104.c) against the vendor libimp 1.0.4 register
- * trace (#701).  The fixtures were recorded with tools/t30_ncu/ncu_oracle.c running the stock
- * ABUS firmware libimp 1.0.4 (md5 962be4bc) under qemu-mipsel on the synthetic bin of
- * ncu_synth_bin.h (seed 1), mode 1 (Temper by day, NCU at night) and mode 0 (NCU always on).
- * Every register write (address, value, order) must match.
+ * T30 NCU engine (src/t30/t30_ncu.c, t30_ncu_par104.c, t30_ncu_par105.c) against the vendor
+ * libimp register traces (#701 1.0.4, #703 1.0.5).  The fixtures were recorded with
+ * tools/t30_ncu/ncu_oracle.c running the vendor library under qemu-mipsel on the synthetic bin
+ * of ncu_synth_bin.h (seed 1): the stock ABUS firmware libimp 1.0.4 (md5 962be4bc, 0x1548 byte
+ * layout) and the T30X libimp 1.0.5 (md5 ad636e05, 0xec8 byte layout), each in mode 1 (Temper by
+ * day, NCU at night) and mode 0 (NCU always on).  Every register write (address, value, order)
+ * must match.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +40,7 @@ static int s_bypass(int en) { t30_ncu_ctrl_bypass(en); return 0; }
 static int s_mode(int m) { t30_ncu_ctrl_update_mode(m); return 0; }
 static int s_update(int g) { t30_ncu_ctrl_update(g); return 0; }
 
-static int run_mode(const char *dir, uint32_t mode)
+static int run_mode(const char *dir, uint32_t mode, int l105)
 {
     static uint32_t bin[0x1548 / 4];
     const struct ncu_seq_ops ops = { s_hal_init, s_buf_size, s_buf_init, s_bypass, s_mode, s_update };
@@ -50,12 +52,12 @@ static int run_mode(const char *dir, uint32_t mode)
 
     snprintf(sensor, sizeof(sensor), "synth%u", mode);
     snprintf(path, sizeof(path), "%s/ncu_%s.bin", dir, sensor);
-    ncu_synth_bin(bin, 1, mode);
+    (l105 ? ncu_synth_bin105 : ncu_synth_bin)(bin, 1, mode);
     f = fopen(path, "wb");
-    if (f == NULL || fwrite(bin, sizeof(bin), 1, f) != 1)
+    if (f == NULL || fwrite(bin, l105 ? 0xec8 : sizeof(bin), 1, f) != 1)
         return 1;
     fclose(f);
-    if (t30_ncu_bin_probe(path, &probed) != T30_NCU_BIN_104 || probed != mode) {
+    if (t30_ncu_bin_probe(path, &probed) != (l105 ? T30_NCU_BIN_105 : T30_NCU_BIN_104) || probed != mode) {
         fprintf(stderr, "ncu_test: probe mode %u -> %u\n", mode, probed);
         return 1;
     }
@@ -65,7 +67,7 @@ static int run_mode(const char *dir, uint32_t mode)
     fclose(out);
     unlink(path);
 
-    snprintf(path, sizeof(path), "fixtures/ncu104_synth_mode%u.txt", mode);
+    snprintf(path, sizeof(path), "fixtures/ncu%u_synth_mode%u.txt", l105 ? 105u : 104u, mode);
     f = fopen(path, "rb");
     if (f == NULL)
         return 1;
@@ -84,7 +86,7 @@ static int run_mode(const char *dir, uint32_t mode)
 
         for (i = 0; i < got_n && i < want_n && got[i] == want[i]; i++)
             line += got[i] == '\n';
-        fprintf(stderr, "ncu_test: mode %u differs from the vendor trace at line %zu\n", mode, line);
+        fprintf(stderr, "ncu_test: layout %u mode %u differs from the vendor trace at line %zu\n", l105 ? 105u : 104u, mode, line);
     }
     free(got);
     free(want);
@@ -101,12 +103,14 @@ int main(void)
         return 1;
     t30_ncu_set_reg_ops(fake_wr, fake_rd);
     t30_ncu_set_bin_dir(dir);
-    fails += run_mode(dir, 1);
-    fails += run_mode(dir, 0);
+    fails += run_mode(dir, 1, 0);
+    fails += run_mode(dir, 0, 0);
+    fails += run_mode(dir, 1, 1);
+    fails += run_mode(dir, 0, 1);
     rmdir(dir);
     /* layout probe: wrong sizes are not taken for an NCU bin */
     if (t30_ncu_bin_probe("/nonexistent/ncu_x.bin", &m) != T30_NCU_BIN_NONE)
         fails++;
-    printf("ncu_test: %s\n", fails ? "FAIL" : "ok (vendor 1.0.4 trace, modes 1 and 0)");
+    printf("ncu_test: %s\n", fails ? "FAIL" : "ok (vendor 1.0.4 and 1.0.5 traces, modes 1 and 0)");
     return fails ? 1 : 0;
 }

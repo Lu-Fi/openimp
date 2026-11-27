@@ -1,6 +1,6 @@
 /*
- * T30 NCU vendor oracle (Lu-Fi/openimp #701): runs the NCU engine of a vendor T30 libimp
- * (1.0.4, stock ABUS firmware, md5 962be4bc) under qemu-mipsel and prints every NCU
+ * T30 NCU vendor oracle (Lu-Fi/openimp #701, #703): runs the NCU engine of a vendor T30 libimp
+ * (1.0.4 stock ABUS firmware, md5 962be4bc, or 1.0.5 T30X library, md5 ad636e05) under qemu-mipsel and prints every NCU
  * register write.  write_reg_32 / read_reg_32 are defined here and preempt the library's
  * own (it reaches them through the GOT), so no /dev/mem is touched.  The vendor library
  * is not part of this repository.
@@ -35,6 +35,7 @@ int read_reg_32(uint32_t a, uint32_t *v)
 }
 
 int IMP_Log_Get_Option(void) { return 0; }
+int isp_get_total_gain(void) { return 0; }   /* 1.0.5 ncu_ctrl_update_param reads it; 1.0.4 does not */
 void imp_log_fun(int level, int opt, int cnt, ...) { (void)level; (void)opt; (void)cnt; }
 
 extern int ncu_hal_init(const char *sensor, int w, int h);
