@@ -1333,6 +1333,13 @@ int IMP_FrameSource_SetFrameDepth(int chnNum, int depth)
             return 0;
         }
         depth = c->attr.nrVBs < T32_FS_MAX_DEPTH ? c->attr.nrVBs : T32_FS_MAX_DEPTH;
+    } else if (depth > 0 && c->depth > 0) {
+        /* #961: with copies, too, a set depth stays: vendor T32 2.2.0 SetFrameDepth (Ghidra 0x14edf4) and T33
+         * 2.0.2.1 (Ghidra 0x14948c): copy type 0 (+0x24c == 0) and a depth set (+0x248 != 0) -> return 0, no
+         * change; only SetFrameDepth(chn, 0) frees the depth list.  A second GetFrame before ReleaseFrame then finds
+         * the further copies of the depth set first (carrier A8: vendor rc 0, OpenIMP refused with 0x80012000) */
+        pthread_mutex_unlock(&fs_lock);
+        return 0;
     }
     c->depth = depth;
     fs_slots_sync_locked(c);

@@ -13,6 +13,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T32/T33 SetFrameDepth keeps a set depth with copies too (#961)
+
+- Vendor T32 2.2.0 SetFrameDepth (Ghidra 0x14edf4) and T33 2.0.2.1 (Ghidra 0x14948c): with copy type 0 (+0x24c == 0)
+  and a depth already set (+0x248 != 0) the call returns 0 and changes nothing; only SetFrameDepth(chn, 0) frees the
+  depth list (the no-copy rule, depth = nrVBs, was already ported).  OpenIMP set the new depth, so after
+  SetFrameDepth(chn, 1) on a channel with a larger depth a second GetFrame before ReleaseFrame found no copy and
+  returned 0x80012000 (vendor 0).  QEMU T32 carrier A8: vendor and OpenIMP now both rc 0, the whole A8 line equal.
+
 ## 2026-11-27: T32/T33 FrameSource passes every sensor frame, the encoder drops against the sensor rate (#921)
 
 - The vendor FrameSource (T33 2.0.2.1, T32 2.2.0) has no frame-rate drop: the DQBUF callback (T33 0x134638, DQBUF
