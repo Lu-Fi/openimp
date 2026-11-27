@@ -435,6 +435,7 @@ int main(int argc, char **argv)
 #if defined(APITEST_T33)
     { void t33_pre_sysinit(void); t33_pre_sysinit(); }   /* at_t33.c: encoder globals before IMP_System_Init */
 #endif
+    { void enc_carrier_pre_sysinit(void); enc_carrier_pre_sysinit(); }   /* at_enc.c: case carrier (#931 A4, A10) calls before the init */
     ret = IMP_System_Init();
     RET0(IMP_System_Init, ret, "");
     if (ret < 0) return 1;

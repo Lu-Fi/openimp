@@ -2942,11 +2942,16 @@ int enc_push_run(void) { return -1; }
 static int car_on(const char *p)
 {
     const char *v = getenv("CARRIER_PARTS"), *c = getenv("APITEST_CASES");
-    char nm[16];
+    char nm[24];
 
     snprintf(nm, sizeof(nm), "carrier_%s", p);       /* case alias carrier_a3: one part, own log in qemu_run */
-    if (c && strstr(c, nm)) return 1;
-    if (c && strstr(c, "carrier_") && !strstr(c, "carrier,") ) return 0;
+    if (c) {                                          /* exact token: carrier_a1 must not match carrier_a10 */
+        const char *q;
+
+        for (q = c; (q = strstr(q, nm)) != NULL; q += strlen(nm))
+            if (q[strlen(nm)] == 0 || q[strlen(nm)] == ',') return 1;
+    }
+    if (c && strstr(c, "carrier_") && !strstr(c, "carrier,") && !(strlen(c) >= 7 && !strcmp(c + strlen(c) - 7, "carrier")) ) return 0;
     return !v || !*v || strstr(v, p);
 }
 
@@ -3237,6 +3242,298 @@ static void car_a9(void)
 }
 #endif
 
+/* ---- batch 2 (#931): A1 A4 A6 A8 A10 A11 A12 ---- */
+
+/* frames and the largest packet count of one frame (slice packets with a multi-section mode) */
+static void car_packs(int chn, int n, int *nfr, int *maxp, int *minp)
+{
+    int i;
+
+    *nfr = 0; *maxp = 0; *minp = 1 << 20;
+    for (i = 0; i < n * 4 && *nfr < n; i++) {
+        G(IMPEncoderStream, s);
+
+        if (IMP_Encoder_PollingStream(chn, 2000) || IMP_Encoder_GetStream(chn, s, false)) { gfree(s); continue; }
+        if ((int)s->packCount > *maxp) *maxp = (int)s->packCount;
+        if ((int)s->packCount < *minp) *minp = (int)s->packCount;
+        (*nfr)++;
+        IMP_Encoder_ReleaseStream(chn, s);
+        gfree(s);
+    }
+    if (!*nfr) *minp = 0;
+}
+
+static int car_pre_ms = -77, car_pre_jms = -77, car_pre_osd = -77, car_pre_isp = -77;
+static int car_pre_done;
+
+/* called by main() right before IMP_System_Init (A4 + A10 need the calls BEFORE the init; CARRIER_PRE=0 skips them as a control) */
+void enc_carrier_pre_sysinit(void)
+{
+    const char *c = getenv("APITEST_CASES"), *pre = getenv("CARRIER_PRE");
+
+    if (!c || !strstr(c, "carrier") || (pre && !strcmp(pre, "0"))) return;
+    car_pre_done = 1;
+#if HAS_IMP_Encoder_SetMultiSectionMode
+    if (IMP_Encoder_SetMultiSectionMode) car_pre_ms = IMP_Encoder_SetMultiSectionMode(1, 100, 2);
+#endif
+#if HAS_IMP_Encoder_SetJpegMultiSectionMode
+    if (IMP_Encoder_SetJpegMultiSectionMode) car_pre_jms = IMP_Encoder_SetJpegMultiSectionMode(1, 50, 2);
+#endif
+#if HAS_IMP_OSD_SetPoolSize
+    if (IMP_OSD_SetPoolSize) car_pre_osd = IMP_OSD_SetPoolSize(512 * 1024);
+#endif
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_SetOsdPoolSize
+    if (IMP_ISP_Tuning_SetOsdPoolSize) car_pre_isp = IMP_ISP_Tuning_SetOsdPoolSize(512 * 1024);
+#endif
+    printf("carrier: pre-init SetMultiSectionMode(1,100,2) %d, SetJpegMultiSectionMode(1,50,2) %d, OSD_SetPoolSize(512K) %d, ISP_Tuning_SetOsdPoolSize(512K) %d (-77 = no such API)\n",
+           car_pre_ms, car_pre_jms, car_pre_osd, car_pre_isp);
+    fflush(stdout);
+}
+
+/* A1: FS + encoder stay running, the client side repeats StartRecvPic and attaches/detaches without any per-session stop */
+static void car_a1(void)
+{
+    int rs2, rs3, ren, sess, ndrain = 0, ok = 1, idr[3] = { -9, -9, -9 }, fr[3] = { 0, 0, 0 }, rf[3] = { 0, 0, 0 }, rq[3] = { 0, 0, 0 };
+    SI si;
+
+    if (car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1)) { rep(FN(IMP_Encoder_StartRecvPic), -1, V_FAIL, "chn up failed"); return; }
+    pull(0, CODEC_H264, 5, 0, 0, &si, 3000);
+    rs2 = IMP_Encoder_StartRecvPic(0);                  /* already started */
+    rs3 = IMP_Encoder_StartRecvPic(0);
+    ren = IMP_FrameSource_EnableChn(CH_SUB);            /* FS already enabled */
+    for (sess = 0; sess < 3; sess++) {
+        rf[sess] = IMP_Encoder_FlushStream(0);          /* attach: Flush, drain, RequestIDR, (Start again) */
+        { int i; for (i = 0; i < 6 && car_fetch(0, 50, 0, NULL) == 0; i++) ndrain++; }
+        rq[sess] = IMP_Encoder_RequestIDR(0);
+        IMP_Encoder_StartRecvPic(0);
+        pull(0, CODEC_H264, 8, 0, 0, &si, 3000);
+        idr[sess] = si.first_idr_frame; fr[sess] = si.frames;
+        usleep(500000);                                 /* detach: nobody consumes, no StopRecvPic */
+        if (idr[sess] != 0 || fr[sess] < 8 || rf[sess] || rq[sess]) ok = 0;
+    }
+    (void)ndrain;
+    printf("carrier: A1 StartRecvPic on a started chn %d / %d, FS EnableChn again %d; 3 sessions (Flush rc %d %d %d, RequestIDR rc %d %d %d): first IDR index %d %d %d, frames %d %d %d\n",
+           rs2, rs3, ren, rf[0], rf[1], rf[2], rq[0], rq[1], rq[2], idr[0], idr[1], idr[2], fr[0], fr[1], fr[2]);
+    rep(FN(IMP_Encoder_StartRecvPic), rs2 | rs3, ok ? V_PASS : V_FAIL, "repeated StartRecvPic %d %d, FS enable again %d, 3 attach/detach sessions: IDR first, 8 frames each", rs2, rs3, ren);
+    car_down(0, CH_SUB, 0);
+}
+
+/* A4: multi-section modes before IMP_System_Init (enc_carrier_pre_sysinit), later calls, slice packets of one frame */
+static void car_a4(void)
+{
+    int late = -77, latej = -77, bad0 = -77, bad1 = -77, nfr, maxp, minp;
+
+    if (!car_pre_done) { rep_na(FN(IMP_Encoder_GetStream)); printf("carrier: A4 skipped (CARRIER_PRE=0 or no carrier case)\n"); }
+#if HAS_IMP_Encoder_SetMultiSectionMode
+    if (IMP_Encoder_SetMultiSectionMode) { bad0 = IMP_Encoder_SetMultiSectionMode(0, 100, 2); bad1 = IMP_Encoder_SetMultiSectionMode(1, 0, 2); }
+#endif
+    if (car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1)) { rep(FN(IMP_Encoder_GetStream), -1, V_FAIL, "chn up failed"); return; }
+#if HAS_IMP_Encoder_SetMultiSectionMode
+    if (IMP_Encoder_SetMultiSectionMode) late = IMP_Encoder_SetMultiSectionMode(1, 100, 2);        /* encoder module already exists */
+#endif
+#if HAS_IMP_Encoder_SetJpegMultiSectionMode
+    if (IMP_Encoder_SetJpegMultiSectionMode) latej = IMP_Encoder_SetJpegMultiSectionMode(1, 50, 2);
+#endif
+    car_packs(0, 10, &nfr, &maxp, &minp);
+    printf("carrier: A4 pre-init rc ms %d jms %d; after init: ms(1,100,2) %d, ms(0,100,2) %d, ms(1,0,2) %d, jms %d; 10 frames %d, packets per frame min>=1 %d, max>1 %d\n",
+           car_pre_ms, car_pre_jms, late, bad0, bad1, latej, nfr, minp >= 1, maxp > 1);
+    rep(FN(IMP_Encoder_GetStream), nfr >= 10 ? 0 : -1, nfr >= 10 ? V_PASS : V_FAIL, "multi-section set before init (rc %d), frames flow, packets per frame max %d", car_pre_ms, maxp);
+    car_down(0, CH_SUB, 0);
+}
+
+/* A6: hot channel-layer rebuild with the system layer kept: FS ch2 + encoder destroyed and recreated at alternating sizes */
+static int car_memfree_kb(void)
+{
+    FILE *f = fopen("/proc/meminfo", "r");
+    char l[128];
+    int v = -1;
+
+    if (!f) return -1;
+    while (fgets(l, sizeof(l), f)) if (sscanf(l, "MemFree: %d kB", &v) == 1) break;
+    fclose(f);
+    return v;
+}
+
+static void car_a6(void)
+{
+    int loops = getenv("CARRIER_LOOPS") ? atoi(getenv("CARRIER_LOOPS")) : 6, i, bad = 0, badsize = 0, badflow = 0, m0, m1, rfs = 0, rd = 0;
+    static const int sz[2][2] = { { SUB_W, SUB_H }, { 480, 272 } };
+
+    car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1);
+    car_down(0, CH_SUB, 0);                       /* warm up: first create/destroy allocates the pools */
+    m0 = car_memfree_kb();
+    for (i = 0; i < loops; i++) {
+        G(IMPFSChnAttr, fa);
+        SI si;
+        int w = sz[i & 1][0], h = sz[i & 1][1], rc;
+
+        IMP_FrameSource_GetChnAttr(CH_SUB, fa);
+        fa->picWidth = w; fa->picHeight = h; fa->scaler.enable = 1; fa->scaler.outwidth = w; fa->scaler.outheight = h;
+        rfs = IMP_FrameSource_CreateChn(2, fa);
+        if (!rfs) rfs = IMP_FrameSource_EnableChn(2);
+        rc = rfs ? rfs : car_up(1, 2, 1, w, h, 0, 1);
+        memset(&si, 0, sizeof(si));
+        if (!rc) pull(1, CODEC_H264, 6, 0, 0, &si, 3000);
+        if (rc || rfs) bad++;
+        if (si.w != w || si.h != h) badsize++;
+        if (si.frames < 6) badflow++;
+        if (!rc) car_down(1, 2, 1);
+        IMP_FrameSource_DisableChn(2);
+        rd = IMP_FrameSource_DestroyChn(2);
+        if (rd) bad++;
+        gfree(fa);
+    }
+    m1 = car_memfree_kb();
+    if (getenv("CARRIER_V")) printf("carrier-v: A6 MemFree %d -> %d kB\n", m0, m1);
+    printf("carrier: A6 %d rebuilds of FS ch2 + encoder (System_Init kept) at alternating sizes: create/destroy errors %d, wrong SPS size %d, too few frames %d, MemFree loss < 2 MB %d\n",
+           loops, bad, badsize, badflow, m0 < 0 || m0 - m1 < 2048);
+    rep(FN(IMP_FrameSource_DestroyChn), bad, (!bad && !badsize && !badflow && (m0 < 0 || m0 - m1 < 2048)) ? V_PASS : V_FAIL, "%d hot rebuilds, SPS follows the size, no leak > 2 MB", loops);
+}
+
+/* A8: encoder on the FS channel while GetFrame / SnapFrame run on the same channel (#922, #932) */
+static void car_a8(void)
+{
+    int i, nstream = 0, ngf = 0, rdepth, rcopy = -77, rsnap = -77, rrel = 0, second = -77, rd0a = 0, rd0b = 0, nsnap_nz = 0;
+    IMPFrameInfo *f1 = NULL, *f2 = NULL;
+    SI si;
+
+    if (car_up(0, CH_SUB, 0, SUB_W, SUB_H, 0, 1)) { rep(FN(IMP_FrameSource_GetFrame), -1, V_FAIL, "chn up failed"); return; }
+#if HAS_IMP_FrameSource_SetFrameDepthCopyType
+    if (IMP_FrameSource_SetFrameDepthCopyType) rcopy = IMP_FrameSource_SetFrameDepthCopyType(CH_SUB, 0);
+#endif
+    rdepth = IMP_FrameSource_SetFrameDepth(CH_SUB, 1);
+    for (i = 0; i < 30; i++) {
+        if (car_fetch(0, 2000, 0, NULL) == 0) nstream++;
+        if (i % 3 == 0) {
+            int rg = IMP_FrameSource_GetFrame(CH_SUB, &f1);
+
+            if (rg == 0 && f1) {
+                ngf++;
+                if (i == 0) second = IMP_FrameSource_GetFrame(CH_SUB, &f2);        /* a second one before ReleaseFrame (vendor: refused) */
+                if (IMP_FrameSource_ReleaseFrame(CH_SUB, f1)) rrel++;
+            }
+            f1 = NULL;
+        }
+    }
+    {
+        size_t nv = (size_t)SUB_W * SUB_H * 3 / 2, k;
+        unsigned char *buf = malloc(nv);
+        G(IMPFrameInfo, fi);
+
+#if HAS_IMP_FrameSource_SnapFrame
+        if (buf && IMP_FrameSource_SnapFrame) {
+            memset(buf, 0, nv);
+            rsnap = IMP_FrameSource_SnapFrame(CH_SUB, PIX_FMT_NV12, SUB_W, SUB_H, buf, fi);
+            for (k = 0; k < nv; k += 61) if (buf[k]) nsnap_nz++;
+        }
+#endif
+        free(buf); gfree(fi);
+    }
+    rd0a = IMP_FrameSource_SetFrameDepth(CH_SUB, 0);
+    rd0b = IMP_FrameSource_SetFrameDepth(CH_SUB, 0);                /* repeated, vendor: explicit "no depth" state */
+    pull(0, CODEC_H264, 10, 0, 0, &si, 3000);
+    printf("carrier: A8 SetFrameDepthCopyType(0) %d, SetFrameDepth(1) %d; 30 rounds: stream frames %d >= 28 %d, GetFrame %d >= 8 %d, Release errors %d, second GetFrame before Release rc %d; SnapFrame NV12 rc %d content %d; SetFrameDepth(0) %d %d; encoder 10 frames after %d\n",
+           rcopy, rdepth, nstream, nstream >= 28, ngf, ngf >= 8, rrel, second, rsnap, nsnap_nz > 100, rd0a, rd0b, si.frames);
+    rep(FN(IMP_FrameSource_GetFrame), rdepth, (rdepth == 0 && nstream >= 28 && ngf >= 8 && !rrel && rd0a == 0 && si.frames >= 10) ? V_PASS : V_FAIL,
+        "encoder + GetFrame on one channel: %d stream frames, %d GetFrame, depth back to 0, encoder %d frames", nstream, ngf, si.frames);
+    car_down(0, CH_SUB, 0);
+}
+
+/* A10: IPU/ISP OSD pools sized before the init (pre-init calls above), then an ISP OSD picture and a pool-exhausting one */
+static void car_a10(void)
+{
+    int late = -77;
+
+#if HAS_IMP_OSD_SetPoolSize
+    if (IMP_OSD_SetPoolSize) late = IMP_OSD_SetPoolSize(256 * 1024);       /* after the init */
+#endif
+    printf("carrier: A10 pre-init OSD_SetPoolSize %d, ISP_Tuning_SetOsdPoolSize %d; OSD_SetPoolSize after init %d\n", car_pre_osd, car_pre_isp, late);
+#if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_CreateOsdRgn && HAS_IMP_ISP_Tuning_SetOsdRgnAttr && HAS_IMP_ISP_Tuning_DestroyOsdRgn
+    if (IMP_ISP_Tuning_CreateOsdRgn && IMP_ISP_Tuning_SetOsdRgnAttr && IMP_ISP_Tuning_DestroyOsdRgn) {
+        static const int dim[2][2] = { { 128, 64 }, { 512, 512 } };        /* 32 KiB fits a 512 KiB pool, 1 MiB does not */
+        int rs[2] = { -99, -99 }, h[2] = { -99, -99 }, rd[2] = { -99, -99 }, k;
+
+        for (k = 0; k < 2; k++) {
+            IMPIspOsdAttrAsm *a = (IMPIspOsdAttrAsm *)calloc(1, sizeof(*a));
+            uint8_t *pic = (uint8_t *)calloc((size_t)dim[k][0] * dim[k][1], 4);
+
+            if (!a || !pic) { free(a); free(pic); continue; }
+            h[k] = IMP_ISP_Tuning_CreateOsdRgn(0, NULL);
+            if (h[k] >= 0) {
+                a->type = ISP_OSD_REG_PIC;
+                a->stsinglepicAttr.chnOSDAttr.osd_type = IMP_ISP_PIC_ARGB_8888;
+                a->stsinglepicAttr.chnOSDAttr.osd_argb_type = IMP_ISP_ARGB_TYPE_ARGB;
+                a->stsinglepicAttr.chnOSDAttr.osd_pixel_alpha_disable = IMPISP_TUNING_OPS_MODE_DISABLE;
+                a->stsinglepicAttr.pic.pinum = (uint8_t)h[k]; a->stsinglepicAttr.pic.osd_enable = 1;
+                a->stsinglepicAttr.pic.osd_left = 64; a->stsinglepicAttr.pic.osd_top = 64;
+                a->stsinglepicAttr.pic.osd_width = dim[k][0]; a->stsinglepicAttr.pic.osd_height = dim[k][1];
+                a->stsinglepicAttr.pic.osd_image = (char *)pic; a->stsinglepicAttr.pic.osd_stride = dim[k][0] * 4;
+                rs[k] = IMP_ISP_Tuning_SetOsdRgnAttr(0, h[k], a);
+                rd[k] = IMP_ISP_Tuning_DestroyOsdRgn(0, h[k]);
+            }
+            free(a); free(pic);
+        }
+        printf("carrier: A10 ISP OSD 128x64: handle>=0 %d SetRgnAttr %d Destroy %d; 512x512 (1 MiB): handle>=0 %d SetRgnAttr %d Destroy %d\n",
+               h[0] >= 0, rs[0], rd[0], h[1] >= 0, rs[1], rd[1]);
+        rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs[0], (h[0] >= 0 && rs[0] == 0 && rd[0] == 0 && rs[1] != 0) ? V_PASS : V_FAIL,
+            "pool 512 KiB sized before init: 128x64 picture accepted, 1 MiB picture refused (%d)", rs[1]);
+    }
+#endif
+}
+
+/* A12: day/night = SetISPRunningMode (ircut is external), then the AE state and AWB statistics are read again */
+#if defined(PLATFORM_T41)
+# define CAR_RM_SET(m) IMP_ISP_Tuning_SetISPRunningMode(IMPVI_MAIN, &(m))
+#else
+# define CAR_RM_SET(m) IMP_ISP_Tuning_SetISPRunningMode(m)
+#endif
+static void car_a12(void)
+{
+#if HAS_IMP_ISP_Tuning_SetISPRunningMode && HAS_IMP_ISP_Tuning_GetISPRunningMode
+    IMPISPRunningMode night = IMPISP_RUNNING_MODE_NIGHT, day = IMPISP_RUNNING_MODE_DAY;
+    G(IMPISPRunningMode, rb);
+    int rn, rbn, rdy, rbd, rae = -77, rawb = -77, stable = -1, awbnz = 0, i, reached = 0;
+
+    rn = CAR_RM_SET(night);
+    rbn = IMP_ISP_Tuning_GetISPRunningMode(V0 rb); gchk(rb);
+    rbn |= *rb != IMPISP_RUNNING_MODE_NIGHT;
+# if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetAeOnlyReadAttr
+    {
+        G(IMPISPAeOnlyReadAttr, ae);
+
+        for (i = 0; i < 40; i++) {                      /* wait for the AE stable stage >= 2 (QEMU sensors may never get there: informational) */
+            rae = IMP_ISP_Tuning_GetAeOnlyReadAttr(IMPVI_MAIN, ae);
+            if (rae == 0) stable = ae->stable;
+            if (rae == 0 && stable >= 2) { reached = 1; break; }
+            usleep(250000);
+        }
+        gfree(ae);
+    }
+# endif
+# if defined(PLATFORM_T41) && HAS_IMP_ISP_Tuning_GetAwbStatistics
+    {
+        IMPISPAWBStatisInfo *aw = calloc(1, sizeof(*aw));
+        int z;
+
+        if (aw) {
+            rawb = IMP_ISP_Tuning_GetAwbStatistics(IMPVI_MAIN, aw);
+            for (z = 0; z < 32 * 32; z++) if (aw->awb_r.zone[z / 32][z % 32] || aw->awb_g.zone[z / 32][z % 32]) awbnz++;
+            free(aw);
+        }
+    }
+# endif
+    rdy = CAR_RM_SET(day);
+    rbd = IMP_ISP_Tuning_GetISPRunningMode(V0 rb); gchk(rb);
+    rbd |= *rb != IMPISP_RUNNING_MODE_DAY;
+    printf("carrier: A12 SetISPRunningMode night %d read back mismatch %d; GetAeOnlyReadAttr rc %d (stable>=2 reached %d, last stable %d); GetAwbStatistics rc %d (any zone non-zero %d); day %d mismatch %d; frames flow %d\n",
+           rn, rbn, rae, reached, stable, rawb, awbnz > 0, rdy, rbd, enc_pull_h264(0) >= 0);
+    rep(FN(IMP_ISP_Tuning_SetISPRunningMode), rn | rdy, (!rn && !rdy && !rbn && !rbd) ? V_PASS : V_FAIL, "night and back to day, read back equal");
+    gfree(rb);
+#else
+    rep_na(FN(IMP_ISP_Tuning_SetISPRunningMode));
+#endif
+}
+
 int enc_carrier_run(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);      /* a vendor abort must not eat the lines before it */
@@ -3250,8 +3547,23 @@ int enc_carrier_run(void)
     if (car_on("a7")) car_a7();
     wdog("cases", 240);
     if (car_on("a9")) car_a9();
+    wdog("cases", 240);
+    if (car_on("a1")) car_a1();
+    wdog("cases", 240);
+    if (car_on("a4")) car_a4();
+    wdog("cases", 240);
+    if (car_on("a6")) car_a6();
+    wdog("cases", 240);
+    if (car_on("a8")) car_a8();
+    wdog("cases", 240);
+    if (car_on("a10")) car_a10();
+    wdog("cases", 240);
+    if (car_on("a11")) { extern void enc_carrier_a11(void); enc_carrier_a11(); }
+    wdog("cases", 240);
+    if (car_on("a12")) car_a12();
     return 0;
 }
 #else
+void enc_carrier_pre_sysinit(void) { }
 int enc_carrier_run(void) { return -1; }     /* the SoC API has no GetFd / SetMaxStreamCnt / FlushStream */
 #endif
