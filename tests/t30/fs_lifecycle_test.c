@@ -2726,6 +2726,103 @@ static void test_depth_copy(void)
 }
 #endif
 
+#if !defined(PLATFORM_T20)
+/* #932: T21/T23/T30/T31 vendor libimp (1.0.33 / 1.3.0 / 1.0.5 / 1.1.6) copy
+ * every frame of a depth channel into the depth list before the bound
+ * encoder gets it (on_framesource_group_data_update / T31 FUN_000aa654), so
+ * a GetFrame reader and an encoder that pulls the capture pool (VBMGetFrame)
+ * both get every frame.  The old code shared the ready queue between them. */
+extern void VBMNotePull(int chn);
+extern int VBMGetFrame(int chn, void **frame);
+extern int VBMReleaseFrame(int chn, void *frame);
+static int dp_stop;
+static unsigned int dp_enc, dp_gf, dp_gf_bad;
+
+static void *dp_encoder(void *arg)
+{
+    (void)arg;
+    while (!__atomic_load_n(&dp_stop, __ATOMIC_RELAXED)) {
+        void *frame = NULL;
+
+        VBMNotePull(0);
+        if (VBMGetFrame(0, &frame) == 0 && frame) {
+            __atomic_add_fetch(&dp_enc, 1u, __ATOMIC_RELAXED);
+            VBMReleaseFrame(0, frame);
+        } else {
+            sleep_ms(1);
+        }
+    }
+    return NULL;
+}
+
+static void *dp_reader(void *arg)
+{
+    (void)arg;
+    while (!__atomic_load_n(&dp_stop, __ATOMIC_RELAXED)) {
+        IMPFrameInfo *fi = NULL;
+
+        if (IMP_FrameSource_GetFrame(0, (void **)&fi) == 0 && fi) {
+            if (fi->phyAddr != 0 || fi->virAddr == 0 ||
+                fi->size != fi->width * fi->height * 3u / 2u)
+                __atomic_add_fetch(&dp_gf_bad, 1u, __ATOMIC_RELAXED);
+            else
+                (void)*(volatile const uint8_t *)(uintptr_t)(fi->virAddr + fi->size - 1u);
+            __atomic_add_fetch(&dp_gf, 1u, __ATOMIC_RELAXED);
+            IMP_FrameSource_ReleaseFrame(0, fi);
+        }
+    }
+    return NULL;
+}
+
+static void test_depth_copy_pull(void)
+{
+    IMPFSChnAttr a = attr_for(640, 360, 2);
+    pthread_t te, tr;
+    unsigned int f0, made, e0, g0;
+    IMPFrameInfo *f = NULL;
+
+    fake_dqbuf_delay_us = 10000;            /* ~100 frames/s */
+    CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "depth pull: create");
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 2) == 0, "depth pull: depth 2");
+    CHECK(IMP_FrameSource_EnableChn(0) == 0, "depth pull: enable");
+    __atomic_store_n(&dp_stop, 0, __ATOMIC_RELAXED);
+    dp_enc = dp_gf = dp_gf_bad = 0;
+    pthread_create(&te, NULL, dp_encoder, NULL);
+    pthread_create(&tr, NULL, dp_reader, NULL);
+    sleep_ms(300);
+    f0 = frames_done();
+    e0 = __atomic_load_n(&dp_enc, __ATOMIC_RELAXED);
+    g0 = __atomic_load_n(&dp_gf, __ATOMIC_RELAXED);
+    sleep_ms(1000);
+    made = frames_done() - f0;
+    e0 = __atomic_load_n(&dp_enc, __ATOMIC_RELAXED) - e0;
+    g0 = __atomic_load_n(&dp_gf, __ATOMIC_RELAXED) - g0;
+    __atomic_store_n(&dp_stop, 1, __ATOMIC_RELAXED);
+    pthread_join(te, NULL);
+    pthread_join(tr, NULL);
+    CHECK(made >= 30, "depth pull: %u frames in 1 s", made);
+    CHECK(e0 * 10u >= made * 8u, "depth pull: encoder got %u of %u", e0, made);
+    CHECK(g0 * 10u >= made * 8u, "depth pull: GetFrame got %u of %u", g0, made);
+    CHECK(dp_gf_bad == 0, "depth pull: %u bad copies", dp_gf_bad);
+    /* SetFrameDepthCopyType(1) (before the depth): no copy, the capture
+     * frame as before */
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 0) == 0, "depth pull: depth 0 first");
+    CHECK(IMP_FrameSource_SetFrameDepthCopyType(0, 1) == 0, "depth pull: no-copy type");
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 2) == 0, "depth pull: depth again");
+    sleep_ms(50);
+    CHECK(IMP_FrameSource_GetFrame(0, (void **)&f) == 0 && f && f->phyAddr != 0,
+          "depth pull: no-copy GetFrame hands out the pool frame");
+    if (f)
+        IMP_FrameSource_ReleaseFrame(0, f);
+    CHECK(IMP_FrameSource_SetFrameDepth(0, 0) == 0, "depth pull: depth 0 no-copy");
+    CHECK(IMP_FrameSource_SetFrameDepthCopyType(0, 0) == 0, "depth pull: copy type back");
+    CHECK(IMP_FrameSource_DisableChn(0) == 0, "depth pull: disable");
+    CHECK(IMP_FrameSource_DestroyChn(0) == 0, "depth pull: destroy");
+    fake_dqbuf_delay_us = 0;
+    check_clean("depth pull");
+}
+#endif
+
 int main(void)
 {
     /* rotate spares (opt-in on a device): the record / release paths */
@@ -2766,6 +2863,9 @@ int main(void)
     RUN(listen_buf);
     RUN(push_reader);
     RUN(depth_copy);
+#endif
+#if !defined(PLATFORM_T20)
+    RUN(depth_copy_pull);
 #endif
 #if !defined(PLATFORM_T31)
     /* T31 stamps frames from its own clock (fs_frame_timestamp), the
