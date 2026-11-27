@@ -618,6 +618,57 @@ out:
     gfree(attr); gfree(got);
 }
 
+/* #931 A11 (case carrier_a11): AI dev + AO dev with 40 frame buffers (usrFrmDepth 40), AI first then AO, IMP_AI_EnableAecRefFrame + GetFrameAndRef
+ * without the integrated AEC (vendor reference app order).  Silence only (muted AO, zero PCM). Lines "carrier: A11 ..." are timing independent. */
+#if HAS_IMP_AI_EnableAecRefFrame && HAS_IMP_AI_GetFrameAndRef
+void enc_carrier_a11(void)
+{
+    G(IMPAudioIOAttr, attr);
+    G(IMPAudioFrame, fr);
+    G(IMPAudioFrame, ref);
+    G(IMPAudioIChnParam, acp);
+    static uint32_t zb[1280 / 4];
+    IMPAudioFrame zf;
+    int adev = aidev(), ao = 0, rsa, ren, rsp, rch, rcp, rcp41 = 0, rcp1 = 0, rao, raoc, rref, rsend = 0, rget = -99, k, same = 0, rrel = -99, rdis;
+
+    if (getenv("APITEST_AO") && !atoi(getenv("APITEST_AO"))) { rep(FN(IMP_AI_GetFrameAndRef), 0, V_SKIP, "APITEST_AO=0"); gfree(attr); gfree(fr); gfree(ref); gfree(acp); return; }
+    attr->samplerate = AUDIO_SAMPLE_RATE_16000; attr->bitwidth = AUDIO_BIT_WIDTH_16; attr->soundmode = AUDIO_SOUND_MODE_MONO;
+    attr->frmNum = 40; attr->numPerFrm = 640; attr->chnCnt = 1;
+    memset(&zf, 0, sizeof(zf)); zf.bitwidth = AUDIO_BIT_WIDTH_16; zf.soundmode = AUDIO_SOUND_MODE_MONO; zf.virAddr = zb; zf.len = 1280;
+    rsa = IMP_AI_SetPubAttr(adev, attr);
+    ren = rsa ? -99 : IMP_AI_Enable(adev);
+    acp->usrFrmDepth = 41; rcp41 = rsa ? -99 : IMP_AI_SetChnParam(adev, 0, acp);       /* above frmNum */
+    acp->usrFrmDepth = 1;  rcp1 = rsa ? -99 : IMP_AI_SetChnParam(adev, 0, acp);        /* below 2 */
+    acp->usrFrmDepth = 40; rcp = rsa ? -99 : IMP_AI_SetChnParam(adev, 0, acp);
+    rch = (rsa || ren) ? -99 : IMP_AI_EnableChn(adev, 0);
+    rsp = rsa;
+    rao = IMP_AO_SetPubAttr(ao, attr);
+    if (!rao) rao = IMP_AO_Enable(ao);
+    raoc = rao ? -99 : IMP_AO_EnableChn(ao, 0);
+    if (!raoc) { IMP_AO_SetVolMute(ao, 0, 1); IMP_AO_SetVol(ao, 0, -30); }
+    rref = rch ? -99 : IMP_AI_EnableAecRefFrame(adev, 0, ao, 0);
+    if (!rref) {
+        for (k = 0; k < 3; k++) rsend |= ao_send_silent(ao, &zf);
+        rget = IMP_AI_GetFrameAndRef(adev, 0, fr, ref, BLOCK);
+        gchk(fr); gchk(ref);
+        same = rget == 0 && fr->len > 0 && ref->len == fr->len;
+        if (rget == 0) rrel = IMP_AI_ReleaseFrame(adev, 0, fr);
+    }
+    printf("carrier: A11 AI SetPubAttr %d (frmNum 40) Enable %d; SetChnParam depth 41 -> %d, 1 -> %d, 40 -> %d; EnableChn %d; AO %d/%d; EnableAecRefFrame %d; silent sends %d; GetFrameAndRef %d, mic len == ref len %d, Release %d\n",
+           rsp, ren, rcp41, rcp1, rcp, rch, rao, raoc, rref, rsend, rget, same, rrel);
+    if (!rref) { rdis = IMP_AI_DisableAecRefFrame ? IMP_AI_DisableAecRefFrame(adev, 0, ao, 0) : 0; printf("carrier: A11 DisableAecRefFrame %d\n", rdis); }
+    rep(FN(IMP_AI_GetFrameAndRef), rget, (rsa == 0 && rch == 0 && rcp == 0 && rref == 0 && rget == 0 && same) ? V_PASS : V_FAIL,
+        "40 frame buffers, depth 40, ref frame without AEC: mic len == ref len %d", same);
+    if (!raoc) IMP_AO_DisableChn(ao, 0);
+    if (!rao) IMP_AO_Disable(ao);
+    if (!rch) IMP_AI_DisableChn(adev, 0);
+    if (!ren) IMP_AI_Disable(adev);
+    gfree(attr); gfree(fr); gfree(ref); gfree(acp);
+}
+#else
+void enc_carrier_a11(void) { }
+#endif
+
 void t_audio(void)
 {
     int dev = aidev(), r;
