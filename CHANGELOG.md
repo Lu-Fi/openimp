@@ -17,6 +17,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T33 SetFrameDepthCopyType / SetYuvAlign check (#803, no library change)
+
+- both cells are already on next (SetYuvAlign #805, no-copy depth #784/#921). The "unreadable frames" of the vendor 2.0.2.1 run were a test fault: the tx-isp-t33 default is IVDC direct mode, which hands out pa 0 / va 0 frames (vendor: virAddr 0x0 phy 0, the sample read 0x7f83c = Y + 270 rows). With `direct_mode=0` QEMU A/B no-copy: vendor and OpenIMP both depth 2 (= chnAttr.nrVBs, vendor SetFrameDepth 0x14948c reads chn+0x80), height rounded to 1088, size 3110400, pool buffers pa 0x03710000 / 0x03a0d000 readable, 12 / 12 frames; copy type 0: depth 1, h 1080. `t32_trace_sample` prints `T32F raw` for no-copy and skips frames without virAddr.
+
 ## 2026-11-27: T32/T33 IMP_FrameSource_EnableChn on an enabled channel answers like the vendor (#960)
 - `IMP_FrameSource_EnableChn` on a channel that is already enabled returned 0; the vendor libimp (T32 2.2.0 0x144c0c-0x144c14 and 0x145b00, T33 2.1.0 0x13f174-0x13f17c and 0x1400f8) logs an error and returns 0x80010040. OpenIMP now does the same (the running channel is untouched). T31 vendor 1.1.6 answers 0 and stays unchanged. Found by the #931 apitest carrier case A1.
 

@@ -1197,6 +1197,15 @@ again:
             if (getenv("T32_FS_NOCOPY"))        /* #784: per frame: copy slot or capture buffer */
                 printf("T32N %d idx %d pool %d %ux%u size %u pa 0x%08x\n", i, frame->index, frame->pool_idx,
                        frame->width, frame->height, frame->size, frame->phyAddr);
+            if (got == 0 && getenv("T32_FS_NOCOPY"))
+                printf("T32F raw frame=%p virAddr=0x%x phy=0x%08x size=%u w=%u h=%u\n", (void *)frame,
+                       (unsigned)frame->virAddr, frame->phyAddr, frame->size, frame->width, frame->height);
+            fflush(stdout);
+            if (!frame->virAddr) {      /* #803 guard: IVDC direct mode (the ko default) hands out pa 0 / va 0 frames */
+                printf("T32F frame without virAddr (direct_mode=1? run with direct_mode=0 for GetFrame tests)\n");
+                IMP_FrameSource_ReleaseFrame(0, frame);
+                continue;
+            }
             if (got == 0) {
                 frame_report("frame", frame);
                 printf("T32F snap pa=0x%08x size=%u w=%u h=%u\n", frame->phyAddr,
