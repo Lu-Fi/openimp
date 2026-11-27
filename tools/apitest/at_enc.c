@@ -2764,14 +2764,15 @@ int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, v
 }
 
 /* ------------------------------------------------------------------------------------------
- * Explicit case "push" (APITEST_CASES=push, #916 #917 #918, T10/T20): the push model of the encoder next to the vendor.
+ * Explicit case "push" (APITEST_CASES=push, #916 #917 #918, T10/T20, #932 T21/T30/T31): the push model of the encoder next to the vendor.
  * chn 0 (group 0, FS ch1 640x360) and with PUSH_2CH=1 (default) chn 1 (group 1, FS ch0 sensor size), H.264 at PUSH_FPS
  * (default the sensor rate), one drain thread per channel for PUSH_SEC (30) s: pictures and capture-timestamp gaps
  * > 1.5 output intervals; PUSH_GF=1: a thread calls IMP_FrameSource_GetFrame(1) as fast as frames come (after
  * SetFrameDepth(1, PUSH_DEPTH=1)); PUSH_HOLD_MS: the drain of chn 0 holds each stream that long before ReleaseStream
  * (#917, a slow streamer); then PUSH_CYCLES (20) StopRecvPic / StartRecvPic rounds of both channels, each must give
  * 5 pictures within 2 s.  Lines "push: ..." carry the numbers. */
-#if defined(PLATFORM_T20) || defined(PLATFORM_T10)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T10) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
+    defined(PLATFORM_T31)
 #include <pthread.h>
 static int push_env(const char *n, int d) { const char *v = getenv(n); return v && *v ? atoi(v) : d; }
 typedef struct { int chn; volatile int run; int pics, gaps, maxgap_ms, hold_ms; int64_t last_ts; int interval_us; } PushDrain;
@@ -2832,8 +2833,13 @@ static int push_chn_up(int grp, int fs_ch, int chn, int w, int h, int fps)
     r = IMP_Encoder_CreateGroup(grp);
     if (!r) r = IMP_System_Bind(&fs, &enc);
     fill_attr(a, CODEC_H264, fps * 2);
+#if defined(PLATFORM_T31)
+    a->encAttr.uWidth = w;
+    a->encAttr.uHeight = h;
+#else
     a->encAttr.picWidth = w;
     a->encAttr.picHeight = h;
+#endif
     a->rcAttr.outFrmRate.frmRateNum = fps;
     a->rcAttr.outFrmRate.frmRateDen = 1;
     if (!r) r = IMP_Encoder_CreateChn(chn, a);

@@ -162,8 +162,10 @@ int IMP_FrameSource_EnableChn(int chnNum);
 void DMA_RmemStreamStarted(void);   /* dma_alloc.h */
 int32_t on_framesource_group_data_update(int32_t *arg1);
 static void *frame_pooling_thread(void *arg);
-#if defined(PLATFORM_T20)
-/* #922: T10/T20 frame-depth list (vendor libimp 3.12.0), below */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || \
+    defined(PLATFORM_T30) || defined(PLATFORM_T31)
+/* #922/#932: frame-depth list of the vendor libimp (T10/T20 3.12.0, T21
+ * 1.0.33, T30 1.0.5, T23 1.3.0, T31 1.1.6), below */
 #define FS_DEPTH_COPY 1
 static void fs_depth_copy(int chn, const void *frame);
 static void fs_depth_set(int chn, int depth);
@@ -3403,9 +3405,24 @@ static uint32_t fs_depth_now_us(void)
     return (uint32_t)ts.tv_sec * 1000000u + (uint32_t)(ts.tv_nsec / 1000L);
 }
 
+/* SetFrameDepthCopyType(chn, 1) (no copy): the vendor node (T31 1.1.6
+ * FUN_000aa654 reads chan+0x210) then keeps the capture frame instead of a
+ * copy.  OpenIMP keeps that case on the pool pull (GetFrame hands out the
+ * capture frame as before); T10/T20 have no such API. */
+static int fs_depth_nocopy(int chn)
+{
+#if defined(PLATFORM_T20)
+    (void)chn;
+    return 0;
+#else
+    return __atomic_load_n(&g_fs_ctx[chn].copy_type, __ATOMIC_RELAXED) != 0;
+#endif
+}
+
 static int fs_depth_active(int chn)
 {
-    return __atomic_load_n(&fs_depth_of(chn)->n, __ATOMIC_RELAXED) > 0;
+    return __atomic_load_n(&fs_depth_of(chn)->n, __ATOMIC_RELAXED) > 0 &&
+           !fs_depth_nocopy(chn);
 }
 
 /* Capture thread, every dequeued frame, before the bound group gets it. */
@@ -3419,7 +3436,7 @@ static void fs_depth_copy(int chn, const void *frame)
     uint32_t t0;
     int i;
 
-    if (__atomic_load_n(&d->n, __ATOMIC_RELAXED) <= 0 || rec == NULL)
+    if (!fs_depth_active(chn) || rec == NULL)
         return;
     w = fs_rec_u32(rec, 0x08);
     h = fs_rec_u32(rec, 0x0c);
@@ -3495,8 +3512,12 @@ static int fs_depth_get(int chn, void **frame, int *ret)
     struct fs_dnode *nd;
     int i, waited = 0;
 
-    if (__atomic_load_n(&d->n, __ATOMIC_RELAXED) <= 0)
+    if (!fs_depth_active(chn))
         return 0;
+#if defined(FS_EXT_SW) && defined(PLATFORM_T31)
+    if (__atomic_load_n(&g_fs_ext_on[chn], __ATOMIC_RELAXED))
+        return 0;               /* vendor 1.1.6: no list on an ext channel */
+#endif
     clock_gettime(CLOCK_MONOTONIC, &until);
     until.tv_sec += FS_GETFRAME_TIMEOUT_MS / 1000u;
     pthread_mutex_lock(&d->lock);
