@@ -1528,9 +1528,10 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
     slice->height = (uint16_t)encoder->params.height;
     slice->cabac_state = encoder->cabac.state;
     slice->raw_format = T30_NV12_MODE;
-#if defined(PLATFORM_T23)
+    /* H264E_T21/T30/T20_SliceInit pack (slice byte & 0xf) << 24 into 0x4010c; the
+     * enc function copies it from node +0x0c of the soc_vpu channel request
+     * (T21 ctx +0x3144, T30/T20 ctx +0x3134): the channel_id (#958) */
     slice->vpu_channel = (uint8_t)encoder->channel.channel_id;
-#endif
     slice->stride[0] = (int)encoder->params.width;
     slice->stride[1] = (int)encoder->params.width;
 #if defined(PLATFORM_T30)
@@ -1698,9 +1699,6 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
                          slice->mbrc_regs[3], slice->mbrc_regs[4],
                          slice->mbrc_regs[5], slice->mbrc_regs[6]);
     }
-#else
-    /* SDK 1.0.5 selects the alternate DCS threshold for its substream. */
-    slice->dcs_oth = encoder->params.width <= 640u ? 1u : 0u;
 #endif
     if (encoder->roi_hw)
         memcpy(slice->roi, encoder->roi, sizeof(slice->roi));
