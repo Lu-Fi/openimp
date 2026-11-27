@@ -401,6 +401,22 @@ The API cell moves from audit to device for T21 (.24, image libsysutils: OpenEve
 
 - `IMP_FrameSource_GetFrame` (src/t32/openimp_t32_fs.c) picked the waiting copy with the lowest *driver* sequence (`q.sequence` of DQBUF). Under QEMU (`-M ingenic-t33`) that number does not order the frames: the apitest saw a fresh frame, then a copy 2.96 s older, then the steady 85 ms steps ("ts monotonic 0"; vendor 2.0.2.1: 1). The copies are now ordered by an own delivery counter (`dseq`), so the oldest waiting copy comes first on every kernel and also across a stream restart. QEMU A/B: fs area 30/1 -> 31/0, GetFrame "ts monotonic 1". Device behaviour unchanged (it was already in order there).
 - apitest (`at_sys.c`): a failing GetFrame case now prints why (first frame size vs NV12 size, and the timestamp steps).
+## 2026-11-24: docs: T21 box colour calibration target = chroma + hue only (#102, beyond vendor, test tool)
+- `docs/COLORCHECKER.md`: the runner fit and its acceptance use the chroma/hue-only dE00 (reference lightness), the full dE00 is
+  reported and may not get worse; offline in-sample and leave-one-out numbers for the jxf23. No library or tool code change.
+
+## 2026-11-24: docs: T21 box colour calibration, WB attr units and first device result (#102, beyond vendor, test tool)
+- `docs/COLORCHECKER.md`: the tisp WB attr `statis` / `global` words are R/G and B/G ratios (/256), the matching manual gain is
+  65536 / ratio; the saturation list value 256 is exactly neutral (vendor `cm_control`); first device run 2026-11-24 made the colour
+  worse (ratio words written as gains by the runner, chart clipped), the runner guards added for it, and the offline finding that the
+  jxf23 vendor matrix is already near the dE00 optimum (lightness dominates). No library or tool code change.
+
+## 2026-11-23: T21 tisp tuning netlink client `tools/tisp_nl` for the light-box colour calibration (#102, beyond vendor, test tool)
+- The T21 IMP API has no CCM attribute; the box calibration (runner phase `boxcal`, info only, not in the gate) reads and writes the
+  A / T / D colour matrices, the saturation list and the WB attr through the tisp tuning netlink channel (protocol 23, port 50) that the
+  vendor and the open-tx-isp T21 modules both serve (`tisp_param_operate_process`). Format and the jxf23 vendor tables: docs/COLORCHECKER.md.
+- Evidence: QEMU -M ingenic-t21 with the t21b24 image: every get = the bin values, set + read-back, manual WB, restore, frames flow, no oops.
+  Device run (T21 .24 in the light box) follows.
 
 ## 2026-11-23: T33 ISP line / rectangle / cover regions after IMP_OSD_Exit_ISP, UpdateRgnAttrData_ISP case (#818)
 - Vendor 2.0.2.1 `IMP_OSD_SetRgnAttr_ISP` (0x185ea0) and `IMP_OSD_GetRgnAttr_ISP` gate the line / rectangle / cover regions (types 10..12) on the OSD module context that `OSDInit` (IMP_System_Init) sets and `OSDExit` clears (libimp .bss 0x238160, stores at 0x16e658 / 0x16ea14), not on the ISP OSD picture pool. OpenIMP returned 0x80020008 after `IMP_OSD_Exit_ISP` (QEMU: rgnisp after isposdapi, vendor 0). The T32 / T33 ISP OSD file now keeps that state (`OpenIMP_T32_IspOsdModule`, set by IMP_System_Init, cleared by IMP_System_Exit).
