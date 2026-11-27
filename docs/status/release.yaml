@@ -80,7 +80,7 @@ gates:
           vendor-equal or better and has no open-only fail rows. lightbox_runs maps each gate SoC to the report path (null = none yet).
         lightbox_runs:
           T10: docs/lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-5000.html   # gate run 2026-11-24..26 (cam .31), 5000 K + 3000 K both GATE PASS; 3000 K: 1 row accepted by the user 2026-11-26 (#230)
-          T20: null
+          T20: docs/lightbox/wyze-t20x-jxf23-kajplats-gate-1127-2026-11-27-5000.html   # gate run 2026-11-26/27 (cam .107), 5000 K + 3000 K both GATE PASS; 5000 K aeresp from 4 fresh-boot paired runs (#946/#955, #230)
           T21: docs/lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html   # gate run 2026-11-23/24, 5000 K + 3000 K both GATE PASS (#230)
           T23: null
           T30: null

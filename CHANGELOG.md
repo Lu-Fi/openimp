@@ -11,6 +11,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T20 light-box gate passed (5000 K + 3000 K), release.yaml lightbox_runs T20 (#230, #946)
+
+- The T20 (Wyze Cam v2, jxf23) light-box gate is green at 5000 K and 3000 K. `docs/status/release.yaml` `lightbox_runs.T20` now points to the 5000 K gate page, and the matrix has been regenerated.
+- #946 (5000 K "lamps on -> off" AE overshoot): this was a test-state fault, not an AE difference. A frame-exact read-only ISP and sensor register trace showed the same sensor writes, ISP digital gain and Iridix strength per frame on both stacks. The overshoot is the Iridix decay in the dark box. It looked "worse" because the open pass ran on a reloaded ISP module while the vendor pass started after a reboot. With both passes after a planned reboot (light-box runner fresh-boot guard, #955), 4 paired runs (alternating order) gave lamps-off overshoot open 2.8/4.4/6.1/1.3 % vs vendor 4.0/1.8/9.7/5.1 % (median 3.6 vs 4.55).
+
 ## 2026-11-26: Light box, Wyze Cam v2, jxf23 full run 3000 K (#230)
 
 - New report `docs/lightbox/wyze-t20x-jxf23-kajplats-gate-1127-2026-11-27-3000.html` (GATE PASS, better 8 (incl. 1 beyond vendor) / equal 144 / worse 0 / invalid 0; open-tx-isp bb1e983b + OpenIMP libimp 6200aa77), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
