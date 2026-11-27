@@ -21359,16 +21359,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "n.a.",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T33": "apitest t33drop 2026-11-27 QEMU -M ingenic-t33 (cv2005), OpenIMP libimp + open module: NULL f009, VI4 f00c, lsize 16 f004, set / get round trip (lsize clamped to 15, fmark = bits above lsize | fmark) as the vendor SDK 2.0.0 / 2.1.0 libimp (0x1151d4 / 0x1157a8) and vendor module (tx_isp_unlocked_ioctl 0x17b80 / 0x17da0); the vendor 2.0.2.1 libimp has no such export, no vendor-library QEMU run (#929)",
         "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
       },
-      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a904: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454ce on /dev/tx-isp with {vi, 36-byte block}, driver error f001; Get clamps the three line-size bytes to 15. QEMU: return codes and the clamped read-back identical to the vendor library on the same module. The \"once\" request is consumed by the module, so the enable word reads 0 or 1 depending on timing (same on the vendor library)."
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a904: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454ce on /dev/tx-isp with {vi, 36-byte block}, driver error f001; Get clamps the three line-size bytes to 15. QEMU: return codes and the clamped read-back identical to the vendor library on the same module. The \"once\" request is consumed by the module, so the enable word reads 0 or 1 depending on timing (same on the vendor library). T33 (2026-11-27, #929): same calls, ioctls and table as T32; the open-tx-isp module now serves 0xc00454cd / 0xc00454ce on T32 and T33 (once table per output as the vendor)."
     },
     "ISP_HB_GetAttr": {
       "area": "ISP tuning",
@@ -22014,16 +22014,16 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "n.a.",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "auto": true,
       "ref": {
-        "T33": "not in the vendor T33 libimp 2.0.2.1 (exports and headers; SDK 2.0.0 T33_T32Pro / T32 2.2.0 line only) (#54-#60, 2026-11-13)",
+        "T33": "apitest t33drop 2026-11-27 QEMU -M ingenic-t33 (cv2005), OpenIMP libimp + open module: NULL f009, VI4 f00c, lsize 16 f004, set / get round trip (lsize clamped to 15, fmark = bits above lsize | fmark) as the vendor SDK 2.0.0 / 2.1.0 libimp (0x1151d4 / 0x1157a8) and vendor module (tx_isp_unlocked_ioctl 0x17b80 / 0x17da0); the vendor 2.0.2.1 libimp has no such export, no vendor-library QEMU run (#929)",
         "T32": "apitest t32gap 2026-11-26 QEMU 0731 -M ingenic-t32 (cv8001), vendor libimp 2.2.0 + vendor module vs OpenIMP libimp + vendor module, fresh boot per run (audit t32-gaps-1126 v6/o5), lines identical"
       },
-      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a344: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454cd on /dev/tx-isp with {vi, 36-byte block}, driver error f001. QEMU: return codes and the clamped read-back identical to the vendor library on the same module."
+      "note": "T32 (2026-11-26, #99 gap batch): vendor 2.2.0 0x11a344: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a line-size byte above 15 f004; ioctl 0xc00454cd on /dev/tx-isp with {vi, 36-byte block}, driver error f001. QEMU: return codes and the clamped read-back identical to the vendor library on the same module. T33 (2026-11-27, #929): same calls, ioctls and table as T32; the open-tx-isp module now serves 0xc00454cd / 0xc00454ce on T32 and T33 (once table per output as the vendor)."
     },
     "ISP_Tuning_GetAeLightCompensation": {
       "area": "AE / AWB / AF",

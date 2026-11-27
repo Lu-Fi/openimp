@@ -1584,4 +1584,34 @@ void cs_t33last3(void)
     }
 }
 
+/* case "t33drop" (#929): Set/GetFrameDropOnce, not declared in the 2.0.2.1 headers (vendor 2.0.0 uclibc 0x1151d4 / 0x1157a8).  Same lines as the
+ * T32 t32gap case: NULL f009, VI 4 f00c, line size 16 f004, round trip; frames still flow. */
+extern int32_t IMP_ISP_SetFrameDropOnce(IMPVI_NUM num, IMPISPFrameDropAttr *attr) __attribute__((weak));
+extern int32_t IMP_ISP_GetFrameDropOnce(IMPVI_NUM num, IMPISPFrameDropAttr *attr) __attribute__((weak));
+void cs_t33drop(void)
+{
+    uint32_t fa[9], fb[9];
+    int rs0, rg, rgn, rsbad, rs4, rs, rg2;
+
+    if (!IMP_ISP_SetFrameDropOnce || !IMP_ISP_GetFrameDropOnce) {
+        rep("IMP_ISP_SetFrameDropOnce", -1, V_NA, "not exported");
+        return;
+    }
+    memset(fa, 0, sizeof(fa)); memset(fb, 0xa5, sizeof(fb));
+    rs0 = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, NULL);
+    rg = IMP_ISP_GetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fb);
+    rgn = IMP_ISP_GetFrameDropOnce((IMPVI_NUM)4, (IMPISPFrameDropAttr *)fb);
+    fa[1] = 16;
+    rsbad = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fa);
+    memset(fa, 0, sizeof(fa)); fa[0] = 1; fa[1] = 2; fa[2] = 0x1;
+    rs4 = IMP_ISP_SetFrameDropOnce((IMPVI_NUM)4, (IMPISPFrameDropAttr *)fa);
+    rs = IMP_ISP_SetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fa);
+    memset(fb, 0xa5, sizeof(fb));
+    rg2 = IMP_ISP_GetFrameDropOnce(IMPVI_MAIN, (IMPISPFrameDropAttr *)fb);
+    rep("IMP_ISP_SetFrameDropOnce", rs, rs == 0 && rs0 == (int)0xfffff009 && rs4 == (int)0xfffff00c && rsbad == (int)0xfffff004 ? V_PASS : V_FAIL,
+        "NULL 0x%x, VI4 0x%x, lsize 16 0x%x, enable/2/1: 0x%x; frames flow %d", (unsigned)rs0, (unsigned)rs4, (unsigned)rsbad, (unsigned)rs, cases_flow());
+    rep("IMP_ISP_GetFrameDropOnce", rg2, rg2 == 0 && rgn == (int)0xfffff00c ? V_PASS : V_FAIL,
+        "first 0x%x, VI4 0x%x, after set 0x%x: entry 0 {lsize %u, fmark 0x%x}", (unsigned)rg, (unsigned)rgn, (unsigned)rg2, fb[1], fb[2]);
+}
+
 #endif /* APITEST_T33 */

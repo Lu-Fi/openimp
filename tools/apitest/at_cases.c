@@ -8143,6 +8143,7 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("t33last3")) { void cs_t33last3(void); cs_t33last3(); wdog("cases", 120); }   /* at_t33.c, explicit only */
     if (getenv("APITEST_CASES") && cs_on("t33i2d")) { void cs_t33i2d(void); cs_t33i2d(); wdog("cases", 60); }   /* at_t33.c, explicit only */
     if (getenv("APITEST_CASES") && cs_on("t33drv")) { void cs_t33drv(void); cs_t33drv(); wdog("cases", 60); }   /* at_t33.c, explicit only (#491) */
+    if (getenv("APITEST_CASES") && cs_on("t33drop")) { void cs_t33drop(void); cs_t33drop(); wdog("cases", 60); }   /* at_t33.c, explicit only (#929) */
     if (getenv("APITEST_CASES") && cs_on("t33l2")) { void cs_t33l2(void); cs_t33l2(); wdog("cases", 60); }   /* at_t33.c, explicit only (#491) */
 #endif
 #if defined(APITEST_T32) && !defined(APITEST_T33)

@@ -864,8 +864,8 @@ int32_t IMP_ISP_GetFrameDrop(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
     return 0;
 }
 
-#if !defined(PLATFORM_T33)
-/* Set/GetFrameDropOnce (T32 2.2.0 libimp 0x11a344 / 0x11a904, #99 gap batch): the FrameDrop block through the
+/* Set/GetFrameDropOnce (T32 2.2.0 libimp 0x11a344 / 0x11a904, #99 gap batch; T33 libimp 2.0.0 uclibc 0x1151d4 / 0x1157a8: same
+ * checks, same requests 0xc00454cd / 0xc00454ce, same clamp, #929): the FrameDrop block through the
  * "once" requests 0xc00454cd / 0xc00454ce (the open module serves them: one-shot frame drop, the driver
  * answers the block back).  Checks in vendor order: ISP not open f008, NULL f009, VI >= 4 f00c; Set: a
  * line-size byte (offsets 4, 16, 28 of the block) above 15 f004; ioctl error f001; Get: the line-size
@@ -915,7 +915,6 @@ int32_t IMP_ISP_GetFrameDropOnce(IMPVI_NUM num, IMPISPFrameDropAttr *attr)
             p[i] = 0xf;
     return 0;
 }
-#endif
 
 int32_t IMP_ISP_SetISPBypass(IMPVI_NUM num, IMPISPOpsMode *enable)
 {
