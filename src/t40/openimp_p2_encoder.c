@@ -763,9 +763,23 @@ static int p2_jpeg_src_copy_forced(void)
     if (forced < 0) {
         const char *value = getenv(P2_JPEG_SRC_COPY_ENV);
 
+#if defined(PLATFORM_T20)
+        /* #939: T10/T20 copy by default. A lent frame stays held for the
+         * whole JPEG encode (45-150 ms: the Helix job waits behind the
+         * H.264 picture) while the video channel holds the next one; with
+         * the two capture buffers of the T10 the ISP then drops a frame per
+         * JPEG picture (200 ms gap trains for 2-3 s after each snapshot).
+         * Encoding in the video channel's pass (vendor 0x52a1c) still held
+         * the frame 60-100 ms and kept the trains (train members 29/18 vs
+         * vendor 0/0); the copy hands it back at once (0/0, gaps as the
+         * vendor). The vendor also copies frames with memcpy (#922).
+         * OPENIMP_HELIX_JPEG_SRC_COPY=0 lends again. */
+        forced = !(value && value[0] == '0');
+#else
         forced = value && value[0] == '1';
+#endif
         if (forced)
-            IMP_LOG_INFO("Encoder", "JPEG: source frames are copied (%s=1)",
+            IMP_LOG_INFO("Encoder", "JPEG: source frames are copied (%s)",
                          P2_JPEG_SRC_COPY_ENV);
     }
     return forced;

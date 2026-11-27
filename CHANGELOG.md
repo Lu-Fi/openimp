@@ -11,6 +11,12 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T10/T20 JPEG source frame is copied by default, no more gap trains after a snapshot (#939)
+
+- Cause: a snapshot starts the JPEG channel at 5 fps for 2-3 s; the lend path kept the ch0 capture frame until the Helix JPEG job was done (45-150 ms, queued behind the H.264 picture) while the video channel held the next one. With the two capture buffers of the T10 the ISP dropped a frame per JPEG picture: a train of 10+ gaps of 160-200 ms after every snapshot (OpenIMP 6/6 runs, vendor 0/6).
+- Fix: on PLATFORM_T20 (T10/T20) `p2_jpeg_src_copy_forced()` defaults to copying the frame for the JPEG encode and returns the capture frame at once, as the vendor does (memcpy, #922). `OPENIMP_HELIX_JPEG_SRC_COPY=0` brings the old lend path back; other SoCs are unchanged. Encoding in the video channel's pass (vendor 0x52a1c layout) was tried and still held the frame 60-100 ms, so it was dropped. Guard: `make -C tests/t20 srccopy-check`.
+- Evidence: see the #939 comments (T10 .31, interleaved copy-default vs vendor, snapshots at 30/80 s).
+
 ## 2026-11-27: T10/T20 ISP flips follow the vendor Temper guard + 120 ms wait; AE working point vendor-equal (#944)
 
 - Cause (T20X jxf23 light box, darker auto AE 8-20 %, noise/Y rows worse): IMP_ISP_EnableTuning opens the tuning node and the T20 driver reloads the day IQ tables at the next frame end (tx-isp-core-tuning.c open: `isp_daynight_switch = 1`). timps applies its image block right after EnableTuning; with OpenIMP all calls took < 1 ms, so HiLightDepress 0 came before the reload and the reload put the bin's AE highlight weight back (AE_BALANCED_LINEAR[2] = knee 7: the top 7 histogram bins up to 4x in the AE mean). The vendor library 3.12.0 sleeps 120 ms in each of SetISPHflip / SetISPVflip / SetISPHVflip (0x5ceec / 0x5d2a0 / 0x5d684, usleep(120000) at 0x5d0b4 / 0x5d4d8 / 0x5d858) while Temper is switched from AUTO to MANUAL 0x28, so its later settings come after the reload (driver trace: vendor reload at frame 1, HiLightDepress at frame 5; OpenIMP HiLightDepress at frame 0, reload at frame 1).

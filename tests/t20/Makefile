@@ -14,13 +14,13 @@ FLIP_TEST := $(BUILD)/t20-flip-test
 
 DECODER_TEST := $(BUILD)/t20-decoder-test
 
-.PHONY: check clean bypass-check flip-check decoder-check
+.PHONY: check clean bypass-check flip-check decoder-check srccopy-check
 
 ifeq ($(shell command -v $(T20_CC) 2>/dev/null),)
-check: bypass-check flip-check decoder-check
+check: bypass-check flip-check decoder-check srccopy-check
 	@echo "t20_abi_test: skipped ($(T20_CC) not found; set T20_CC to a 32-bit compiler)"
 else
-check: $(OBJ) bypass-check flip-check decoder-check
+check: $(OBJ) bypass-check flip-check decoder-check srccopy-check
 	@echo t20_abi_test: ok
 endif
 
@@ -34,6 +34,11 @@ $(BYPASS_TEST): bypass_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
 		"-D_Static_assert(a,b)=" -DPLATFORM_T20 -DPLATFORM_T21 -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
 		bypass_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
 		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o $@
+
+# #939 guard: T10/T20 copy the JPEG source frame by default (=0 lends); other SoCs stay opt-in (=1)
+srccopy-check:
+	@sed -n '/^static int p2_jpeg_src_copy_forced/,/^}/p' $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c > $(BUILD)/srccopy.txt 2>/dev/null || { mkdir -p $(BUILD); sed -n '/^static int p2_jpeg_src_copy_forced/,/^}/p' $(PROJECT_DIR)/src/t40/openimp_p2_encoder.c > $(BUILD)/srccopy.txt; }
+	@grep -q 'defined(PLATFORM_T20)' $(BUILD)/srccopy.txt && grep -q "forced = !(value && value\[0\] == '0')" $(BUILD)/srccopy.txt && grep -q "forced = value && value\[0\] == '1'" $(BUILD)/srccopy.txt && echo "srccopy-check: ok"
 
 # host test of the T10/T20 flips (vendor Temper guard + 120 ms wait, openimp #944)
 flip-check: $(FLIP_TEST)
