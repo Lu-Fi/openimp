@@ -2786,22 +2786,19 @@ int IMP_Encoder_PollingStream(int encChn, uint32_t timeoutMsec)
     struct t32_enc_chn *e;
     int rc = -1;
 
-#ifndef PLATFORM_T33
-    /* vendor T32 2.2.0 (libimp 98071ecd, #937): PollingStream 0xdf2d0 returns 0x80040001 for a channel >= 16 (0xdf54c), 0x80040008
+    /* vendor T32 2.2.0 (libimp 98071ecd) and T33 2.1.0 (SDK libimp, PollingStream 0xe654c: slti/bltz paths to 0x80040001 at 0xe6754,
+     * 0x80040008 at 0xe6748, 0x80044000 at 0xe675c) (#937): PollingStream 0xdf2d0 returns 0x80040001 for a channel >= 16 (0xdf54c), 0x80040008
      * for a channel that is not created (0xdf4d4) and 0x80044000 when the wait ends without a picture (0xdf4e0) */
     if (encChn < 0 || encChn > 15)
         return T32_ENC_ERR_CHN;
-#endif
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e)
         rc = wait_ready_locked(e, (int64_t)timeoutMsec);
-#ifndef PLATFORM_T33
     else
         rc = T32_ENC_ERR_NOCHN;
     if (rc == -1)
         rc = T32_ENC_ERR_TIMEOUT;
-#endif
     pthread_mutex_unlock(&enc_lock);
     return rc;
 }
@@ -2858,22 +2855,17 @@ int IMP_Encoder_FlushStream(int encChn)
 {
     struct t32_enc_chn *e;
 
-#ifndef PLATFORM_T33
-    /* vendor T32 2.2.0 (libimp 98071ecd, #937): FlushStream 0xe0508 returns 0x80040001 for a channel >= 16 (0xe07e0) and
+    /* vendor T32 2.2.0 (libimp 98071ecd) and T33 2.1.0 (SDK libimp, FlushStream 0xe7784: slti a0,16 at 0xe7794, codes 0x80040001 at
+     * 0xe7a5c, 0x80040008 at 0xe7ac4) (#937): FlushStream 0xe0508 returns 0x80040001 for a channel >= 16 (0xe07e0) and
      * 0x80040008 for a channel that is not created (0xe0848) */
     if (encChn < 0 || encChn > 15)
         return T32_ENC_ERR_CHN;
-#endif
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e)
         chn_notify_drop_locked(e, t32_encq_drop_ready(&e->q));
     pthread_mutex_unlock(&enc_lock);
-#ifndef PLATFORM_T33
     return e ? 0 : T32_ENC_ERR_NOCHN;
-#else
-    return e ? 0 : -1;
-#endif
 }
 
 int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)

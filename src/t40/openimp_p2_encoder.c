@@ -4696,6 +4696,24 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
                  channel, timeout_ms);
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T31)
+    /* #942: with SetMaxStreamCnt(1) the one stream buffer is held by the application (GetStream done, ReleaseStream
+     * not yet): the vendor 1.1.6 poll finds no free buffer and times out instead of returning the held stream again. */
+    if (ch->raw_stream && ch->raw_stream_out && ch->max_stream_count == 1 && ch->stream_count_set && !push) {
+        uint64_t until = p2_monotonic_us() + (uint64_t)timeout_ms * 1000u;
+
+        while (ch->raw_stream && ch->raw_stream_out && p2_monotonic_us() < until) {
+            pthread_mutex_unlock(&ch->lock);
+            p2_sleep_us(1000);
+            pthread_mutex_lock(&ch->lock);
+        }
+        if (ch->raw_stream && ch->raw_stream_out) {
+            pthread_mutex_unlock(&ch->lock);
+            openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
+            return -1;
+        }
+    }
+#endif
     if (ch->raw_stream && !push) {
         pthread_mutex_unlock(&ch->lock);
         openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
