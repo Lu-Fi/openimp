@@ -498,7 +498,10 @@ typedef struct {
      * while raw_stream already is the next one (vendor 1.1.6: the encode
      * thread 0x8ece0 sem_trywait()s the CreateChn 0x936e0 semaphore of
      * MaxStreamCnt before each picture, ReleaseStream 0x8ebc0 posts it, so
-     * the application can hold MaxStreamCnt distinct streams).  packs is
+     * PollingStream succeeds for MaxStreamCnt held streams; the vendor
+     * GetStream then hands the oldest one out again and aborts on its second
+     * release, OpenIMP hands out the next picture: OPENIMP_BEYOND_VENDOR.md
+     * section 8).  packs is
      * where the application's stream->pack points (ch->packs or one of
      * hold_packs); cur_packs is that of raw_stream once handed out. */
     struct {
