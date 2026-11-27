@@ -29,6 +29,7 @@ OSD_THICK_BENCH_BIN := $(PROJECT_DIR)/build/tests/t31-osd-thick-bench
 P2_JPEG_SOURCE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-jpeg-source-test
 P2_RC_MODE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-rc-mode-test
 P2_BUFSHARE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-bufshare-test
+P2_HOLD_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-p2-hold-test
 MASK_RGB2YUV_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-mask-rgb2yuv-test
 AL_RC_TRACE_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-al-rc-trace-test
 AL_RC_OVERLOAD_TEST_BIN := $(PROJECT_DIR)/build/tests/t31-al-rc-overload-test
@@ -56,7 +57,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(FRAME_PIN_TEST_BIN) \
 	$(AO_SENDFRAME_TEST_BIN) $(AO_CACHE_TEST_BIN) $(AI_STALE_TEST_BIN) $(HEVC_HEADERS_TEST_BIN) $(AEC_TEST_BIN) $(NV12_ROTATE_TEST_BIN) \
 	$(LAMBDA_TEST_BIN) $(HWRC_TARGET_TEST_BIN) $(AI_LIFECYCLE_TEST_BIN) $(ALSA_PCM_TEST_BIN) $(FAKE_AUDIO_PROCESS) $(OSD_DRAW_TEST_BIN) $(P2_JPEG_SOURCE_TEST_BIN) \
-	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
+	$(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(P2_HOLD_TEST_BIN) $(MASK_RGB2YUV_TEST_BIN) $(AL_RC_TRACE_TEST_BIN) $(AL_RC_OVERLOAD_TEST_BIN) \
 	$(LOG_LIMIT_TEST_BIN) $(LOG_LEVEL_TEST_BIN) $(LOG_LEVEL_DBG_TEST_BIN) $(ISP_AE_ATTR_TEST_BIN) $(VIDEO_DROP_TEST_BIN) $(VBM_DELAY_TEST_BIN) $(ROI_CLAMP_TEST_BIN) \
 	$(FIXED_CONTRAST_TEST_BIN) $(EVAL_INFO_TEST_BIN) $(BIN_PATH_TEST_BIN) $(LOG_SINK_TEST_BIN) \
 	$(DMIC_SWITCH_TEST_BINS) $(CUSTOM_ALGO_TEST_BINS)
@@ -84,6 +85,7 @@ check: $(STREAM_LAYOUT_TEST_BIN) $(RATE_CONTROL_TEST_BIN) \
 	$(P2_JPEG_SOURCE_TEST_BIN)
 	$(P2_RC_MODE_TEST_BIN)
 	$(P2_BUFSHARE_TEST_BIN)
+	$(P2_HOLD_TEST_BIN)
 	$(MASK_RGB2YUV_TEST_BIN)
 	$(LOG_LIMIT_TEST_BIN)
 	$(LOG_LEVEL_TEST_BIN)
@@ -399,7 +401,7 @@ clean:
 		$(AI_LIFECYCLE_TEST_BIN)-asan $(AI_LIFECYCLE_TEST_BIN)-tsan \
 		$(FAKE_AUDIO_PROCESS) \
 		$(OSD_DRAW_TEST_BIN) $(OSD_THICK_BENCH_BIN) \
-		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(EVAL_INFO_TEST_BIN) \
+		$(P2_JPEG_SOURCE_TEST_BIN) $(P2_RC_MODE_TEST_BIN) $(P2_BUFSHARE_TEST_BIN) $(P2_HOLD_TEST_BIN) $(EVAL_INFO_TEST_BIN) \
 		$(DMIC_SWITCH_TEST_BINS)
 
 # A JPEG channel that is the only one on its framesource (timps' jpeg.*
@@ -445,6 +447,18 @@ $(P2_BUFSHARE_TEST_BIN): p2_bufshare_test.c \
 		'-D_Static_assert(c,m)=' -Wno-unused-result \
 		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
 		-I$(PROJECT_DIR)/src/t40 p2_bufshare_test.c \
+		$(PROJECT_DIR)/src/openimp_profile.c \
+		$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
+		-no-pie -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o $@
+
+# #942: SetMaxStreamCnt(N) holds exactly N distinct streams (vendor 1.1.6).
+$(P2_HOLD_TEST_BIN): p2_hold_test.c \
+	$(PROJECT_DIR)/src/t40/openimp_p2_encoder.c
+	mkdir -p "$(dir $@)"
+	$(CC) -std=gnu99 -O1 -g -Wall -Wextra -Werror -DPLATFORM_T31 \
+		'-D_Static_assert(c,m)=' -Wno-unused-result \
+		-I$(PROJECT_DIR)/include -I$(PROJECT_DIR)/src \
+		-I$(PROJECT_DIR)/src/t40 p2_hold_test.c \
 		$(PROJECT_DIR)/src/openimp_profile.c \
 		$(PROJECT_DIR)/src/t40/t31_stream_layout.c \
 		-no-pie -lpthread $(PROJECT_DIR)/src/core/imp_log_emit.c -o $@

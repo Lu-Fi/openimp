@@ -203,6 +203,9 @@ extern int OpenIMP_T40_FrameSource_WaitFrame(int channel, void **frame,
 #define P2_PUSH_RING_MAX 15  /* stream count limit 16, one held by the application */
 static int p2_push_env_on(void);
 #endif
+#if defined(PLATFORM_T31)
+#define P2_HOLD_MAX 15      /* MaxStreamCnt limit 16, one is raw_stream */
+#endif
 #define P2_PARAM_SIZE 0x794
 /* T40 1.3.1 ends IMPEncoderStream after isVI and pads it to 28 bytes. T31
  * 1.1.6 includes the streamInfo/jpegInfo union, matching the compatibility
@@ -489,6 +492,27 @@ typedef struct {
         void *frame;
     } push_ring[P2_PUSH_RING_MAX];
     uint32_t push_full;
+#endif
+#if defined(PLATFORM_T31)
+    /* #942: streams the application took with GetStream and still holds
+     * while raw_stream already is the next one (vendor 1.1.6: the encode
+     * thread 0x8ece0 sem_trywait()s the CreateChn 0x936e0 semaphore of
+     * MaxStreamCnt before each picture, ReleaseStream 0x8ebc0 posts it, so
+     * PollingStream succeeds for MaxStreamCnt held streams; the vendor
+     * GetStream then hands the oldest one out again and aborts on its second
+     * release, OpenIMP hands out the next picture: OPENIMP_BEYOND_VENDOR.md
+     * section 8).  packs is
+     * where the application's stream->pack points (ch->packs or one of
+     * hold_packs); cur_packs is that of raw_stream once handed out. */
+    struct {
+        void *raw;
+        void *user;
+        void *frame;
+        IMPEncoderPack *packs;
+    } held[P2_HOLD_MAX];
+    unsigned int held_n;
+    IMPEncoderPack *cur_packs;
+    IMPEncoderPack *hold_packs;     /* (P2_HOLD_MAX) x P2_MAX_PUBLIC_PACKS, on demand */
 #endif
 } P2EncoderChannel;
 
@@ -3366,6 +3390,96 @@ static void p2_evt_clear(P2EncoderChannel *ch)
     ch->evt_signaled = 0;
 }
 
+#if defined(PLATFORM_T31)
+/* #942: a video stream handed out by GetStream may stay with the
+ * application while the channel encodes the next one (JPEG keeps one
+ * stream: its reuse picture lives in the channel). */
+static int p2_hold_queue(const P2EncoderChannel *ch)
+{
+    return ch->codec_type != IMP_ENC_TYPE_JPEG;
+}
+
+/* Room for a stream besides the ones the application holds: the vendor
+ * semaphore of MaxStreamCnt. */
+static int p2_hold_room(const P2EncoderChannel *ch)
+{
+    return p2_hold_queue(ch) && ch->held_n < P2_HOLD_MAX &&
+           (int)ch->held_n + 1 < ch->max_stream_count;
+}
+
+/* raw_stream, handed out, joins the held streams.  Lock held. */
+static void p2_hold_park(P2EncoderChannel *ch)
+{
+    unsigned int k = ch->held_n++;
+
+    ch->held[k].raw = ch->raw_stream;
+    ch->held[k].user = ch->codec_user;
+    ch->held[k].frame = ch->source_frame;
+    ch->held[k].packs = ch->cur_packs ? ch->cur_packs : ch->packs;
+    ch->raw_stream = NULL;
+    ch->codec_user = NULL;
+    ch->source_frame = NULL;
+    ch->raw_stream_out = 0;
+    ch->cur_packs = NULL;
+    p2_evt_clear(ch);
+}
+
+/* Pack storage that no held stream points to (ch->packs or a slot of
+ * hold_packs); NULL when out of memory.  Lock held. */
+static IMPEncoderPack *p2_hold_pack_slot(P2EncoderChannel *ch)
+{
+    unsigned int n = ch->max_stream_count > 1
+        ? (unsigned int)ch->max_stream_count - 1u : 0u;
+    unsigned int i, k;
+
+    if (n > P2_HOLD_MAX)
+        n = P2_HOLD_MAX;
+    for (i = 0; i <= n; i++) {
+        IMPEncoderPack *c = ch->packs;
+
+        if (i) {
+            if (!ch->hold_packs)
+                ch->hold_packs = calloc((size_t)n * P2_MAX_PUBLIC_PACKS,
+                                        sizeof(IMPEncoderPack));
+            if (!ch->hold_packs)
+                return NULL;
+            c = ch->hold_packs + (size_t)(i - 1u) * P2_MAX_PUBLIC_PACKS;
+        }
+        for (k = 0; k < ch->held_n && ch->held[k].packs != c; k++)
+            ;
+        if (k == ch->held_n)
+            return c;
+    }
+    return NULL;
+}
+
+/* ReleaseStream of a held stream, found by its pack pointer; a stream
+ * that is neither held nor raw_stream releases the oldest held one.
+ * 0: taken out of the list.  Lock held. */
+static int p2_hold_take(P2EncoderChannel *ch, const IMPEncoderStream *stream,
+                        void **raw, void **user, void **frame)
+{
+    unsigned int k;
+
+    if (!ch->held_n)
+        return -1;
+    for (k = 0; k < ch->held_n && ch->held[k].packs != stream->pack; k++)
+        ;
+    if (k == ch->held_n) {
+        if (ch->raw_stream && ch->raw_stream_out)
+            return -1;
+        k = 0;
+    }
+    *raw = ch->held[k].raw;
+    *user = ch->held[k].user;
+    *frame = ch->held[k].frame;
+    ch->held_n--;
+    memmove(&ch->held[k], &ch->held[k + 1u],
+            (ch->held_n - k) * sizeof(ch->held[0]));
+    return 0;
+}
+#endif
+
 static void *p2_fd_pump(void *arg)
 {
     P2EncoderChannel *ch = (P2EncoderChannel *)arg;
@@ -3377,7 +3491,19 @@ static void *p2_fd_pump(void *arg)
         int active;
 
         pthread_mutex_lock(&ch->lock);
+#if defined(PLATFORM_T31)
+        /* #942: the application holds raw_stream: the poll below encodes
+         * the next one while there is room, else wait for a release */
+        if (ch->raw_stream && ch->raw_stream_out && p2_hold_queue(ch) &&
+            !p2_hold_room(ch)) {
+            pthread_mutex_unlock(&ch->lock);
+            usleep(2000);
+            continue;
+        }
+        if (ch->raw_stream && !(ch->raw_stream_out && p2_hold_queue(ch))) {
+#else
         if (ch->raw_stream) {
+#endif
             /* ready: the application takes it (GetStream/ReleaseStream
              * clear the pipe) */
             if (!ch->evt_signaled &&
@@ -3470,12 +3596,21 @@ static int p2_destroy_chn(int channel)
         pthread_mutex_lock(&ch->lock);
     }
     p2_wait_poll_idle(ch);
-    if (!ch->created || ch->registered || ch->raw_stream || ch->source_frame) {
+    if (!ch->created || ch->registered || ch->raw_stream || ch->source_frame
+#if defined(PLATFORM_T31)
+        || ch->held_n
+#endif
+        ) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
     if (ch->codec)
         AL_Codec_Encode_Destroy(ch->codec);
+#if defined(PLATFORM_T31)
+    free(ch->hold_packs);
+    ch->hold_packs = NULL;
+    ch->cur_packs = NULL;
+#endif
     p2_free_jpeg_frame_buffer(ch);
     p2_jpeg_free_last(ch);
     ch->jpeg_frame_generation = 0;
@@ -3564,7 +3699,11 @@ int IMP_Encoder_UnRegisterChn(int channel)
         pthread_mutex_lock(&ch->lock);
     }
     p2_wait_poll_idle(ch);
-    if (!ch->created || !ch->registered || ch->receiving || ch->raw_stream) {
+    if (!ch->created || !ch->registered || ch->receiving || ch->raw_stream
+#if defined(PLATFORM_T31)
+        || ch->held_n
+#endif
+        ) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
     }
@@ -4697,20 +4836,30 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
 #if defined(PLATFORM_T31)
-    /* #942: with SetMaxStreamCnt(1) the one stream buffer is held by the application (GetStream done, ReleaseStream
-     * not yet): the vendor 1.1.6 poll finds no free buffer and times out instead of returning the held stream again. */
-    if (ch->raw_stream && ch->raw_stream_out && ch->max_stream_count == 1 && ch->stream_count_set && !push) {
+    /* #942: vendor 1.1.6 holds MaxStreamCnt streams (semaphore, see
+     * P2EncoderChannel.held): a stream the application holds stays with it
+     * and the poll encodes the next one while fewer than MaxStreamCnt are
+     * held; with all of them held it waits for a ReleaseStream and times
+     * out instead of returning a held stream again.  JPEG: only
+     * SetMaxStreamCnt(1) waits (its one stream). */
+    if (ch->raw_stream && ch->raw_stream_out && !push &&
+        (p2_hold_queue(ch) ||
+         (ch->max_stream_count == 1 && ch->stream_count_set))) {
         uint64_t until = p2_monotonic_us() + (uint64_t)timeout_ms * 1000u;
 
-        while (ch->raw_stream && ch->raw_stream_out && p2_monotonic_us() < until) {
+        while (ch->raw_stream && ch->raw_stream_out && !p2_hold_room(ch) &&
+               p2_monotonic_us() < until) {
             pthread_mutex_unlock(&ch->lock);
             p2_sleep_us(1000);
             pthread_mutex_lock(&ch->lock);
         }
         if (ch->raw_stream && ch->raw_stream_out) {
-            pthread_mutex_unlock(&ch->lock);
-            openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
-            return -1;
+            if (!p2_hold_room(ch)) {
+                pthread_mutex_unlock(&ch->lock);
+                openimp_profile_end(OPENIMP_PROFILE_ENCODER_POLL, poll_profile);
+                return -1;
+            }
+            p2_hold_park(ch);
         }
     }
 #endif
@@ -5293,10 +5442,27 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     if (!p2_valid_channel(channel) || p2_null_arg(__func__, stream))
         return -1;
     ch = &p2_channels[channel];
+#if defined(PLATFORM_T31)
+    {
+        /* #942: a held stream is not handed out again: the next one comes
+         * from a poll (which waits while MaxStreamCnt streams are held) */
+        int out;
+
+        pthread_mutex_lock(&ch->lock);
+        out = ch->raw_stream && ch->raw_stream_out && p2_hold_queue(ch);
+        pthread_mutex_unlock(&ch->lock);
+        if (out && (!block || IMP_Encoder_PollingStream(channel, 1000) != 0))
+            return -1;
+    }
+#endif
     if (!ch->raw_stream && block && IMP_Encoder_PollingStream(channel, 1000) != 0)
         return -1;
     pthread_mutex_lock(&ch->lock);
     raw = (P2HWStream *)ch->raw_stream;
+#if defined(PLATFORM_T31)
+    if (raw && ch->raw_stream_out && p2_hold_queue(ch))
+        raw = NULL;
+#endif
     if (!raw) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
@@ -5372,11 +5538,32 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
                  is_idr, (int)ch->packs[0].dataType.h264Type);
 #else
 #if defined(PLATFORM_T31)
-    pack_count = p2_fill_t31_packs(
-        ch, raw,
-        raw->timestamp
-            ? (int64_t)raw->timestamp : (int64_t)p2_monotonic_us(),
-        is_idr);
+    {
+        /* #942: ch->packs may belong to a held stream: fill, move the new
+         * packs to free storage and give ch->packs its content back */
+        IMPEncoderPack keep[P2_MAX_PUBLIC_PACKS];
+        IMPEncoderPack *dst = ch->packs;
+
+        if (ch->held_n) {
+            dst = p2_hold_pack_slot(ch);
+            if (!dst) {
+                pthread_mutex_unlock(&ch->lock);
+                return -1;
+            }
+            if (dst != ch->packs)
+                memcpy(keep, ch->packs, sizeof(keep));
+        }
+        pack_count = p2_fill_t31_packs(
+            ch, raw,
+            raw->timestamp
+                ? (int64_t)raw->timestamp : (int64_t)p2_monotonic_us(),
+            is_idr);
+        if (dst != ch->packs) {
+            memcpy(dst, ch->packs, sizeof(keep));
+            memcpy(ch->packs, keep, sizeof(keep));
+        }
+        ch->cur_packs = dst;
+    }
     if (!pack_count) {
         pthread_mutex_unlock(&ch->lock);
         return -1;
@@ -5429,10 +5616,11 @@ int IMP_Encoder_GetStream(int channel, IMPEncoderStream *stream, int block)
     stream->phyAddr = raw->phys_addr;
     stream->virAddr = raw->virt_addr;
     stream->streamSize = raw->length;
-    stream->pack = &ch->packs[0];
 #if defined(PLATFORM_T31)
+    stream->pack = ch->cur_packs;
     stream->packCount = pack_count;
 #else
+    stream->pack = &ch->packs[0];
     stream->packCount = 1;
 #endif
     stream->seq = ch->sequence++;
@@ -5550,6 +5738,17 @@ int IMP_Encoder_ReleaseStream(int channel, IMPEncoderStream *stream)
     }
     ch->ms_raw = NULL;
     ch->ms_index = ch->ms_count = 0u;
+#endif
+#if defined(PLATFORM_T31)
+    /* #942: one of the streams the application holds besides raw_stream;
+     * a stream that is ready meanwhile stays signalled */
+    if (p2_hold_take(ch, stream, &raw, &user, &frame) == 0) {
+        pthread_mutex_unlock(&ch->lock);
+        if (!raw || !frame)
+            return -1;
+        return p2_return_stream(ch, raw, user, frame);
+    }
+    ch->cur_packs = NULL;
 #endif
     raw = ch->raw_stream;
     user = ch->codec_user;
@@ -5735,7 +5934,11 @@ int OpenIMP_Encoder_StreamIsReused(int channel, const IMPEncoderStream *stream)
     ch = &p2_channels[channel];
     pthread_mutex_lock(&ch->lock);
     if (!ch->raw_stream || !ch->raw_stream_out ||
+#if defined(PLATFORM_T31)
+        stream->pack != (ch->cur_packs ? ch->cur_packs : ch->packs))
+#else
         stream->pack != ch->packs)
+#endif
         reused = -1;
     else
         reused = ch->raw_stream == &ch->jpeg_reuse;
