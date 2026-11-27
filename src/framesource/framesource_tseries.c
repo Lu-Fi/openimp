@@ -469,9 +469,28 @@ int32_t nv12_copyto_yuyv422(char *arg1, int32_t arg2, int32_t arg3, int32_t arg4
  * set_framesource_fps / set_framesource_changewait_cnt (HLIL 0x9a3e8).
  * ------------------------------------------------------------------- */
 
+/* #962-#968: the sensor rate the vendor writes on every frame (frame words
+ * +0x28/+0x2c T20/T21/T30, +0x38/+0x3c T23, +0x2c/+0x30 T31) from this slot;
+ * the encoder's keep mask reads it here (OpenIMP_EncoderSourceFps). */
+static volatile uint32_t fs_source_fps;     /* num << 16 | den, 0 unknown */
+
+int OpenIMP_EncoderSourceFps(uint32_t *num, uint32_t *den)
+{
+    uint32_t v = fs_source_fps;
+
+    if (!v || !(v >> 16) || !(v & 0xffffu))
+        return -1;
+    *num = v >> 16;
+    *den = v & 0xffffu;
+    return 0;
+}
+
 int32_t set_framesource_fps(int32_t arg1, int32_t arg2)
 {
     uint8_t *base = (uint8_t *)gFrameSource;
+
+    if (arg1 > 0 && arg2 > 0 && arg1 <= 0xffff && arg2 <= 0xffff)
+        fs_source_fps = ((uint32_t)arg1 << 16) | (uint32_t)arg2;
     if (base == NULL) {
         return -1;
     }

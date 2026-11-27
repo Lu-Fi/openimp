@@ -44,6 +44,18 @@
 #include "t30/t30_ncu.h"
 #endif
 
+/* vendor: EnableTuning and Get/SetSensorFPS hand the sensor rate to the
+ * FrameSource (set_framesource_fps), whose frames carry it to the encoder's
+ * keep mask (#962-#968).  Weak: host tests link the ISP without it. */
+extern int32_t set_framesource_fps(int32_t fps_num, int32_t fps_den)
+    __attribute__((weak));
+
+static void tseries_fs_fps(int32_t fps_num, int32_t fps_den)
+{
+    if (set_framesource_fps)
+        (void)set_framesource_fps(fps_num, fps_den);
+}
+
 /* Offset of the sensor bus type (IMPSensorInfo.cbus_type) in the ISPDevice
  * copy of the sensor record at 0x28.  The T23 1.3.0 record has a sensor_id
  * before it (cbus_type at 0x24, 0x54 bytes), the other SoCs have it at 0x20.
@@ -2012,6 +2024,7 @@ int IMP_ISP_Tuning_SetSensorFPS(uint32_t fps_num, uint32_t fps_den)
     if (result == 0) {
         tseries_sensor_fps_num = fps_num;
         tseries_sensor_fps_den = fps_den;
+        tseries_fs_fps((int32_t)fps_num, (int32_t)fps_den);   /* vendor */
 #if defined(PLATFORM_T31)
         tseries_algo_notify_fps();
 #endif
@@ -2037,6 +2050,8 @@ int IMP_ISP_Tuning_GetSensorFPS(uint32_t *fps_num, uint32_t *fps_den)
     if (result == 0) {
         tseries_sensor_fps_num = ((uint32_t)value >> 16) & 0xffff;
         tseries_sensor_fps_den = (uint32_t)value & 0xffff;
+        tseries_fs_fps((int32_t)tseries_sensor_fps_num,
+                            (int32_t)tseries_sensor_fps_den);       /* vendor */
     }
 
     *fps_num = tseries_sensor_fps_num;
@@ -6550,6 +6565,7 @@ int IMP_ISP_EnableTuning(void)
         if (ioctl(isp->tuning_fd, TISP_VIDIOC_TUNING, &fps_req) == 0) {
             *(int32_t *)((char *)tune + 0xc) = fps >> 16;
             *(int32_t *)((char *)tune + 0x10) = fps & 0xffff;
+            tseries_fs_fps((int32_t)(fps >> 16), (int32_t)(fps & 0xffff));
         }
     }
 #else
@@ -6558,6 +6574,8 @@ int IMP_ISP_EnableTuning(void)
               &fps_req) == 0) {
         *(int32_t *)((char *)tune + 0xc) = (uint32_t)fps_req.value >> 16;
         *(int32_t *)((char *)tune + 0x10) = fps_req.value & 0xffff;
+        tseries_fs_fps((int32_t)((uint32_t)fps_req.value >> 16),
+                            (int32_t)(fps_req.value & 0xffff));
     }
 #endif
     *(uint8_t *)((char *)tune + 9) = TSERIES_CUSTOM_CONTRAST;

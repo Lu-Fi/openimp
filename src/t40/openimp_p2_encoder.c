@@ -100,6 +100,7 @@
  * wait at once). */
 #define P2_FRAME_WAIT_SLICE_US 20000u
 #endif
+#include "t40/p2_fps_mask.h"   /* #962: vendor keep mask, every SoC */
 #if defined(PLATFORM_T40)
 /* the next frame wait starts this long before the capture is due (#149) */
 #define P2_T40_ARRIVAL_MARGIN_US 2000u
@@ -643,6 +644,10 @@ static int p2_discard_take(int group)
 }
 #endif
 static P2EncoderChannel p2_channels[P2_ALL_CHANNELS];
+/* #962: vendor keep mask per channel (p2_fps_mask_poll) */
+static P2FpsMask p2_fps_masks[P2_ALL_CHANNELS];
+static unsigned int p2_fps_mask_kept[P2_ALL_CHANNELS];
+static unsigned int p2_fps_mask_skips[P2_ALL_CHANNELS];
 static P2Bind p2_binds[P2_MAX_BINDS];
 static pthread_mutex_t p2_state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t p2_core_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -3733,6 +3738,7 @@ int IMP_Encoder_StartRecvPic(int channel)
     ch->osd_group = p2_find_osd_group(ch->group);
     ch->next_frame_due_us = 0;
     ch->output_timestamp_us = 0;
+    memset(&p2_fps_masks[channel], 0, sizeof(p2_fps_masks[channel]));
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
     ch->receiving = 1;
@@ -4774,6 +4780,61 @@ static int p2_ivdc_pick(int channel, int source, void **frame,
 }
 #endif
 
+/*
+ * #962-#968: an output rate below the sensor rate is the vendor frame-count
+ * keep mask (p2_fps_mask.h): the source rate is the sensor rate the ISP
+ * hands to the FrameSource (set_framesource_fps, carried on every vendor
+ * frame), one mask step per frame the encoder takes, a skipped frame goes
+ * back at once.  Without a known sensor rate, with out >= src or a window
+ * over 64 frames the wall-clock pacing below stays.  Video channels only
+ * (the vendor JPEG path has no mask).  OPENIMP_ENC_FPS_MASK=0: old pacing.
+ */
+extern int OpenIMP_EncoderSourceFps(uint32_t *num, uint32_t *den)
+    __attribute__((weak));
+
+static int p2_fps_mask_env_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_ENC_FPS_MASK");
+
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+
+/* Called with ch->lock held: 1 when the mask decides this poll's frames. */
+static int p2_fps_mask_poll(int channel, const P2EncoderChannel *ch,
+                            uint32_t out_num, uint32_t out_den)
+{
+    uint32_t src_num, src_den;
+
+    if (ch->codec_type == IMP_ENC_TYPE_JPEG || !p2_fps_mask_env_on() ||
+        !OpenIMP_EncoderSourceFps ||
+        OpenIMP_EncoderSourceFps(&src_num, &src_den) != 0)
+        return 0;
+    return p2_fps_mask_update(&p2_fps_masks[channel], src_num, src_den,
+                              out_num, out_den) == 1;
+}
+
+/* One frame the poll took: 1 = code it, 0 = skipped by the mask. */
+static int p2_fps_mask_frame(int channel)
+{
+    P2FpsMask *m = &p2_fps_masks[channel];
+
+    if (p2_fps_mask_take(m)) {
+        if (++p2_fps_mask_kept[channel] % 750u == 1u)
+            IMP_LOG_INFO("Encoder", "ch %d fps mask: %u/%u -> %u/%u, kept %u "
+                         "skipped %u", channel, m->src_num, m->src_den,
+                         m->out_num, m->out_den, p2_fps_mask_kept[channel],
+                         p2_fps_mask_skips[channel]);
+        return 1;
+    }
+    p2_fps_mask_skips[channel]++;
+    return 0;
+}
+
 static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
 {
     static unsigned int trace_count;
@@ -4807,6 +4868,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
     int jpeg_may_skip = 0;
     int result = -1;
     int osd_withhold_jpeg = 0;
+    int fps_mask = 0;
     int process_result;
     OpenIMPProfileStamp poll_profile;
 #if defined(PLATFORM_T23)
@@ -4911,11 +4973,16 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
      * due, an earlier one is skipped (output rate below the sensor rate). */
     if (push && wait_us <= interval_us / 2u)
         wait_us = 0;
+    /* #962: below the sensor rate the vendor keep mask picks the frames */
+    fps_mask = p2_fps_mask_poll(channel, ch, fps_num, fps_den);
+    if (fps_mask)
+        wait_us = 0;
 #if defined(PLATFORM_T23)
     /* #807: IVDC direct: kicked by the frame-start event, no timer */
     if (p2_ivdc_push_on() && ch->codec_type != IMP_ENC_TYPE_JPEG &&
         OpenIMP_T23_IvdcChnDirect(ch->source_channel)) {
         ivdc_push = 1;
+        fps_mask = 0;       /* the IVDC pick steps its own mask */
         wait_us = 0;
         ivdc_out_fps = (fps_num + fps_den / 2u) / fps_den;
     }
@@ -4986,6 +5053,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
 #else
         frame_deadline_us = p2_monotonic_us() + timeout_us;
 #endif
+p2_fps_mask_next:
 #if defined(PLATFORM_T31) || defined(PLATFORM_T20) || defined(PLATFORM_T23) || defined(PLATFORM_T21)
         /* Sleep until the capture worker publishes a frame instead of
          * polling every millisecond. The sequence is read before each
@@ -5074,6 +5142,15 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
         }
 #endif
 #endif
+        if (fps_mask && frame && !p2_fps_mask_frame(channel)) {
+            /* #962: not this frame: back to the driver, wait for the next */
+            (void)p2_release_source_frame(ch->source_channel, frame);
+            frame = NULL;
+            if (!timeout_ms || p2_monotonic_us() >= frame_deadline_us ||
+                !__atomic_load_n(&ch->receiving, __ATOMIC_RELAXED))
+                goto done;
+            goto p2_fps_mask_next;
+        }
 #if defined(PLATFORM_T23)
         pace_got_us = p2_monotonic_us();
 #endif

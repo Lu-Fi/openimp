@@ -2770,12 +2770,14 @@ int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, v
  * > 1.5 output intervals; PUSH_GF=1: a thread calls IMP_FrameSource_GetFrame(1) as fast as frames come (after
  * SetFrameDepth(1, PUSH_DEPTH=1)); PUSH_HOLD_MS: the drain of chn 0 holds each stream that long before ReleaseStream
  * (#917, a slow streamer); then PUSH_CYCLES (20) StopRecvPic / StartRecvPic rounds of both channels, each must give
- * 5 pictures within 2 s.  Lines "push: ..." carry the numbers. */
+ * 5 pictures within 2 s.  Lines "push: ..." carry the numbers.  #962 (T23 too): "push: chn N dts ..." is the
+ * histogram of the pack timestamp steps in 10 ms bins (the keep pattern of an output rate below the sensor rate). */
 #if defined(PLATFORM_T20) || defined(PLATFORM_T10) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
-    defined(PLATFORM_T31)
+    defined(PLATFORM_T31) || defined(PLATFORM_T23)
 #include <pthread.h>
 static int push_env(const char *n, int d) { const char *v = getenv(n); return v && *v ? atoi(v) : d; }
-typedef struct { int chn; volatile int run; int pics, gaps, maxgap_ms, hold_ms; int64_t last_ts; int interval_us; } PushDrain;
+typedef struct { int chn; volatile int run; int pics, gaps, maxgap_ms, hold_ms; int64_t last_ts; int interval_us;
+                 int dts[41], dts_neg; FILE *dump; unsigned char *buf; } PushDrain;
 static volatile int g_push_gf_run;
 static int g_push_gf_ok, g_push_gf_fail;
 
@@ -2789,9 +2791,21 @@ static void *push_drain(void *arg)
         if (IMP_Encoder_PollingStream(d->chn, 500) != 0) continue;
         memset(&s, 0, sizeof(s));
         if (IMP_Encoder_GetStream(d->chn, &s, 1) != 0) continue;
+        if (d->dump && d->buf) {     /* PUSH_DUMP=<dir>: chn 0 stream to <dir>/push0.h264 (#962 picture check) */
+            int trunc = 0;
+            size_t len = gather(&s, d->buf, STREAMCAP, &trunc);
+
+            if (!trunc) fwrite(d->buf, 1, len, d->dump);
+        }
         if (s.packCount > 0 && s.pack) {
             int64_t ts = s.pack[0].timestamp;
 
+            if (d->last_ts) {
+                int64_t st = ts - d->last_ts;
+
+                if (st <= 0) d->dts_neg++;
+                else d->dts[st >= 405000 ? 40 : (int)((st + 5000) / 10000)]++;
+            }
             if (d->last_ts && ts > d->last_ts && (ts - d->last_ts) * 2 > (int64_t)d->interval_us * 3) {
                 int ms = (int)((ts - d->last_ts) / 1000);
 
@@ -2871,6 +2885,12 @@ int enc_push_run(void)
 
     wdog("cases", sec + cycles * 4 + 60);
     memset(d, 0, sizeof(d));
+    {
+        uint32_t sn = 0, sd = 0;
+        int sr = IMP_ISP_Tuning_GetSensorFPS(&sn, &sd);
+
+        printf("push: sensor fps %u/%u (%d), encoder %d fps\n", sn, sd, sr, fps);
+    }
     if (gf) printf("push: SetFrameDepth(%d, %d) %d\n", CH_SUB, push_env("PUSH_DEPTH", 1),
                    IMP_FrameSource_SetFrameDepth(CH_SUB, push_env("PUSH_DEPTH", 1)));
     if (push_chn_up(0, CH_SUB, 0, SUB_W, SUB_H, fps)) return -1;
@@ -2878,17 +2898,35 @@ int enc_push_run(void)
     for (i = 0; i < n; i++) {
         d[i].chn = i; d[i].run = 1; d[i].interval_us = 1000000 / fps;
         d[i].hold_ms = i == 0 ? push_env("PUSH_HOLD_MS", 0) : 0;
+        if (i == 0 && getenv("PUSH_DUMP") && *getenv("PUSH_DUMP")) {     /* the sub stream only (camera RAM) */
+            char fn[256];
+
+            snprintf(fn, sizeof(fn), "%s/push%d.h264", getenv("PUSH_DUMP"), i);
+            d[i].dump = fopen(fn, "wb");
+            d[i].buf = malloc(STREAMCAP);
+        }
         pthread_create(&th[i], NULL, push_drain, &d[i]);
     }
     if (gf) { g_push_gf_run = 1; pthread_create(&gth, NULL, push_getframe, NULL); }
     t0 = now_us();
     sleep((unsigned)sec);
     if (gf) { g_push_gf_run = 0; pthread_join(gth, NULL); }
-    for (i = 0; i < n; i++) { d[i].run = 0; pthread_join(th[i], NULL); }
+    for (i = 0; i < n; i++) {
+        d[i].run = 0;
+        pthread_join(th[i], NULL);
+        if (d[i].dump) fclose(d[i].dump);
+        free(d[i].buf);
+    }
     t0 = now_us() - t0;
     for (i = 0; i < n; i++)
         printf("push: chn %d pictures %d in %.1f s (%.2f fps, want %d) gaps %d maxgap %d ms\n", i, d[i].pics, t0 / 1e6,
                d[i].pics * 1e6 / t0, fps, d[i].gaps, d[i].maxgap_ms);
+    for (i = 0; i < n; i++) {
+        printf("push: chn %d dts", i);
+        for (k = 0; k <= 40; k++)
+            if (d[i].dts[k]) printf(" %s%dms:%d", k == 40 ? ">=" : "", k * 10, d[i].dts[k]);
+        printf(" nonpos:%d\n", d[i].dts_neg);
+    }
     if (gf) printf("push: getframe ok %d (%.2f fps) fail %d\n", g_push_gf_ok, g_push_gf_ok * 1e6 / t0, g_push_gf_fail);
     for (k = 0; k < cycles; k++) {
         int good = 1;
