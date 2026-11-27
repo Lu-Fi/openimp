@@ -230,11 +230,17 @@ int main(void)
     CHECK(last_id == 0x8000163 && last_val == 2);
 #endif
 #if defined(PLATFORM_T20) || defined(PLATFORM_T30)
-    /* ISPHVflip = the two flip controls, hflip first */
+    /* ISPHVflip = the two flip controls, hflip first; T10/T20 (vendor
+     * 3.12.0 0x5d684, #944) also switch an AUTO Temper to MANUAL and back
+     * around them (CUSTOM_TEMPER 0x98e90c twice) */
     s_calls = 0;
     CHECK(IMP_ISP_Tuning_SetISPHVflip(IMPISP_TUNING_OPS_MODE_ENABLE,
                                       IMPISP_TUNING_OPS_MODE_DISABLE) == 0);
+#if defined(PLATFORM_T20)
+    CHECK(s_calls == 4);
+#else
     CHECK(s_calls == 2);
+#endif
     CHECK(ctrl_val[0x914] == 1 && ctrl_val[0x915] == 0);
     CHECK(IMP_ISP_Tuning_SetISPHVflip(IMPISP_TUNING_OPS_MODE_DISABLE,
                                       IMPISP_TUNING_OPS_MODE_ENABLE) == 0);

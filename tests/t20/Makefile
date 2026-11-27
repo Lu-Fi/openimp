@@ -10,15 +10,17 @@ OBJ := $(BUILD)/t20-abi-test.o
 
 BYPASS_TEST := $(BUILD)/t20-bypass-test
 
+FLIP_TEST := $(BUILD)/t20-flip-test
+
 DECODER_TEST := $(BUILD)/t20-decoder-test
 
-.PHONY: check clean bypass-check decoder-check
+.PHONY: check clean bypass-check flip-check decoder-check
 
 ifeq ($(shell command -v $(T20_CC) 2>/dev/null),)
-check: bypass-check decoder-check
+check: bypass-check flip-check decoder-check
 	@echo "t20_abi_test: skipped ($(T20_CC) not found; set T20_CC to a 32-bit compiler)"
 else
-check: $(OBJ) bypass-check decoder-check
+check: $(OBJ) bypass-check flip-check decoder-check
 	@echo t20_abi_test: ok
 endif
 
@@ -31,6 +33,17 @@ $(BYPASS_TEST): bypass_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
 	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
 		"-D_Static_assert(a,b)=" -DPLATFORM_T20 -DPLATFORM_T21 -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
 		bypass_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
+		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o $@
+
+# host test of the T10/T20 flips (vendor Temper guard + 120 ms wait, openimp #944)
+flip-check: $(FLIP_TEST)
+	$(FLIP_TEST)
+
+$(FLIP_TEST): flip_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
+	@mkdir -p $(BUILD)
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
+		"-D_Static_assert(a,b)=" -DPLATFORM_T20 -DPLATFORM_T21 -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
+		flip_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
 		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o $@
 
 # host test of IMP_Decoder_* on T10/T20/T21 (src/t23/openimp_t23_decoder.c as OPENIMP_DECODER_SW_ONLY + the software JPEG decoder)
