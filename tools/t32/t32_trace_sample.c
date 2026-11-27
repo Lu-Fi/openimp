@@ -1041,6 +1041,7 @@ again:
                             { "t265c", "IMP_Encoder_SetH265TransCfg", 1, { -5, -2 } },
                             { "t265d", "IMP_Encoder_SetH265TransCfg", 1, { -3, -7 } },
                             { "grey", "IMP_Encoder_SetChnColor2Grey", 1, { 1 } },
+                            { "grey0", "IMP_Encoder_SetChnColor2Grey", 1, { 0 } },
                             { "dn", "IMP_Encoder_SetChnDenoise", 1, { 1, 1, 30, 30 } },
                             { "hskip", "IMP_Encoder_SetChnHSkip", 1, { 1, 0, 0, 1, 0, 0 } },  /* N2X */
                             { "gdr", "IMP_Encoder_SetGDRCfg", 1, { 1, 30, 5 } },

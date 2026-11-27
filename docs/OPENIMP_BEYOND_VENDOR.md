@@ -580,6 +580,14 @@ switches (`P1_*`, `P2_*`, ...) are not described anywhere; treat them as interna
 A firmware package passes the same variable to the build (`OPENIMP_DEBUG=1` in the package's make environment),
 for a debug image; the default image carries the release build.
 
+## 7a. T33 Color2Grey: a real grey chroma plane (#788)
+
+Vendor 2.0.2.1 `IMP_Encoder_SetChnColor2Grey(chn, {1})` (setter 0xf80bc -> `i264e_set_param` 0 -> `i264e_reconfig_color2gray_set` 0x823e0) switches the HERA chroma source register EFE_RAWC (0x20010) of every following picture from the IVDC chroma (0x81000000) to a user-space virtual address of the process (0x77726d00 H.264 / 0x774d8d00 H.265, QEMU T33 HERA capture, audit t33-cache `vfx`/`v265`). The engine then reads chroma from wherever that number points as a physical address, so the picture is not reliably grey. OpenIMP does not copy that: the encoder owns one DMA plane of `0x80` (neutral chroma, `stride x height/2`, allocated at the first grey picture, freed with the channel) and writes its physical address into EFE_RAWC while Color2Grey is on, for H.264 and H.265 (the vendor list changes on both). Switching off restores the source chroma at the next picture.
+
+- Everything else in the HERA list is vendor-equal: the on/off transition of an OpenIMP run changes only EFE_RAWC (plus the rate-control restart the vendor also does, #784); QEMU `g788` (H.264) and `g788h5` (H.265), 14 pictures, `T32_ENC_CHANGES=4:I,8:Xgrey,10:Xgrey0`: EFE_RAWC = DMA address on pictures 8-9, 0x81000000 before and after; the source chroma the engine reads is exactly 0x80 on those pictures (QEMU model reads RAWC next to an IVDC luma, audit patch `audit/issue788/qemu-hera-rawc.patch`).
+- `IMP_Encoder_GetChnColor2Grey` stays vendor-equal (1 on H.264 after a set, 0 on H.265 and on a JPEG channel) although the grey handling works on H.265 too.
+- T32 (2.2.0) is unchanged (the setting is stored only, not verified against its vendor library). Device picture check on the T33L is still open (no camera in this task).
+
 ## 8. Unverified or not yet in this list
 
 - T31 streams held with `SetMaxStreamCnt(N)` (#942, decision pending): the count is vendor-equal (vendor 1.1.6 on the T31 test camera: default 2, N = 1/2/3 -> PollingStream succeeds for 2/1/2/3 streams the application holds, then refuses), but the vendor's GetStream returns the oldest unreleased stream again (same seq, pack pointer and address for every held one) and the second ReleaseStream of it aborts the process (`AL_Buffer_Unref: Assertion iRefCount >= 0`, every N >= 2). OpenIMP hands out the next picture each time (distinct seq, packs and buffer) and releases them in any order. Apps that release before the next GetStream (timps, the SDK samples) see no difference.

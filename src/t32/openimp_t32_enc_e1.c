@@ -59,7 +59,7 @@ struct t32_e1 {
     IMPEncoderCropCfg crop, crop_pend;
     int qpg, qpg_pend;
     IMPEncoderSrdCfg srd, srd_pend;
-    int changeref, grey, mbrc, pskip_req, gdr_req, gdr_req_frames, pad, trig_mode;
+    int changeref, grey, grey_hw, mbrc, pskip_req, gdr_req, gdr_req_frames, pad, trig_mode;
     int rc_new;                 /* T32_E1RC_* changes for the next IDR (#784) */
     uint32_t trig_level;
     uint8_t pad_attr[32];
@@ -630,10 +630,26 @@ int IMP_Encoder_SetChnColor2Grey(int encChn, const IMPEncoderColor2GreyCfg *c)
     rc = e1_get(encChn, &ci);
     if (!rc && ci.codec == 1 && c)
         E1.grey = c->enable ? 1 : 0;
-    if (!rc && ci.codec != 0 && c)
+    if (!rc && ci.codec != 0 && c) {
+        E1.grey_hw = c->enable ? 1 : 0;  /* #788: H.264 and H.265 (the vendor list changes on both) */
         E1.rc_new |= T32_E1RC_RESTART;  /* #784: rate control restarts at the next IDR */
+    }
     pthread_mutex_unlock(&e1_lock);
     return rc;
+}
+
+/* #788: Color2Grey is on for the pictures coded from now on (H.264 and H.265).  The vendor 2.0.2.1
+ * list then points EFE_RAWC at a user-space address; OpenIMP gives the engine a real grey plane. */
+int OpenIMP_T32_E1GreyChroma(int encChn)
+{
+    int g = 0;
+
+    if (encChn < 0 || encChn >= T32_E1_CHNS)
+        return 0;
+    pthread_mutex_lock(&e1_lock);
+    g = E1.grey_hw;
+    pthread_mutex_unlock(&e1_lock);
+    return g;
 }
 
 int IMP_Encoder_GetChnColor2Grey(int encChn, IMPEncoderColor2GreyCfg *c)

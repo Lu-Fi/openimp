@@ -138,6 +138,7 @@ struct t32_enc_slot {
 struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint8_t mq;                         /* #784: H.265 MotionQuality from the last IDR on */
     T32VpuBuf list, ring, ebs, aux[T32_HERA5_AUX];
+    T32VpuBuf grey;                     /* #788: Color2Grey chroma plane (0x80), T33 */
     T32H264Seq seq;
     T32H265Seq seq5;
     uint8_t vps[T32_H265_PARAM_MAX], sps[T32_H265_PARAM_MAX], pps[T32_H265_PARAM_MAX];
@@ -500,6 +501,28 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
     /* the vendor's vtype (2.2.0 and 2.0.2.1 traces): H.264 0x91, H.265
      * 0x80, JPEG 0; the radix driver writes it to HERA CFGC 0x0c (#391) */
     e->vpu.node.vtype = e->hevc ? 0x80u : e->h264 ? 0x91u : 0u;
+}
+
+/* #788 (beyond vendor, T33): Color2Grey.  Vendor 2.0.2.1 writes a user-space address into the HERA chroma
+ * source EFE_RAWC; here the engine reads a real DMA plane of 0x80 (neutral chroma), stride = the source
+ * stride, height/2 rows, so the coded picture is grey whatever the source chroma holds. */
+static void enc_grey_source(struct t32_enc_chn *e, uint32_t stride, uint32_t h, uint32_t *c)
+{
+#ifdef PLATFORM_T33
+    uint32_t need = stride * (h / 2u);
+
+    if (!OpenIMP_T32_E1GreyChroma(chn_no(e)))
+        return;
+    if (e->avc.grey.size < need) {
+        OpenIMP_T32_VpuBufFree(&e->avc.grey);
+        if (OpenIMP_T32_VpuBufAlloc(&e->avc.grey, need, "t33_grey_c") != 0)
+            return;                     /* no buffer: keep the source chroma */
+        memset(t32_vpu_buf_va(&e->avc.grey), 0x80, e->avc.grey.size);
+    }
+    *c = t32_vpu_buf_pa(&e->avc.grey);
+#else
+    (void)e; (void)stride; (void)h; (void)c;
+#endif
 }
 
 /* ---- the JPEG job --------------------------------------------------------- */
@@ -1117,6 +1140,7 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.first = a->pictures == 0;         /* #295: only the channel's first picture has the QP..QP window */
     p.qp = rc_picture_qp(e, idr);
     enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
+    enc_grey_source(e, p.src_stride, h, &p.src_c);
     p.ring_y = t32_vpu_buf_pa(&a->ring);
     p.ring_y_end = p.ring_c = p.ring_y + rs * rows;
     p.ring_c_end = p.ring_c + rs * rows / 2u;
@@ -1395,6 +1419,7 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     p.first = a->pictures == 0;
     p.qp = rc_picture_qp(e, idr);
     enc_source(e, f, &p.src_y, &p.src_c, &p.src_stride);
+    enc_grey_source(e, p.src_stride, h, &p.src_c);
     p.ring_y = t32_vpu_buf_pa(&a->ring);
     p.ring_y_end = p.ring_c = p.ring_y + rs * rows;
     p.ring_c_end = p.ring_c + rs * rows / 2u;
@@ -1857,6 +1882,7 @@ static void h264_free(struct t32_enc_chn *e)
 
     OpenIMP_T32_VpuBufFree(&e->avc.list);
     OpenIMP_T32_VpuBufFree(&e->avc.ring);
+    OpenIMP_T32_VpuBufFree(&e->avc.grey);
     t33_bs_put(e);                      /* the engine's shared buffer: not ours to free */
     OpenIMP_T32_VpuBufFree(&e->avc.ebs);
     for (i = 0; i < T32_HERA5_AUX; i++)
