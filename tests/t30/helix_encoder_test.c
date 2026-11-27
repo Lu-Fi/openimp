@@ -609,6 +609,17 @@ typedef struct {
 static int hs_parse;
 
 /* Encode one picture and check its layout.  Returns 0 on success. */
+/* #940: T10/T20 pictures are recycled blocks (descriptor + payload) */
+static void test_release_stream(HWStreamBuffer *stream)
+{
+#if defined(PLATFORM_T20)
+    if (OpenIMP_T30_HelixStreamRelease(stream))
+        return;
+#endif
+    free((void *)(uintptr_t)stream->virt_addr);
+    free(stream);
+}
+
 static int encode(T30HelixEncoder *encoder, PictureInfo *info)
 {
     static IMPFrameInfo frame;
@@ -705,8 +716,7 @@ static int encode(T30HelixEncoder *encoder, PictureInfo *info)
     assert(hs_parse || bits.offset <= (slice_length - payload_length) * 8u);
     assert(stream->timestamp == (uint64_t)frame.timeStamp);
 
-    free((void *)(uintptr_t)stream->virt_addr);
-    free(stream);
+    test_release_stream(stream);
     return 0;
 }
 
@@ -1775,8 +1785,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
     flushed = flushed_before_run;
     assert(OpenIMP_T30_HelixEncode(encoder, &frame, &stream) == 0);
     assert(stream);
-    free((void *)(uintptr_t)stream->virt_addr);
-    free(stream);
+    test_release_stream(stream);
     assert(!memcmp(buffer, expected, size));
     for (i = 0; i < (size_t)width * (aligned / 2u); i++)
         assert(chroma[i] == ((i & 1u) ? 0xa5u : 0x5au));
@@ -1791,8 +1800,7 @@ static void check_bottom_padding(uint32_t width, uint32_t height)
     frame.size = (uint32_t)(width * height * 3u / 2u);
     frame.timeStamp++;
     if (OpenIMP_T30_HelixEncode(encoder, &frame, &stream) == 0) {
-        free((void *)(uintptr_t)stream->virt_addr);
-        free(stream);
+        test_release_stream(stream);
     }
     for (i = (size_t)width * height; i < (size_t)width * aligned; i++)
         assert(aligned == height || buffer[i] == 0u);
@@ -1840,8 +1848,7 @@ static void test_failure_count_and_input_size(void)
     frame.size = 640u * 360u * 3u / 2u;
     assert(OpenIMP_T30_HelixEncode(encoder, &frame, &stream) == 0);
     assert(stream && runs == before + 1u);
-    free((void *)(uintptr_t)stream->virt_addr);
-    free(stream);
+    test_release_stream(stream);
     OpenIMP_T30_HelixDestroy(encoder);
 }
 
