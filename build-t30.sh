@@ -134,6 +134,7 @@ compile t30_helix_bitstream src/t30/helix_bitstream.c -Werror
 # NCU denoise engine driven from user space like the vendor libimp (#701, docs/T30_NCU.md)
 compile t30_ncu src/t30/t30_ncu.c -Werror
 compile t30_ncu_par104 src/t30/t30_ncu_par104.c -Werror
+compile t30_ncu_par105 src/t30/t30_ncu_par105.c -Werror
 # IMP_Decoder_*: the vendor T30 1.0.5 decodes JPEG with ijpegd on the VPU,
 # as T21 1.0.33; OpenIMP decodes in software in the calling thread, the
 # T10/T20/T21 decoder (same API: channel 0, JPEG to YUV420P/NV12/NV21).
@@ -211,6 +212,7 @@ compile watermark src/watermark/watermark.c -Werror -ffp-contract=off
     "$output_dir/t30_helix_bitstream.o" \
     "$output_dir/t30_ncu.o" \
     "$output_dir/t30_ncu_par104.o" \
+    "$output_dir/t30_ncu_par105.o" \
     "$output_dir/t30_decoder.o" \
     "$output_dir/t30_jpegdec.o" \
     "$output_dir/t30_radix_encoder.o" \

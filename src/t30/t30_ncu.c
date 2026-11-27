@@ -49,6 +49,7 @@ static struct {
     struct t30_ncu_info info;
     uint32_t params[T30_NCU_BIN104_SIZE / 4];   /* vendor g_ncu_t30_params (bin as read) */
     uint32_t active[T30_NCU_SET104_SIZE / 4];   /* vendor g_ncu_t30_param (day or night set) */
+    int layout;               /* T30_NCU_BIN_104 or T30_NCU_BIN_105 (the bin that was loaded) */
     int inited;               /* set by ncu_ctrl_update_param */
     int night;                /* ncu_ctrl_update_mode: 0 day set, 1 night set */
     int32_t total_gain;       /* vendor g_total_gain */
@@ -205,23 +206,31 @@ int t30_ncu_bin_probe(const char *path, uint32_t *mode)
             *mode = (hdr[1] >> 16) & 3;   /* vendor 1.0.4 AddSensor: flags >> 16 & 3 */
         return T30_NCU_BIN_104;
     }
-    if (size == 0xec8 && hdr[0] == 0xec8 && (hdr[1] >> 24) == 1)
+    if (size == (long)T30_NCU_BIN105_SIZE && hdr[0] == T30_NCU_BIN105_SIZE && (hdr[1] >> 24) == 1) {
+        if (mode != NULL)
+            *mode = (hdr[1] & 0x3ffffu) >> 16;   /* vendor 1.0.5 EnableSensor: (flags & 0x3ffff) >> 16 */
         return T30_NCU_BIN_105;
+    }
     return T30_NCU_BIN_INVALID;
 }
 
 /* vendor ncu_func_par_download through ncu_func_update (lock / unlock are no-ops) */
 static void ncu_func_update(int32_t gain)
 {
-    t30_ncu_par104_download((const uint8_t *)g_ncu.active, gain);
+    if (g_ncu.layout == T30_NCU_BIN_105)
+        t30_ncu_par105_download((const uint8_t *)g_ncu.active, gain);
+    else
+        t30_ncu_par104_download((const uint8_t *)g_ncu.active, gain);
 }
 
 /* vendor ncu_ctrl_update_param: copy the day or night set and download it */
 static void ncu_ctrl_update_param_locked(void)
 {
-    const uint32_t *set = &g_ncu.params[1 + (g_ncu.night ? T30_NCU_SET104_SIZE / 4 : 0)];
+    /* 1.0.4: day set at +4, night set 0xaa0 bytes later; 1.0.5: sets of 0x760 bytes (0xec8 bin) */
+    const size_t set_words = (g_ncu.layout == T30_NCU_BIN_105 ? T30_NCU_SET105_SIZE : T30_NCU_SET104_SIZE) / 4;
+    const uint32_t *set = &g_ncu.params[1 + (g_ncu.night ? set_words : 0)];
 
-    memcpy(g_ncu.active, set, sizeof(g_ncu.active));
+    memcpy(g_ncu.active, set, set_words * 4);
     g_ncu.inited = 1;
     ncu_func_update(g_ncu.total_gain);
 }
@@ -265,13 +274,17 @@ int t30_ncu_hal_init(const char *sensor, int w, int h)
     memset(g_ncu.active, 0, sizeof(g_ncu.active));
     g_ncu.inited = 0;
     g_ncu.night = 0;
+    g_ncu.layout = T30_NCU_BIN_104;
     ncu_config((uint32_t)w, (uint32_t)h);
     t30_ncu_img_w = w;   /* ncu_func_config */
     t30_ncu_img_h = h;
     snprintf(path, sizeof(path), "%s/ncu_%s.bin", t30_ncu_bin_dir, sensor);
     if (access(path, R_OK) == 0) {
+        /* the vendor reads its own layout only (1.0.4 0x1548, 1.0.5 0xec8 bytes); this port reads both */
+        g_ncu.layout = t30_ncu_bin_probe(path, NULL) == T30_NCU_BIN_105 ? T30_NCU_BIN_105 : T30_NCU_BIN_104;
         f = fopen(path, "rb");
-        if (f != NULL && fread(g_ncu.params, T30_NCU_BIN104_SIZE, 1, f) == 1) {
+        if (f != NULL && fread(g_ncu.params, g_ncu.layout == T30_NCU_BIN_105 ? T30_NCU_BIN105_SIZE : T30_NCU_BIN104_SIZE,
+                               1, f) == 1) {
             ncu_ctrl_update_param_locked();
         } else {
             printf("error: ncubin file %s, read error\n", path);
@@ -345,7 +358,8 @@ void t30_ncu_ctrl_bypass(int bypass)
 {
     pthread_mutex_lock(&g_ncu.lock);
     if (bypass == 0) {
-        uint32_t f = g_ncu.active[0x5a4 / 4];
+        /* 1.0.4 reads the engine-enable word at +0x5a4 of its set, 1.0.5 (0x760 byte set) at +0x30 */
+        uint32_t f = g_ncu.active[(g_ncu.layout == T30_NCU_BIN_105 ? 0x30 : 0x5a4) / 4];
         uint32_t m = g_ncu.active[1];
         uint32_t e = g_ncu.active[0x2c / 4];
         uint32_t fc = t30_ncu_rd(0x24);

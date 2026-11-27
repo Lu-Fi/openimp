@@ -26,6 +26,10 @@ extern int t30_ncu_img_h;
 /* vendor 1.0.4 ncu_func_par_download: pb = active parameter set, param_1 = total gain */
 int t30_ncu_par104_download(const uint8_t *pb, int32_t param_1);
 
+/* vendor 1.0.5 ncu_func_par_download (nm 0xd86d8): pb = active 0x760-byte set; -1 on a zero divisor
+ * (the vendor traps) */
+int t30_ncu_par105_download(const uint8_t *pb, int32_t param_1);
+
 #ifdef T30_NCU_GENERATED
 /* names used by the generated transcription (t30_ncu_par104.c only) */
 typedef uint32_t uint;

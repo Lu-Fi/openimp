@@ -297,7 +297,7 @@ isp_t21_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c
 	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T21 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c -lpthread
 
 # T30 ISP links the NCU engine (#701).
-T30_NCU_SOURCES := $(ROOT)/src/t30/t30_ncu.c $(ROOT)/src/t30/t30_ncu_par104.c
+T30_NCU_SOURCES := $(ROOT)/src/t30/t30_ncu.c $(ROOT)/src/t30/t30_ncu_par104.c $(ROOT)/src/t30/t30_ncu_par105.c
 
 isp_t30_movestate_test: isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(T30_NCU_SOURCES)
 	$(CC) $(CFLAGS) $(ISP_T1X_FLAGS) -DPLATFORM_T30 -o $@ isp_t31_movestate_test.c $(ROOT)/src/isp/isp_tseries.c $(ROOT)/src/core/imp_log_emit.c $(T30_NCU_SOURCES) -lpthread

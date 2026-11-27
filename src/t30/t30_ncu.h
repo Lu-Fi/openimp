@@ -10,16 +10,18 @@
 #define T30_NCU_REG_BASE 0x13090000u
 #define T30_NCU_BIN104_SIZE 0x1548u /* vendor 1.0.4 ncu_load_param fread size */
 #define T30_NCU_SET104_SIZE 0xaa0u  /* one day / night parameter set */
+#define T30_NCU_BIN105_SIZE 0xec8u  /* vendor 1.0.5 ncu_load_param fread size */
+#define T30_NCU_SET105_SIZE 0x760u  /* 1.0.5 day / night set (4 + 2 * 0x760 + 4 = 0xec8) */
 
 /* /etc/sensor/ncu_<sensor>.bin layouts */
 enum t30_ncu_bin_kind {
     T30_NCU_BIN_NONE = 0,    /* no file: Temper (vendor "try to use temper") */
     T30_NCU_BIN_104 = 1,     /* 0x1548 bytes, word0 = size: vendor 1.0.4 layout, supported */
-    T30_NCU_BIN_105 = 2,     /* 0xec8 bytes, version byte 1: vendor 1.0.5 layout, not supported */
+    T30_NCU_BIN_105 = 2,     /* 0xec8 bytes, word0 = size, version byte 1: vendor 1.0.5 layout, supported */
     T30_NCU_BIN_INVALID = 3, /* unreadable or unknown layout */
 };
 
-/* Classify the bin; for T30_NCU_BIN_104 *mode gets the vendor 3D mode ((word1 >> 16) & 3):
+/* Classify the bin; for T30_NCU_BIN_104 and _105 *mode gets the vendor 3D mode ((word1 >> 16) & 3):
  * 0 NCU always on, 1 Temper by day / NCU at night, 2 Temper only. */
 int t30_ncu_bin_probe(const char *path, uint32_t *mode);
 
