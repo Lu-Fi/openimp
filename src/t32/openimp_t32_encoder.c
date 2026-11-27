@@ -2985,7 +2985,10 @@ void *OpenIMP_T32_EncYuvOpen(const T32YuvCfg *c)
         memcpy(&a->rcAttr.attrRcMode, c->rc, sizeof(a->rcAttr.attrRcMode));
     if (c->codec == T32_YUV_H264)
         t32_rc_yuv_h264_defaults(&a->rcAttr.attrRcMode);
-    else
+    else if (c->codec == T32_YUV_JPEG)
+        /* JPEG only (#912): attrJPEGFixQp.qp shares the union's first word with attrH265FixQp.IQp; writing
+         * it for H.265 too set the IDR QP to jpeg_qp_of(0) = 0 (vendor 2.0.2.1 YuvInit 0x1040c4, H.265 branch:
+         * FUN_000e780c maps the caller's rate control unchanged; QEMU 0731 IDR BC_CFG1 0x60004 = 0x13c, QP 30) */
         a->rcAttr.attrRcMode.attrJPEGFixQp.qp = (uint32_t)jpeg_qp_of(c->jpeg_qp);
     e->h264 = c->codec != T32_YUV_JPEG;
     e->hevc = c->codec == T32_YUV_H265;
