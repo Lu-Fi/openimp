@@ -253,12 +253,8 @@ static void test_registers(int p)
         assert(get(on_pairs, 0x50000) == 0x547fdfb1u);
         c.ring_flags = T21_RING_VENDOR_MISC;
         assert(T21_H264_BuildDescriptor(&c, &on_pairs) == 0);
-#if defined(T21_HELIX_T23_DELTAS)
-        /* T23: 0x4010c carries the soc_vpu channel_id, not a flag (#799) */
+        /* 0x4010c carries the soc_vpu channel_id, not a flag (#799, #958) */
         assert(get(on_pairs, 0x4010c) == 0x00400000u);
-#else
-        assert(get(on_pairs, 0x4010c) == 0x03400000u);
-#endif
         assert(get(on_pairs, 0x801c0) == 0x30000006u);
         /* vendor T23 MCE words */
         c.ring_flags = T21_RING_VENDOR_ME;

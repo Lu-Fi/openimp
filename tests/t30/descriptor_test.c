@@ -67,7 +67,7 @@ static T30H264SliceConfig make_config(h264_cabac_t *cabac)
     config.last_mby = 22;
     config.qp = 28;
     config.raw_format = 8;
-    config.dcs_oth = 1;
+    config.vpu_channel = 1;
     config.width = 640;
     config.height = 360;
     config.cabac_state = cabac->state;

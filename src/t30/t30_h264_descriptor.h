@@ -17,7 +17,7 @@ typedef struct {
     uint8_t last_mby;
     uint8_t qp;
     uint8_t raw_format;
-    uint8_t dcs_oth;
+    uint8_t vpu_channel; /* soc_vpu channel_id, 0x4010c bits 24..27 (#958) */
     uint16_t width;
     uint16_t height;
     const uint8_t *cabac_state;

@@ -367,10 +367,11 @@ int T30_H264_BuildDescriptor(const T30H264SliceConfig *config,
     EMIT(0x40120, 0);
 #endif
     EMIT(0x40108, 0);
-#if defined(PLATFORM_T20)
-    EMIT(0x4010c, 0x03400000u);
-#else
-    EMIT(0x4010c, 0x00400000u | ((uint32_t)config->dcs_oth << 24));
+    /* T30 1.0.5 H264E_T30_SliceInit 0x45590 (slice +0x1f2) and T20 3.12.0
+     * H264E_T20_SliceInit 0x30ad0 (slice +0x13d): 0x00400000 | (channel_id &
+     * 0xf) << 24 from the soc_vpu node (#958) */
+    EMIT(0x4010c, 0x00400000u | (((uint32_t)config->vpu_channel & 0xfu) << 24));
+#if !defined(PLATFORM_T20)
     /* OEM H264E_T30_SliceInit: the macroblock rate-control fields of the
      * slice block in 0x40074 and 0x4007c..0x400c8 (#217); without them
      * zero (the former list) */
