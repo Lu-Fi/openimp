@@ -827,10 +827,30 @@ static int g_fs_thread_exited[FS_MAX_CHANNELS];
  * does not know the ioctl, wait in DQBUF as before. */
 #define FS_T20_LISTEN_BUF 0x400456bfu
 static int g_fs_listen[FS_MAX_CHANNELS];
-/* STREAMOFF does not complete the wait: DisableChn lets the worker see
- * running == 0 at the next frame before it stops the stream (the vendor
- * cancels and joins the thread before STREAMOFF, IMP_FrameSource_DisableChn). */
+/* STREAMOFF does not complete the wait, neither in the open nor in the
+ * vendor tx-isp-t10 (frame_channel_vidioc_streamoff 0x2bd4 and
+ * frame_channel_vb2_stop_streaming 0x2210 never touch vdev->comp). The vendor
+ * lib ends it with the thread: IMP_FrameSource_DisableChn (libimp 3.12.0
+ * 0x688c8) calls pthread_cancel + pthread_join on frame_pooling_thread
+ * (0x68b94 / 0x68ba8) before STREAMOFF (ioctl 0x80045613 at 0x68a64), and
+ * uClibc-ng's ioctl is a cancellation point (__libc_enable_asynccancel
+ * around the syscall), so the cancel ends the wait at once even when no
+ * frame comes.  #956: the same here, but the worker can only be cancelled
+ * inside the LISTEN_BUF ioctl: it runs with cancellation disabled and
+ * enables it just for that wait, where it holds no lock.  A cancel that
+ * misses the wait stays pending and the worker leaves by itself at the
+ * running check.  Before, a stop without frames waited 500 ms here and 1 s
+ * in fs_stop_worker. */
 #define FS_T20_LISTEN_STOP_MS 500
+static int g_fs_listen_waiting[FS_MAX_CHANNELS];
+
+static void fs_t20_listen_cancelled(void *arg)
+{
+    int chn = (int)(intptr_t)arg;
+
+    __atomic_store_n(&g_fs_listen_waiting[chn], 0, __ATOMIC_SEQ_CST);
+    FS_FLAG_STORE(g_fs_thread_exited[chn], 1);
+}
 
 /* 0: a frame is ready (or the driver lacks the ioctl: DQBUF waits),
  * -1: no frame (signal, channel not running yet): back to the loop top. */
@@ -838,12 +858,25 @@ static int fs_t20_listen(int chn, int fd)
 {
     int ready = -1;
     int err;
+    int rc;
+    int old_state;
 
-    if (ioctl(fd, FS_T20_LISTEN_BUF, &ready) >= 0)
-        return 0;
+    /* #956: the only point where DisableChn may cancel this thread */
+    pthread_cleanup_push(fs_t20_listen_cancelled, (void *)(intptr_t)chn);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
+    __atomic_store_n(&g_fs_listen_waiting[chn], 1, __ATOMIC_SEQ_CST);
+    rc = ioctl(fd, FS_T20_LISTEN_BUF, &ready);
     err = errno;
+    __atomic_store_n(&g_fs_listen_waiting[chn], 0, __ATOMIC_SEQ_CST);
+    pthread_setcancelstate(old_state, NULL);
+    pthread_cleanup_pop(0);
+    if (rc >= 0)
+        return 0;
     if (err == ENOTTY || err == EINVAL) {
         __atomic_store_n(&g_fs_listen[chn], -1, __ATOMIC_RELAXED);
+        /* DQBUF waits from now on: back to a cancellable worker, the
+         * fs_stop_worker fallback for a DQBUF that never returns */
+        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
         IMP_LOG_INFO("Framesource", "chn%d: no LISTEN_BUF in the driver (errno %d), DQBUF waits", chn, err);
         return 0;
     }
@@ -1177,6 +1210,12 @@ static void *frame_pooling_thread(void *arg)
                 IMP_LOG_INFO("Framesource", "chn%d: SCHED_FIFO not set, normal policy", chn);
         }
     }
+#endif
+#if defined(PLATFORM_T20)
+    /* #956: cancellable only inside the LISTEN_BUF wait (fs_t20_listen) */
+    if (__atomic_load_n(&g_fs_listen[chn], __ATOMIC_RELAXED) >= 0)
+        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    __atomic_store_n(&g_fs_listen_waiting[chn], 0, __ATOMIC_SEQ_CST);
 #endif
     OPENIMP_TRACE_STDERR("FSDBG ch=%d step=post_prctl fd=%d running=%d\n", chn, ctx->fd, FS_FLAG_LOAD(ctx->running));
     while (FS_FLAG_LOAD(ctx->running)) {
@@ -2796,6 +2835,30 @@ static int fs_wait_worker_exit(int chn, int timeout_ms)
     return (int)(fs_now_ms() - start);
 }
 
+#if defined(PLATFORM_T20)
+/* #956: vendor IMP_FrameSource_DisableChn order (cancel + join before
+ * STREAMOFF): wait for the worker to leave, and cancel it as soon as it
+ * sits in the LISTEN_BUF wait (once; it is cancellable only there).
+ * Returns the time waited in ms, or -1 after timeout_ms. */
+static int fs_t20_stop_listener(int chn, pthread_t thread, int timeout_ms)
+{
+    uint32_t start = fs_now_ms();
+    int cancelled = 0;
+
+    while (!FS_FLAG_LOAD(g_fs_thread_exited[chn])) {
+        if (!cancelled &&
+            __atomic_load_n(&g_fs_listen_waiting[chn], __ATOMIC_SEQ_CST)) {
+            pthread_cancel(thread);
+            cancelled = 1;
+        }
+        if (fs_now_ms() - start >= (uint32_t)timeout_ms)
+            return -1;
+        usleep(1000);
+    }
+    return (int)(fs_now_ms() - start);
+}
+#endif
+
 /* Stop the pooling worker once running is cleared and STREAMOFF issued
  * (the driver's wake-up edge for a worker in select() or DQBUF): let it
  * leave by itself and cancel only a worker still running after
@@ -3017,7 +3080,7 @@ int IMP_FrameSource_DisableChn(int chnNum)
 #if defined(PLATFORM_T20)
     if (ctx->thread != 0 &&
         __atomic_load_n(&g_fs_listen[chnNum], __ATOMIC_RELAXED) >= 0)
-        (void)fs_wait_worker_exit(chnNum, FS_T20_LISTEN_STOP_MS);
+        (void)fs_t20_stop_listener(chnNum, ctx->thread, FS_T20_LISTEN_STOP_MS);
 #endif
     /* A frame-channel DQBUF may remain asleep in the kernel even after the
      * worker is cancelled.  STREAMOFF is the driver's wakeup edge, so issue
