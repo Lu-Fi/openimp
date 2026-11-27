@@ -457,18 +457,6 @@ static int wait_count(int *p, int v)
     return 1;
 }
 
-static int wait_given_back(int s, int v)
-{
-    uint64_t t0 = now_ms();
-
-    while (atomic_read(&given_back[s]) < v) {
-        if (now_ms() - t0 > 2000u)
-            return 0;
-        usleep(200);
-    }
-    return 1;
-}
-
 /* the encode thread finished the give-back step: nothing inside Process
  * and the queue no longer changes */
 static void settle(void)
@@ -572,11 +560,16 @@ static void test_encode_while_app_holds_stream(void)
     CHECK(n == 1);                                  /* the one encoded while held */
 }
 
-/* #918 */
-static void test_no_giveback_while_reader(void)
+/* #918.  The output pacing runs on the real clock, so "early" frames only
+ * stay early while the host keeps up.  Under load an attempt can lose that
+ * premise (the early frame was encoded after all, seen as proc_count moving
+ * past base + 1): such an attempt is cleaned up and repeated, the checks of
+ * an attempt whose premise held are never relaxed (#959). */
+static int no_giveback_attempt(void)
 {
     int base = count_of(&proc_count[0]);
     int gb;
+    uint64_t t0;
 
     drain_streams(0);
     usleep(3 * INTERVAL_US);                /* pacing restarts: next due = now + interval */
@@ -587,19 +580,45 @@ static void test_no_giveback_while_reader(void)
     CHECK(wait_count(&proc_count[0], base + 1));
     usleep(2000);
     gb = atomic_read(&given_back[0]);
+    t0 = now_ms();
     frame_tick(0);                          /* early: skipped by the output pacing */
     usleep(5000);
-    CHECK(count_of(&proc_count[0]) == base + 1);
+    if (count_of(&proc_count[0]) != base + 1 || now_ms() - t0 > 30u)
+        goto lost_premise;
     CHECK(qlen(0) == 1);                    /* left for the reader (worker ages it out) */
     CHECK(atomic_read(&given_back[0]) == gb);
     pthread_mutex_lock(&vq);
     reader_active[0] = 0;
     pthread_mutex_unlock(&vq);
     frame_tick(0);                          /* early again: skipped, both go back */
-    CHECK(wait_given_back(0, gb + 2));
+    t0 = now_ms();
+    while (atomic_read(&given_back[0]) < gb + 2 && count_of(&proc_count[0]) == base + 1 &&
+           now_ms() - t0 < 2000u)
+        usleep(200);
+    if (count_of(&proc_count[0]) != base + 1)
+        goto lost_premise;
+    CHECK(atomic_read(&given_back[0]) >= gb + 2);
     settle();
     CHECK(qlen(0) == 0);
     drain_streams(0);
+    return 1;
+lost_premise:
+    pthread_mutex_lock(&vq);
+    reader_active[0] = 0;
+    pthread_mutex_unlock(&vq);
+    settle();
+    drain_streams(0);
+    return 0;
+}
+
+static void test_no_giveback_while_reader(void)
+{
+    int i;
+
+    for (i = 0; i < 20; i++)
+        if (no_giveback_attempt())
+            return;
+    CHECK(!"no_giveback: timing premise never held in 20 attempts");
 }
 
 /* two channels on two sources, channel 1 slow (waits on the shared
@@ -609,6 +628,7 @@ static void test_two_channels(void)
     int b0 = count_of(&proc_count[0]), b1 = count_of(&proc_count[1]);
     int gb0 = atomic_read(&given_back[0]), gb1 = atomic_read(&given_back[1]);
     int got0 = 0, got1 = 0, i;
+    int e0 = count_of(&enc_n[0]), e1 = count_of(&enc_n[1]);
     const int frames = 25;
 
     drain_streams(0);
@@ -620,6 +640,11 @@ static void test_two_channels(void)
     for (i = 0; i < frames; i++) {
         frame_tick(0);
         frame_tick(1);
+        /* the pacing samples the clock when the encode thread takes the frame:
+         * wait until both did, then keep one interval from that point, so a
+         * late thread under load cannot make the next frame look early (#959) */
+        CHECK(wait_count(&enc_n[0], e0 + i + 1));
+        CHECK(wait_count(&enc_n[1], e1 + i + 1));
         usleep(INTERVAL_US);
         got0 += drain_streams(0);
         got1 += drain_streams(1);

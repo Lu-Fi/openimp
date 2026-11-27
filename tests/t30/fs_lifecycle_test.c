@@ -2320,12 +2320,12 @@ static void test_single_pull_capture(void)
         CHECK(IMP_FrameSource_ReleaseFrame(0, frame) == 0, "single pull: release");
     sleep_ms(100);
     before = __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED);
-    for (waited = 0; waited < 500 &&
+    for (waited = 0; waited < 1000 &&
          __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) < before + 20;
          waited += 10)
         sleep_ms(10);
     CHECK(__atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) >= before + 20,
-          "single pull: only %u driver frames in 500 ms after one GetFrame (capture stalled)",
+          "single pull: only %u driver frames in 1000 ms after one GetFrame (capture stalled)",
           __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) - before);
     CHECK(IMP_FrameSource_DisableChn(0) == 0, "single pull: disable");
     CHECK(IMP_FrameSource_DestroyChn(0) == 0, "single pull: destroy");
@@ -2350,20 +2350,24 @@ static void check_fresh_after_pause(int vbs, int need_two)
     CHECK(IMP_FrameSource_EnableChn(0) == 0, "fresh %d: enable", vbs);
     for (k = 0; k < sizeof(pause_ms) / sizeof(pause_ms[0]); k++) {
         unsigned int done, seq;
-        uint64_t age;
+        uint64_t age, t_call;
         int r;
 
         sleep_ms(pause_ms[k]);
         fi = NULL;
-        r = IMP_FrameSource_GetFrame(0, (void **)&fi);
+        /* both references are taken right before the call: a host that
+         * descheduled this thread after the call must not age the frame (#959) */
         done = frames_done();
+        t_call = now_ms();
+        r = IMP_FrameSource_GetFrame(0, (void **)&fi);
         CHECK(r == 0 && fi != NULL, "fresh %d: GetFrame after %u ms", vbs, pause_ms[k]);
         if (r != 0 || !fi)
             continue;
         seq = (unsigned int)(fi->timeStamp / 40000);
-        age = now_ms() - fake_done_ms[seq % 256];
+        /* age against the call: > 0 is a frame captured before the call */
+        age = fake_done_ms[seq % 256] >= t_call ? 0 : t_call - fake_done_ms[seq % 256];
         /* captured after the pause began (a few 10 ms frames back at most) */
-        CHECK(done - seq <= (unsigned int)vbs + 1 && age < 100,
+        CHECK((int)(done - seq) <= vbs + 1 && age < 100,
               "fresh %d%s: after a %u ms pause GetFrame gave frame %u (%llu ms old), newest %u (stale)",
               vbs, need_two == 2 ? " bank+stock" : need_two ? " bank" : "", pause_ms[k], seq, (unsigned long long)age, done);
         IMP_FrameSource_ReleaseFrame(0, fi);
