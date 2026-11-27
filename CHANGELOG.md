@@ -11,6 +11,14 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T10/T20 JPEG picture in ONE VPU job like the vendor; capture frame lent again (#954, replaces the #939 copy default)
+
+- Cause (#939 root cause): OpenIMP encoded a 1280x720 JPEG in 12 VPU jobs (stripes of 4 macroblock rows + 1 extra row, 34 jobs at 1080p) plus a CPU Huffman parse to cut them, because the 1 MiB bitstream buffer cannot hold the theoretical worst case of one job (the T20/T21/T30 core has no bitstream limit). H.264 jobs ran between the stripes: 86-98 ms per picture (9 ms hardware), which held the lent capture frame and made the 2-buffer T10 ISP drop frames. The vendor libimp 3.12.0 runs ONE job per picture (`hwicodec_pf_jpege_t10_enc` 0x37008: slice = `mb_width * mb_height - 1`, one `ioctl 0xc0386302`), about 5 ms.
+- Fix (user decision B, 2026-11-27): `helix_jpeg_stripes_locked` encodes the whole picture in one job (no extra row, no cut, no DRI/RST, no parse) while the last picture of the same size and quantizer tables used at most 1/3 of the bitstream capacity; the first picture, new tables, a larger last picture or a failed one run in the worst-case stripes as before (guard beyond the vendor, docs/OPENIMP_BEYOND_VENDOR.md 3.x). T10/T20 only (`HELIX_ONE_JOB_DEFAULT`); T21/T30 keep the stripes until checked against their own vendor library. `OPENIMP_HELIX_JPEG_ONE_JOB=0` restores the stripes for every picture.
+- The #939 source copy default (052e6d4e) is removed: the encoder lends the capture frame when `OpenIMP_HelixJpeg_OneJobNext()` says the next picture runs as one job (frame back after about 25 ms like the vendor) and copies it only for a striped picture (which would hold the frame about 90 ms). `OPENIMP_HELIX_JPEG_SRC_COPY=1` always copies, `=0` always lends.
+- Tests: `tests/t30` `helix_jpeg_test_t20` test_one_job (stripes first, then one job without restarts, new tables, a picture above 1/3 of the buffer, `=0`); guard `make -C tests/t20 onejob-check` (replaces srccopy-check).
+- Evidence: see the #954 comments (T10 .31 and T20 .107, timing shim, 6-round interleaved series with snapshots).
+
 ## 2026-11-27: T21/T30 ISP flips follow the vendor Temper guard + 120 ms wait (#948)
 
 - Vendor (Ghidra): T21 1.0.33 SetISPHflip 0x63534 / SetISPVflip 0x6391c and T30 1.0.5 SetISPHflip 0xd7e14 / SetISPVflip 0xd822c / SetISPHVflip 0xd8658 check tuning_state==2 (else -1), switch Temper AUTO (type 1) to MANUAL 0x28, send the flip, usleep(120000) and restore the saved Temper attribute (same as T20, #944).

@@ -751,6 +751,9 @@ extern int OpenIMP_T31_HwJpegActive(void);
  * (OPENIMP_SW_JPEG=1 builds) gets a heap copy instead.
  * OPENIMP_HELIX_JPEG_SRC_COPY=1 keeps the copy (A/B). */
 extern int OpenIMP_HelixJpeg_Available(void); /* t30/helix_jpeg.h */
+#if defined(PLATFORM_T20)
+extern int OpenIMP_HelixJpeg_OneJobNext(uint32_t width, uint32_t height);
+#endif
 #define P2_JPEG_SRC_COPY_ENV "OPENIMP_HELIX_JPEG_SRC_COPY"
 #endif
 
@@ -763,36 +766,51 @@ static int p2_jpeg_src_copy_forced(void)
     if (forced < 0) {
         const char *value = getenv(P2_JPEG_SRC_COPY_ENV);
 
-#if defined(PLATFORM_T20)
-        /* #939: T10/T20 copy by default. A lent frame stays held for the
-         * whole JPEG encode (45-150 ms: the Helix job waits behind the
-         * H.264 picture) while the video channel holds the next one; with
-         * the two capture buffers of the T10 the ISP then drops a frame per
-         * JPEG picture (200 ms gap trains for 2-3 s after each snapshot).
-         * Encoding in the video channel's pass (vendor 0x52a1c) still held
-         * the frame 60-100 ms and kept the trains (train members 29/18 vs
-         * vendor 0/0); the copy hands it back at once (0/0, gaps as the
-         * vendor). The vendor also copies frames with memcpy (#922).
-         * OPENIMP_HELIX_JPEG_SRC_COPY=0 lends again. */
-        forced = !(value && value[0] == '0');
-#else
         forced = value && value[0] == '1';
-#endif
         if (forced)
-            IMP_LOG_INFO("Encoder", "JPEG: source frames are copied (%s)",
+            IMP_LOG_INFO("Encoder", "JPEG: source frames are copied (%s=1)",
                          P2_JPEG_SRC_COPY_ENV);
     }
     return forced;
 }
 
+#if defined(PLATFORM_T20)
+/* #954 (replaces the #939 copy default): T10/T20 lend the capture frame
+ * when the Helix JPEG picture runs as one VPU job like the stock library
+ * (about 5 ms, frame back after about 25 ms as the vendor's); when it will
+ * run in the worst-case stripes (first picture of a size, a large last
+ * picture) the frame is copied, as a lent frame would stay held for the
+ * whole striped encode (about 90 ms; with the two capture buffers of the
+ * T10 the ISP then drops frames, #939).  OPENIMP_HELIX_JPEG_SRC_COPY=0
+ * always lends, =1 always copies. */
+static int p2_jpeg_lend_size_ok(uint32_t width, uint32_t height)
+{
+    static int always = -1;
+
+    if (always < 0) {
+        const char *value = getenv(P2_JPEG_SRC_COPY_ENV);
+
+        always = value && value[0] == '0';
+    }
+    return always || OpenIMP_HelixJpeg_OneJobNext(width, height);
+}
+#endif
+
 /* Lend capture frames only while they go to a hardware JPEG core: a
  * software encode would hold a capture buffer for a long time. */
-static int p2_jpeg_lend_wanted(void)
+static int p2_jpeg_lend_wanted(uint32_t width, uint32_t height)
 {
 #if defined(PLATFORM_T31)
+    (void)width;
+    (void)height;
     return p2_jpeg_copy_in_rmem() && !p2_jpeg_src_copy_forced() &&
            OpenIMP_T31_HwJpegActive();
+#elif defined(PLATFORM_T20)
+    return !p2_jpeg_src_copy_forced() && OpenIMP_HelixJpeg_Available() &&
+           p2_jpeg_lend_size_ok(width, height);
 #else
+    (void)width;
+    (void)height;
     return !p2_jpeg_src_copy_forced() && OpenIMP_HelixJpeg_Available();
 #endif
 }
@@ -998,7 +1016,8 @@ static int p2_copy_requested_jpeg_frames(int source_channel,
         }
 #endif
         if (lend < 0)
-            lend = (source->physical_address || ivdc) && p2_jpeg_lend_wanted();
+            lend = (source->physical_address || ivdc) &&
+                   p2_jpeg_lend_wanted(source->width, source->height);
         if (lend && !jpeg->jpeg_lent_frame &&
             p2_frame_pin_lend(&p2_frame_pins, source_channel,
                               (void *)source) == 0) {

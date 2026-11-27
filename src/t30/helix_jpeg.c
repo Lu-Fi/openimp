@@ -620,6 +620,17 @@ _Static_assert(sizeof(HelixJpegChannel) == 56, "soc_vpu channel ABI");
 #define HELIX_PROBE_GUARD       (1024u << 10)
 #define HELIX_PROBE_PATTERN     0xa5u
 #define HELIX_BITSTREAM_MIN     (256u << 10)
+/* #954: picture sizes / tables whose last output is remembered */
+#define HELIX_RECENT            4u
+/* #954: one job only while the last picture of that size and tables took
+ * at most 1 / HELIX_ONE_JOB_SHARE of the bitstream capacity */
+#define HELIX_ONE_JOB_SHARE     3u
+#if defined(PLATFORM_T20) && !defined(PLATFORM_T23)
+#define HELIX_ONE_JOB_DEFAULT   1u  /* T10/T20: one job as the stock library */
+#else
+#define HELIX_ONE_JOB_DEFAULT   0u  /* T21/T30: not checked against their
+                                     * libraries yet (cross-SoC follow-up) */
+#endif
 
 static struct {
     pthread_mutex_t lock;
@@ -646,6 +657,14 @@ static struct {
     uint32_t bs_offset;        /* bitstream start behind the command list */
     uint32_t stripe_rows;      /* OPENIMP_HELIX_JPEG_STRIPE_ROWS (0 = auto) */
     uint32_t stripes;          /* jobs of the last picture */
+    int one_job;               /* OPENIMP_HELIX_JPEG_ONE_JOB (#954) */
+    struct {
+        uint32_t width, height, qsum;
+        uint32_t bytes;        /* file bytes of the last picture, 0 none */
+        uint32_t stamp;        /* order of the notes */
+    } recent[HELIX_RECENT];    /* per picture size and tables (#954) */
+    uint32_t recent_next;
+    uint32_t recent_stamp;
     uint32_t channels;         /* JPEG channels (Reserve .. Release) */
     int borrowed;              /* job is the T23 shared H.264 area */
 } helix_jpeg = { .lock = PTHREAD_MUTEX_INITIALIZER, .fd = -1 };
@@ -781,6 +800,13 @@ static int helix_jpeg_open_locked(void)
      * striped path) */
     helix_jpeg.stripe_rows = helix_env_uint(
         "OPENIMP_HELIX_JPEG_STRIPE_ROWS", 0u, 1u, 4096u);
+    /* #954: one job per picture like the stock T10/T20 library while the
+     * last picture used at most a third of the buffer (=0: always the
+     * worst-case stripes) */
+    helix_jpeg.one_job = (int)helix_env_uint("OPENIMP_HELIX_JPEG_ONE_JOB",
+                                             HELIX_ONE_JOB_DEFAULT, 0u, 1u);
+    memset(helix_jpeg.recent, 0, sizeof(helix_jpeg.recent));
+    helix_jpeg.recent_next = 0;
     /* kept open after a shutdown, see OpenIMP_HelixJpeg_Shutdown */
     if (helix_jpeg.fd < 0)
         helix_jpeg.fd = open("/dev/soc_vpu", O_RDWR | O_CLOEXEC);
@@ -1697,8 +1723,102 @@ static int helix_stripes_out(uint8_t **file, size_t *length,
     return 0;
 }
 
-/* The picture in stripes (or one job when its worst case fits); on success
- * *file is the heap JFIF file. */
+/*
+ * #954 (user decision B, beyond vendor as a guard): the stock T10/T20
+ * library (3.12.0 hwicodec_pf_jpege_t10_enc @0x37008) encodes a picture in
+ * ONE job (slice = mb_width * mb_height - 1, one ioctl 0xc0386302), about
+ * 5 ms at 720p, with no bound on the output.  OpenIMP does the same while
+ * the last picture of the same size and tables took at most a third of the
+ * bitstream capacity: a picture would have to grow more than threefold from
+ * one JPEG picture to the next to overrun the buffer.  The first picture,
+ * a new size or new tables, a larger last picture or a failed one go in the
+ * worst-case stripes below.  One job loses the core's last partial burst
+ * (up to 127 bytes before EOI), exactly as the stock library.
+ */
+static uint32_t helix_qt_sum(const uint8_t qt[128])
+{
+    uint32_t sum = 2166136261u;
+    unsigned int i;
+
+    for (i = 0; i < 128u; i++)
+        sum = (sum ^ qt[i]) * 16777619u;
+    return sum;
+}
+
+static int helix_recent_find(uint32_t width, uint32_t height, uint32_t qsum)
+{
+    unsigned int i;
+
+    for (i = 0; i < HELIX_RECENT; i++)
+        if (helix_jpeg.recent[i].width == width &&
+            helix_jpeg.recent[i].height == height &&
+            helix_jpeg.recent[i].qsum == qsum)
+            return (int)i;
+    return -1;
+}
+
+static void helix_recent_note(uint32_t width, uint32_t height,
+                              const uint8_t qt[128], uint32_t bytes)
+{
+    uint32_t qsum = helix_qt_sum(qt);
+    int i = helix_recent_find(width, height, qsum);
+
+    if (i < 0) {
+        if (!bytes)
+            return;
+        i = (int)(helix_jpeg.recent_next++ % HELIX_RECENT);
+        __atomic_store_n(&helix_jpeg.recent[i].bytes, 0u, __ATOMIC_RELAXED);
+        helix_jpeg.recent[i].width = width;
+        helix_jpeg.recent[i].height = height;
+        helix_jpeg.recent[i].qsum = qsum;
+    }
+    __atomic_store_n(&helix_jpeg.recent[i].bytes, bytes, __ATOMIC_RELAXED);
+    __atomic_store_n(&helix_jpeg.recent[i].stamp, ++helix_jpeg.recent_stamp,
+                     __ATOMIC_RELAXED);
+}
+
+static int helix_one_job_ok(uint32_t width, uint32_t height,
+                            const uint8_t qt[128], uint32_t capacity)
+{
+    int i;
+
+    if (!helix_jpeg.one_job || helix_jpeg.stripe_rows)
+        return 0;
+    i = helix_recent_find(width, height, helix_qt_sum(qt));
+    return i >= 0 && helix_jpeg.recent[i].bytes &&
+           (uint64_t)helix_jpeg.recent[i].bytes * HELIX_ONE_JOB_SHARE <=
+               capacity;
+}
+
+int OpenIMP_HelixJpeg_OneJobNext(uint32_t width, uint32_t height)
+{
+    uint32_t size = __atomic_load_n(&helix_jpeg.job.size, __ATOMIC_RELAXED);
+    uint32_t bytes = 0, stamp = 0;
+    unsigned int i;
+
+    /* read without the lock (an encode may hold it for a job): a stale
+     * answer only picks a copy instead of a lend or back */
+    if (!helix_jpeg.one_job || helix_jpeg.stripe_rows ||
+        size <= HELIX_DESCRIPTOR_AREA)
+        return 0;
+    /* the last picture of that size (its tables are the channel's) */
+    for (i = 0; i < HELIX_RECENT; i++) {
+        uint32_t when = __atomic_load_n(&helix_jpeg.recent[i].stamp,
+                                        __ATOMIC_RELAXED);
+
+        if (helix_jpeg.recent[i].width == width &&
+            helix_jpeg.recent[i].height == height && when >= stamp) {
+            stamp = when;
+            bytes = __atomic_load_n(&helix_jpeg.recent[i].bytes,
+                                    __ATOMIC_RELAXED);
+        }
+    }
+    return bytes && (uint64_t)bytes * HELIX_ONE_JOB_SHARE <=
+                        size - HELIX_DESCRIPTOR_AREA;
+}
+
+/* The picture in one job (#954, or when its worst case fits) or in
+ * stripes; on success *file is the heap JFIF file. */
 static int helix_jpeg_stripes_locked(HelixJpegSlice *slice,
                                      const HelixJpegFrame *frame,
                                      const uint8_t qt[128], uint8_t **file,
@@ -1712,6 +1832,7 @@ static int helix_jpeg_stripes_locked(HelixJpegSlice *slice,
     uint32_t extra = helix_stripe_extra(mb_width);
     uint32_t rows, row, offset = 0, index = 0;
     unsigned int held = 0;
+    int one;
     uint8_t *out;
     size_t length;
     int overflow, ret = -1;
@@ -1729,8 +1850,12 @@ static int helix_jpeg_stripes_locked(HelixJpegSlice *slice,
 #endif
     capacity = helix_jpeg.job.size - HELIX_DESCRIPTOR_AREA;
     *capacity_out = capacity;
-    if (helix_stripe_bound(mb_width, whole.mb_height + extra) <= capacity &&
-        !helix_jpeg.stripe_rows) {
+    one = helix_one_job_ok(frame->width, frame->height, qt, capacity);
+    if (one) {
+        rows = whole.mb_height;  /* #954: one job, no cut, no parse */
+    } else if (helix_stripe_bound(mb_width, whole.mb_height + extra) <=
+                   capacity &&
+               !helix_jpeg.stripe_rows) {
         rows = whole.mb_height;          /* one job, as the stock library */
     } else {
         rows = capacity > HELIX_STRIPE_SLACK
@@ -1771,13 +1896,16 @@ static int helix_jpeg_stripes_locked(HelixJpegSlice *slice,
         uint32_t more = whole.mb_height - row - n < extra
             ? whole.mb_height - row - n : extra;
 
-        if (!more &&
+        if (!more && !one &&
             helix_in_rmem(whole.raw_y + row * 16u * whole.stride,
                           (n + extra) * 16u * whole.stride) &&
             helix_in_rmem(whole.raw_c + row * 8u * whole.stride,
                           (n + extra) * 8u * whole.stride))
             more = extra;
-        uint32_t bound = helix_stripe_bound(mb_width, n + more);
+        /* one job: bounded by the post-job check only, as the stock
+         * library (the guard is the last picture's size) */
+        uint32_t bound = one ? capacity
+                             : helix_stripe_bound(mb_width, n + more);
         uint32_t used;
 
         if (held == HELIX_STRIPE_PIECES ||
@@ -1821,12 +1949,16 @@ static int helix_jpeg_stripes_locked(HelixJpegSlice *slice,
         goto fail;
     helix_jpeg.stripes = index;
     helix_jpeg.bs_offset = 0;
+    /* the file: a stripe's job also encodes the next rows (cut off) */
+    helix_recent_note(frame->width, frame->height, qt, (uint32_t)length);
     *slice = whole;
     *file = out;
     *file_length = length;
     return 0;
 fail:
     helix_jpeg.bs_offset = 0;
+    /* the next picture of this kind goes in stripes again */
+    helix_recent_note(frame->width, frame->height, qt, 0u);
     *slice = whole;
     free(out);
     return ret ? ret : -1;

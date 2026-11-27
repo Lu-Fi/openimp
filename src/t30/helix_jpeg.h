@@ -147,6 +147,11 @@ int OpenIMP_HelixJpeg_EncodeEx(const HelixJpegFrame *frame,
 /* Releases the VPU channel and DMA buffers (idempotent; with the encoder
  * lock held or nothing else running). */
 void OpenIMP_HelixJpeg_Shutdown(void);
+/* #954 (T10/T20): whether the next width x height picture will most likely
+ * run as ONE VPU job (the last one of that size used at most a third of the
+ * bitstream buffer).  The encoder lends the capture frame then and copies
+ * it otherwise (stripes hold the frame about 90 ms).  Lock-free. */
+int OpenIMP_HelixJpeg_OneJobNext(uint32_t width, uint32_t height);
 /* JPEG channel destroyed (pairs with OpenIMP_HelixJpeg_Reserve at its
  * creation): with the last one gone the JPEG buffers are freed. */
 void OpenIMP_HelixJpeg_Release(void);
