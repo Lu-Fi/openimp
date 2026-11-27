@@ -732,7 +732,8 @@ int main(int argc, char **argv)
     fs.scaler.enable = 1;
     fs.scaler.outwidth = enc_w;
     fs.scaler.outheight = enc_h;
-    fs.outFrmRateNum = 15;
+    /* T32_FS_FPS=<n>: other channel rate (#921 frame-rate drop A/B); default 15 */
+    fs.outFrmRateNum = getenv("T32_FS_FPS") ? atoi(getenv("T32_FS_FPS")) : 15;
     fs.outFrmRateDen = 1;
     fs.nrVBs = 2;
     fs.type = FS_PHY_CHANNEL;
@@ -1133,6 +1134,8 @@ again:
             }
             if (getenv("T32_STREAM_DUMP"))
                 stream_dump(got, &st);
+            if (getenv("T32_FS_FPS"))       /* #921: arrival time per stream (the coded rate) */
+                printf("T32N stream %d t %ld ms\n", i, (long)(t1.tv_sec * 1000 + t1.tv_nsec / 1000000));
             got++;
             if (getenv("T32_ENC_QUERY"))
                 query_print(i, "get");
@@ -1195,8 +1198,13 @@ again:
             if (IMP_FrameSource_GetFrame(0, (void **)&frame))
                 continue;
             if (getenv("T32_FS_NOCOPY"))        /* #784: per frame: copy slot or capture buffer */
-                printf("T32N %d idx %d pool %d %ux%u size %u pa 0x%08x\n", i, frame->index, frame->pool_idx,
-                       frame->width, frame->height, frame->size, frame->phyAddr);
+            {   /* #921: the monotonic arrival time per frame (frame interval = the delivered rate) */
+                struct timespec ta;
+                clock_gettime(CLOCK_MONOTONIC, &ta);
+                printf("T32N %d idx %d pool %d %ux%u size %u pa 0x%08x t %lld ms\n", i, frame->index, frame->pool_idx,
+                       frame->width, frame->height, frame->size, frame->phyAddr,
+                       (long long)ta.tv_sec * 1000 + ta.tv_nsec / 1000000);
+            }
             if (got == 0) {
                 frame_report("frame", frame);
                 printf("T32F snap pa=0x%08x size=%u w=%u h=%u\n", frame->phyAddr,
