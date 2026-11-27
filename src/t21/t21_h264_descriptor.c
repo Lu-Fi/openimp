@@ -200,7 +200,20 @@ static int t21_emit_motion_estimation(T21DescriptorWriter *writer,
     MOTION_EMIT(0x50074, 0);
     MOTION_EMIT(0x50078, 0);
     MOTION_EMIT(0x50068, 0);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* REG_MCE_FSC (FSE 31, RECY/RECX 31..16, PERY/PERX 15..0).  T23 1.3.0
+     * H264E_T21_SliceInit L12324-12326 packs slice +0x29..+0x33, which
+     * h264_api_enc L94937-94943 copies from the RC picture block.  Vendor
+     * QEMU A12 lists (#799): 1280x720 0x08080303 on both channels (also a
+     * 1280x720 sub), 640x360 0; same picture-size rule as the OEM T20/T30
+     * (pictures of at least 51 x 39 macroblocks, see t30_h264_descriptor.c),
+     * without FSE. */
+    MOTION_EMIT(0x5004c, !vendor_me ? 0x88080303u :
+                         (config->mb_width >= 51u && config->mb_height >= 39u) ?
+                         0x08080303u : 0u);
+#else
     MOTION_EMIT(0x5004c, vendor_me ? 0x08080303u : 0x88080303u);
+#endif
     MOTION_EMIT(0x5007c, 0);
     /* bits 14..21: the ring wrap row of the reference (vendor T23 lists:
      * the 0xb0000 byte again; 0xff = none); bits 9/10: ctx[54]/ctx[52],
@@ -441,9 +454,19 @@ int T21_H264_BuildDescriptor(const T21H264SliceConfig *config,
     /* 0x1d278: the chroma QP offset (slice +457) */
     EMIT(0x40120, (uint32_t)config->chroma_qp_offset & 0x1fu);
     EMIT(0x40108, 0);
+#if defined(T21_HELIX_T23_DELTAS)
+    /* T23 1.3.0 H264E_T21_SliceInit L12060-12062: 0x00400000 | (slice +0x3a2
+     * & 1) << 16 | (slice +0x3a3 & 0xf) << 24.  hwicodec_pf_h264e_t21_enc
+     * L13677-13688 copies +0x3a2 from hwicodec byte +0x38 (0 in every vendor
+     * list) and +0x3a3 from hwicodec word 0xc53 = node +0x0c of the soc_vpu
+     * channel request 0xc0586300 (L13110-13168), i.e. the channel_id the
+     * driver assigned (vendor QEMU A12: main 3, sub 4; #799). */
+    EMIT(0x4010c, 0x00400000u | (((uint32_t)config->vpu_channel & 0xfu) << 24));
+#else
     EMIT(0x4010c, (config->ref_share &&
                    (config->ring_flags & T21_RING_VENDOR_MISC))
                       ? 0x03400000u : 0x00400000u);
+#endif
     /* + the macroblock rate control of the OEM h264_get_mb_qp, encoded as
      * H264E_T21_SliceInit does (enable bits, SAS activity filter, class
      * limits and per-class QP offsets) */

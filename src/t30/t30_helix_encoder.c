@@ -1528,6 +1528,9 @@ static void t30_fill_slice(T30HelixEncoder *encoder,
     slice->height = (uint16_t)encoder->params.height;
     slice->cabac_state = encoder->cabac.state;
     slice->raw_format = T30_NV12_MODE;
+#if defined(PLATFORM_T23)
+    slice->vpu_channel = (uint8_t)encoder->channel.channel_id;
+#endif
     slice->stride[0] = (int)encoder->params.width;
     slice->stride[1] = (int)encoder->params.width;
 #if defined(PLATFORM_T30)

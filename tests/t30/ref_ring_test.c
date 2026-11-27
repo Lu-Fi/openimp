@@ -253,7 +253,12 @@ static void test_registers(int p)
         assert(get(on_pairs, 0x50000) == 0x547fdfb1u);
         c.ring_flags = T21_RING_VENDOR_MISC;
         assert(T21_H264_BuildDescriptor(&c, &on_pairs) == 0);
+#if defined(T21_HELIX_T23_DELTAS)
+        /* T23: 0x4010c carries the soc_vpu channel_id, not a flag (#799) */
+        assert(get(on_pairs, 0x4010c) == 0x00400000u);
+#else
         assert(get(on_pairs, 0x4010c) == 0x03400000u);
+#endif
         assert(get(on_pairs, 0x801c0) == 0x30000006u);
         /* vendor T23 MCE words */
         c.ring_flags = T21_RING_VENDOR_ME;
@@ -525,10 +530,12 @@ static void test_vendor_t23_exact(void)
 {
     static const struct {
         unsigned int w, h;
-        uint32_t ring_y, wrap, r10010, b0000, r50000;
+        uint32_t ring_y, wrap, r10010, b0000, r50000, chn, r4010c, r5004c;
     } v[] = {
-        { 640, 360, 399360u, 0x26u, 0x00e601ccu, 0x00022663u, 0x544999b1u },
-        { 1280, 720, 1249280u, 0x3cu, 0x03840708u, 0x00023c63u, 0x544f19b1u },
+        { 640, 360, 399360u, 0x26u, 0x00e601ccu, 0x00022663u, 0x544999b1u,
+          4u, 0x04400000u, 0u },
+        { 1280, 720, 1249280u, 0x3cu, 0x03840708u, 0x00023c63u, 0x544f19b1u,
+          3u, 0x03400000u, 0x08080303u },
     };
     size_t k;
 
@@ -548,6 +555,7 @@ static void test_vendor_t23_exact(void)
         fill(&c, 1, v[k].w, v[k].h);
         c.ref_share = 1;
         c.ring_flags = T21_RING_VENDOR_ME;
+        c.vpu_channel = (uint8_t)v[k].chn;
         c.ring_wrap_rows = p.wrap_rows;
         c.ring_start_y = p.start_y;
         c.ring_start_c = p.start_c;
@@ -565,6 +573,9 @@ static void test_vendor_t23_exact(void)
         assert(get(pairs, 0x801cc) == 0x00430000u);
         assert(get(pairs, 0x801c0) == 0x30000006u);
         assert(get(pairs, 0x80198) == 0x88888000u);
+        /* vendor main channel_id 3, sub 4; FSC by picture size (#799) */
+        assert(get(pairs, 0x4010c) == v[k].r4010c);
+        assert(get(pairs, 0x5004c) == v[k].r5004c);
     }
     /* 1080p: the vendor 0x10010 equals the T21 form */
     {
