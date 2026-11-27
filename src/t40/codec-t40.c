@@ -12206,6 +12206,9 @@ static void avpu_t31_start_companion_stage(ALAvpuContext *ctx, int fd,
  * AL_Codec_Encode_Process - based on decompilation at 0x7a334
  * Process a frame for encoding
  */
+/* #940: T10/T20 Helix stream recycle table (t30_helix_encoder.c) */
+extern int OpenIMP_T30_HelixStreamRelease(void *stream) __attribute__((weak));
+
 static int al_codec_encode_process_impl(void *codec, void *frame,
                                         void *user_data) {
     OpenIMPProfileStamp submit_profile;
@@ -14629,9 +14632,12 @@ queue_encoded_stream:
         LOG_CODEC("Process: failed to queue stream");
         /* Same ownership rule as the legacy ReleaseStream: a heap stream
          * without a DMA address owns its payload (native Helix, software). */
-        if (hw_stream->virt_addr != 0 && hw_stream->phys_addr == 0)
-            free((void *)(uintptr_t)hw_stream->virt_addr);
-        free(hw_stream);
+        if (!(OpenIMP_T30_HelixStreamRelease &&
+              OpenIMP_T30_HelixStreamRelease(hw_stream))) {
+            if (hw_stream->virt_addr != 0 && hw_stream->phys_addr == 0)
+                free((void *)(uintptr_t)hw_stream->virt_addr);
+            free(hw_stream);
+        }
         return -1;
     }
     codec_queue_frame_metadata(enc, user_data);
@@ -15094,6 +15100,10 @@ int AL_Codec_Encode_ReleaseStream(void *codec, void *stream, void *user_data) {
     }
 
     HWStreamBuffer *hw_stream = (HWStreamBuffer*)stream;
+    /* #940: a T10/T20 Helix stream goes back to its recycle table */
+    if (OpenIMP_T30_HelixStreamRelease &&
+        OpenIMP_T30_HelixStreamRelease(hw_stream))
+        return 0;
     /* Throttled: per-frame SW ReleaseStream log suppressed */
     if (hw_stream->virt_addr != 0 && hw_stream->phys_addr == 0) {
         /* Software-encoded stream - free the allocated buffer */

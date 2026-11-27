@@ -810,14 +810,24 @@ struct v4l2_buf32 {
     uint32_t reserved;     /* 0x40 */
 } __attribute__((packed));
 
+/* #940: the v4l2_buffer of QUERYBUF / QBUF / DQBUF lives on the caller's
+ * stack, as in vendor libimp 3.12.0 (get_frame 0x62ee0, release_Frame
+ * 0x62d24: no allocation).  It was posix_memalign + free per call, i.e.
+ * the uClibc-ng global malloc lock twice per buffer operation in the
+ * capture and release threads: an application thread preempted inside
+ * malloc/free (a nice -20 burst) held them off the ring for up to 120 ms
+ * and the 2-bank ISP ring stopped for 3-4 frames. */
+union ki_vbuf {
+    struct v4l2_buf32 b;
+    uint8_t raw[sizeof(struct v4l2_buf32) + 0x400]; /* tolerate driver over-copy */
+} __attribute__((aligned(16)));
+
 /* Query buffer to get the exact length the driver expects */
 int fs_querybuf(int fd, int index, unsigned int *length_out) {
     if (fd < 0 || index < 0) return -1;
-    size_t buf_sz = sizeof(struct v4l2_buf32) + 0x400; /* tolerate driver over-copy */
-    void *raw = NULL;
-    if (posix_memalign(&raw, 16, buf_sz) != 0 || !raw) {
-        return -1;
-    }
+    union ki_vbuf vb;
+    size_t buf_sz = sizeof(vb.raw);
+    void *raw = vb.raw;
     memset(raw, 0, buf_sz);
     struct v4l2_buf32 *b = (struct v4l2_buf32 *)raw;
     b->index = (uint32_t)index;
@@ -827,11 +837,9 @@ int fs_querybuf(int fd, int index, unsigned int *length_out) {
     int ret = ioctl(fd, VIDIOC_QUERYBUF, b);
     if (ret < 0) {
         fprintf(stderr, "[KernelIF] QUERYBUF failed: idx=%d err=%s\n", index, strerror(errno));
-        free(raw);
         return -1;
     }
     if (length_out) *length_out = b->length;
-    free(raw);
     return 0;
 }
 
@@ -841,11 +849,9 @@ int fs_querybuf(int fd, int index, unsigned int *length_out) {
 int fs_qbuf(int fd, int index, unsigned long phys, unsigned int length) {
     if (fd < 0 || index < 0) return -1;
 
-    size_t buf_sz = sizeof(struct v4l2_buf32) + 0x400; /* large slack to tolerate driver over-copy */
-    void *raw = NULL;
-    if (posix_memalign(&raw, 16, buf_sz) != 0 || !raw) {
-        return -1;
-    }
+    union ki_vbuf vb;
+    size_t buf_sz = sizeof(vb.raw);
+    void *raw = vb.raw;
     memset(raw, 0, buf_sz);
     struct v4l2_buf32 *b = (struct v4l2_buf32 *)raw;
     b->index = (uint32_t)index;
@@ -869,7 +875,6 @@ int fs_qbuf(int fd, int index, unsigned long phys, unsigned int length) {
         errno = qbuf_errno;
         ki_trace("libimp/KI: QBUF fail fd=%d idx=%d phys=0x%lx len=%u err=%d\n",
                  fd, index, phys, length, errno);
-        free(raw);
         return -1;
     }
     {
@@ -882,7 +887,6 @@ int fs_qbuf(int fd, int index, unsigned long phys, unsigned int length) {
             qbuf_log_count++;
         }
     }
-    free(raw);
     return 0;
 }
 /*
@@ -963,7 +967,8 @@ int fs_dqbuf(int fd, int *index_out, uint64_t *timestamp_out) {
  * buffer (T23 IVDC: overflow count, frame type | sensor << 16). */
 int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
                   uint32_t *meta_out) {
-    void *raw = NULL;
+    union ki_vbuf vb;
+    void *raw = vb.raw;
     struct v4l2_buf32 *b;
     int ret;
     int saved_errno;
@@ -973,9 +978,7 @@ int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
 
     if (fd < 0 || !index_out) return -1;
 
-    buf_sz = sizeof(struct v4l2_buf32) + 0x400;
-    if (posix_memalign(&raw, 16, buf_sz) != 0 || raw == NULL)
-        return -1;
+    buf_sz = sizeof(vb.raw);
     memset(raw, 0, buf_sz);
     b = (struct v4l2_buf32 *)raw;
     b->type   = 1;
@@ -1009,7 +1012,6 @@ int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
         ki_trace("libimp/KI: DQBUF exit fd=%d ret=%d idx=-1 errno=%d\n",
                  fd, ret, saved_errno);
         if (saved_errno == EAGAIN || saved_errno == EINTR) {
-            free(raw);
             return -2;
         }
         /* A DQBUF waiting in the driver when DisableChn stops the stream
@@ -1017,7 +1019,6 @@ int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
          * the normal end of a stop. The worker reports it when it happens
          * while the channel is meant to run. */
         if (saved_errno == EINVAL || saved_errno == EPIPE) {
-            free(raw);
             return -3;
         }
         static unsigned int dqbuf_fail;
@@ -1025,7 +1026,6 @@ int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
         if (OPENIMP_LOG_ALLOW(&dqbuf_fail))
             fprintf(stderr, "[KernelIF] DQBUF failed: fd=%d %s (#%u)\n", fd,
                     strerror(saved_errno), dqbuf_fail);
-        free(raw);
         return -1;
     }
 
@@ -1051,7 +1051,6 @@ int fs_dqbuf_meta(int fd, int *index_out, uint64_t *timestamp_out,
             dqbuf_ok_log++;
         }
     }
-    free(raw);
     return 0;
 }
 

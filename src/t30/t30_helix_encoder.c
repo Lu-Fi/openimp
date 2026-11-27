@@ -4325,6 +4325,140 @@ static int t20_hs_idr(T30HelixEncoder *e, int extra_force)
 #endif
 
 
+#if defined(PLATFORM_T20)
+/*
+ * #940: T10/T20 stream buffers are recycled, not malloc'ed per picture.
+ * Vendor libimp 3.12.0 writes each picture into a preallocated stream ring
+ * (do_channel_process_h264e 0x512fc -> get_empty_framestream_noblock,
+ * update_one_frmstrm 0x539dc: no malloc/free on the encode or release
+ * path).  OpenIMP allocated the descriptor and the payload per picture and
+ * the application thread freed them in ReleaseStream: two trips through
+ * the uClibc-ng global malloc lock on each side.  Under a nice -20 burst
+ * an application thread preempted inside malloc/free held Encoder-0 off
+ * that lock for up to 120 ms after its VPU job, with both capture buffers
+ * out, and the 2-bank ring lost 3-4 frames.
+ *
+ * One block = descriptor + payload.  A lock-free table tracks the blocks
+ * handed out (OUT) and the ones given back (FREE, at most
+ * HELIX_SC_KEEP_FREE kept); only pointers found in the table are recycled
+ * (pointer compare, never a read in front of a foreign pointer), all else
+ * goes to free() as before.  A full table falls back to plain malloc.
+ */
+#define HELIX_SC_SLOTS 16
+#define HELIX_SC_KEEP_FREE 4
+#define HELIX_SC_HDR ((sizeof(HWStreamBuffer) + 15u) & ~(size_t)15u)
+enum { HELIX_SC_EMPTY = 0, HELIX_SC_OUT, HELIX_SC_FREE, HELIX_SC_BUSY };
+static struct {
+    int state;
+    void *block;
+    size_t cap;            /* payload bytes */
+} helix_sc[HELIX_SC_SLOTS];
+
+static int helix_sc_claim(int i, int from)
+{
+    int expected = from;
+
+    return __atomic_compare_exchange_n(&helix_sc[i].state, &expected,
+                                       HELIX_SC_BUSY, 0, __ATOMIC_ACQUIRE,
+                                       __ATOMIC_RELAXED);
+}
+
+static void helix_sc_set(int i, int state)
+{
+    __atomic_store_n(&helix_sc[i].state, state, __ATOMIC_RELEASE);
+}
+
+/* descriptor (zeroed) + payload of at least `capacity` bytes */
+static HWStreamBuffer *helix_sc_get(size_t capacity, uint8_t **payload)
+{
+    void *block;
+    size_t cap;
+    int i;
+
+    for (i = 0; i < HELIX_SC_SLOTS; i++) {
+        if (__atomic_load_n(&helix_sc[i].state, __ATOMIC_ACQUIRE) !=
+                HELIX_SC_FREE || !helix_sc_claim(i, HELIX_SC_FREE))
+            continue;
+        if (helix_sc[i].cap >= capacity) {
+            block = helix_sc[i].block;
+            helix_sc_set(i, HELIX_SC_OUT);
+            memset(block, 0, sizeof(HWStreamBuffer));
+            *payload = (uint8_t *)block + HELIX_SC_HDR;
+            return (HWStreamBuffer *)block;
+        }
+        helix_sc_set(i, HELIX_SC_FREE);        /* too small, keep it */
+    }
+    cap = (capacity + 4095u) & ~(size_t)4095u;
+    block = malloc(HELIX_SC_HDR + cap);
+    if (!block)
+        return NULL;
+    memset(block, 0, sizeof(HWStreamBuffer));
+    *payload = (uint8_t *)block + HELIX_SC_HDR;
+    for (i = 0; i < HELIX_SC_SLOTS; i++) {
+        if (helix_sc_claim(i, HELIX_SC_EMPTY)) {
+            helix_sc[i].block = block;
+            helix_sc[i].cap = cap;
+            helix_sc_set(i, HELIX_SC_OUT);
+            break;
+        }
+        /* a too small FREE block makes room for the new one */
+        if (__atomic_load_n(&helix_sc[i].state, __ATOMIC_ACQUIRE) ==
+                HELIX_SC_FREE && helix_sc[i].cap < cap &&
+            helix_sc_claim(i, HELIX_SC_FREE)) {
+            void *old = helix_sc[i].block;
+
+            helix_sc[i].block = block;
+            helix_sc[i].cap = cap;
+            helix_sc_set(i, HELIX_SC_OUT);
+            free(old);
+            break;
+        }
+    }
+    return (HWStreamBuffer *)block;   /* untracked if the table is full */
+}
+
+/* 1: `stream` was a recycled block and is back in the table (or freed) */
+int OpenIMP_T30_HelixStreamRelease(void *stream)
+{
+    int i, kept = 0, slot = -1;
+
+    if (!stream)
+        return 0;
+    for (i = 0; i < HELIX_SC_SLOTS; i++) {
+        int st = __atomic_load_n(&helix_sc[i].state, __ATOMIC_ACQUIRE);
+
+        if (st == HELIX_SC_FREE)
+            kept++;
+        else if (st == HELIX_SC_OUT && slot < 0 && helix_sc[i].block == stream)
+            slot = i;
+    }
+    if (slot < 0 || !helix_sc_claim(slot, HELIX_SC_OUT))
+        return 0;
+    if (kept >= HELIX_SC_KEEP_FREE) {
+        helix_sc[slot].block = NULL;
+        helix_sc[slot].cap = 0;
+        helix_sc_set(slot, HELIX_SC_EMPTY);
+        free(stream);
+        return 1;
+    }
+    helix_sc_set(slot, HELIX_SC_FREE);
+    return 1;
+}
+
+static void helix_stream_drop(HWStreamBuffer *stream, uint8_t *output)
+{
+    (void)output;
+    if (!OpenIMP_T30_HelixStreamRelease(stream))
+        free(stream);
+}
+#else
+static void helix_stream_drop(HWStreamBuffer *stream, uint8_t *output)
+{
+    free(output);
+    free(stream);
+}
+#endif
+
 int OpenIMP_T30_HelixEncode(T30HelixEncoder *encoder,
                             const IMPFrameInfo *frame,
                             HWStreamBuffer **stream_out)
@@ -5330,6 +5464,11 @@ again:
     capacity = (idr ? encoder->headers_size : 0u) +
                t30_annexb_bound(header_length + encoder->channel.output_len) +
                encoder->ud_count * t30_annexb_bound(T30_USER_DATA_MAX_SIZE + 24u);
+#if defined(PLATFORM_T20)
+    stream = helix_sc_get(capacity, &output);
+    if (!stream)
+        return -1;
+#else
     output = malloc(capacity);
     stream = calloc(1, sizeof(*stream));
     if (!output || !stream) {
@@ -5337,6 +5476,7 @@ again:
         free(stream);
         return -1;
     }
+#endif
     if (idr) {
         memcpy(output, encoder->headers, encoder->headers_size);
         offset = encoder->headers_size;
@@ -5367,8 +5507,7 @@ again:
                 t30_annexb_append(&sw, encoder->ud_data[ui],
                                   encoder->ud_len[ui]) != 0 ||
                 t30_annexb_append(&sw, (const uint8_t *)"\x80", 1u) != 0) {
-                free(output);
-                free(stream);
+                helix_stream_drop(stream, output);
                 return -1;
             }
             offset = (uint32_t)(sw.output - output);
@@ -5390,8 +5529,7 @@ again:
 #endif
                           temporary + T30_SLICE_OFFSET,
                           encoder->channel.output_len) != 0) {
-        free(output);
-        free(stream);
+        helix_stream_drop(stream, output);
         return -1;
     }
     stream->virt_addr = (uint32_t)(uintptr_t)output;
