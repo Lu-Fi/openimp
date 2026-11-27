@@ -11,6 +11,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-26: Light box, Wyze Cam v2, jxf23 full run 5000 K (#230)
+
+- New report `docs/lightbox/wyze-t20x-jxf23-kajplats-gate-1127-2026-11-27-5000.html` (GATE PASS, better 9 (incl. 1 beyond vendor) / equal 146 / worse 0 / invalid 0; open-tx-isp bb1e983b + OpenIMP libimp 6200aa77), both stacks, runtime only, numbers and box pictures (bench runs: no pictures).
+
 ## 2026-11-27: docs: T10/T20 JPEG one-job plan (#954, user decision option B)
 
 - docs/OPENIMP_BEYOND_VENDOR.md section 3.x: vendor one-job JPEG vs OpenIMP stripes (#939 cause), the merged interim source copy, and the decided one-job-with-stripe-fallback (beyond vendor, in work).
