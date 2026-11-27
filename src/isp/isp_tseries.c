@@ -2424,10 +2424,19 @@ int ISP_EnsureLinkStreamOn(int32_t sensor_idx)
 }
 
 #if !defined(PLATFORM_T23) /* T23: isp_t23_tuning.c */
-#if defined(PLATFORM_T20)
-static int tseries_t20_tuning_ready(void);
+#if defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T30)
+#define TSERIES_FLIP_GUARD 1
 
 /*
+ * T21 1.0.33 SetISPHflip (0x63534) / SetISPVflip (0x6391c) and T30 1.0.5
+ * SetISPHflip (0xd7e14) / SetISPVflip (0xd822c) / SetISPHVflip (0xd8658) do
+ * the same: tuning_state==2 else -1, Temper type==1 (AUTO) -> MANUAL 0x28,
+ * flip ioctl, usleep(120000) (T21 inline, T30 string-pointer artefact of the
+ * same 0x1d4c0), restore Temper (#948).  T30 SetISPVflip additionally skips
+ * wait+restore when a library flag (+0x15cc) is set; not modelled (default 0).
+ * T21 also calls set_framesource_changewait_cnt() (return value unused, a
+ * NULL-framesource check only), not needed.
+ *
  * T20/T10 3.12.0 SetISPHflip (0x5ceec), SetISPVflip (0x5d2a0) and
  * SetISPHVflip (0x5d684): tuning must be enabled (else -1); with Temper in
  * AUTO the vendor switches it to MANUAL strength 0x28 for the flip, sleeps
@@ -2443,7 +2452,15 @@ static int tseries_t20_tuning_ready(void);
  * after HiLightDepress 0 and put the bin's AE highlight weight (knee 7)
  * back: the AE settled 8-20 % darker than the vendor (openimp #944).
  */
-static int tseries_t20_flip_begin(IMPISPTemperDenoiseAttr *saved, int *get_result)
+static int tseries_flip_tuning_ready(void)
+{
+    ISPDevice *isp;
+
+    return tseries_get_isp(&isp) == 0 && isp->tuning != NULL &&
+           isp->tuning_state == 2;
+}
+
+static int tseries_flip_begin(IMPISPTemperDenoiseAttr *saved, int *get_result)
 {
     IMPISPTemperDenoiseAttr manual;
 
@@ -2460,7 +2477,7 @@ static int tseries_t20_flip_begin(IMPISPTemperDenoiseAttr *saved, int *get_resul
     return saved->type == IMPISP_TEMPER_AUTO;
 }
 
-static int tseries_t20_flip_end(IMPISPTemperDenoiseAttr *saved, int guarded, int result)
+static int tseries_flip_end(IMPISPTemperDenoiseAttr *saved, int guarded, int result)
 {
     if (!guarded) {
         return result;
@@ -2473,17 +2490,17 @@ static int tseries_t20_flip_end(IMPISPTemperDenoiseAttr *saved, int guarded, int
     return result;
 }
 
-static int tseries_t20_flip_one(int32_t cid, IMPISPTuningOpsMode mode)
+static int tseries_flip_one(int32_t cid, IMPISPTuningOpsMode mode)
 {
     IMPISPTemperDenoiseAttr saved;
     int get_result;
     int guarded;
     int result;
 
-    if (!tseries_t20_tuning_ready()) {
+    if (!tseries_flip_tuning_ready()) {
         return -1;
     }
-    guarded = tseries_t20_flip_begin(&saved, &get_result);
+    guarded = tseries_flip_begin(&saved, &get_result);
     result = tseries_v4l2_set(cid, mode);
     if (result == 0) {
         if (cid == TISP_V4L2_CID_HFLIP) {
@@ -2492,14 +2509,14 @@ static int tseries_t20_flip_one(int32_t cid, IMPISPTuningOpsMode mode)
             tseries_hvflip = (tseries_hvflip & 1) | (mode ? 2 : 0);
         }
     }
-    return tseries_t20_flip_end(&saved, guarded, result + get_result);
+    return tseries_flip_end(&saved, guarded, result + get_result);
 }
 #endif
 
 int IMP_ISP_Tuning_SetISPHflip(IMPISPTuningOpsMode mode)
 {
-#if defined(PLATFORM_T20)
-    return tseries_t20_flip_one(TISP_V4L2_CID_HFLIP, mode);
+#ifdef TSERIES_FLIP_GUARD
+    return tseries_flip_one(TISP_V4L2_CID_HFLIP, mode);
 #else
     int result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, mode);
 
@@ -2531,8 +2548,8 @@ int IMP_ISP_Tuning_GetISPHflip(IMPISPTuningOpsMode *pmode)
 
 int IMP_ISP_Tuning_SetISPVflip(IMPISPTuningOpsMode mode)
 {
-#if defined(PLATFORM_T20)
-    return tseries_t20_flip_one(TISP_V4L2_CID_VFLIP, mode);
+#ifdef TSERIES_FLIP_GUARD
+    return tseries_flip_one(TISP_V4L2_CID_VFLIP, mode);
 #else
     int result = tseries_v4l2_set(TISP_V4L2_CID_VFLIP, mode);
 
@@ -2578,10 +2595,10 @@ int IMP_ISP_Tuning_SetISPHVflip(IMPISPTuningOpsMode hmode, IMPISPTuningOpsMode v
     int guarded;
     int result;
 
-    if (!tseries_t20_tuning_ready()) {
+    if (!tseries_flip_tuning_ready()) {
         return -1;
     }
-    guarded = tseries_t20_flip_begin(&saved, &get_result);
+    guarded = tseries_flip_begin(&saved, &get_result);
     result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, hmode);
     if (result == 0) {
         tseries_hvflip = (tseries_hvflip & 2) | (hmode ? 1 : 0);
@@ -2590,7 +2607,7 @@ int IMP_ISP_Tuning_SetISPHVflip(IMPISPTuningOpsMode hmode, IMPISPTuningOpsMode v
             tseries_hvflip = (tseries_hvflip & 1) | (vmode ? 2 : 0);
         }
     }
-    return tseries_t20_flip_end(&saved, guarded, result);
+    return tseries_flip_end(&saved, guarded, result);
 }
 
 int IMP_ISP_Tuning_GetISPHVflip(IMPISPTuningOpsMode *phmode, IMPISPTuningOpsMode *pvmode)
@@ -2682,12 +2699,27 @@ int IMP_ISP_Tuning_SetMeshShadingScale(IMPISPMeshShadingScale scale)
  * SetISPHflip/SetISPVflip pair, which is served everywhere. */
 int IMP_ISP_Tuning_SetISPHVflip(IMPISPTuningOpsMode hmode, IMPISPTuningOpsMode vmode)
 {
-    int result = IMP_ISP_Tuning_SetISPHflip(hmode);
+    /* one Temper guard and one 120 ms wait for both flips, as the vendor
+     * (Ghidra 0xd8658: Temper AUTO->MANUAL 0x28, flip, usleep, restore);
+     * #948 */
+    IMPISPTemperDenoiseAttr saved;
+    int get_result;
+    int guarded;
+    int result;
 
-    if (result != 0) {
-        return result;
+    if (!tseries_flip_tuning_ready()) {
+        return -1;
     }
-    return IMP_ISP_Tuning_SetISPVflip(vmode);
+    guarded = tseries_flip_begin(&saved, &get_result);
+    result = tseries_v4l2_set(TISP_V4L2_CID_HFLIP, hmode);
+    if (result == 0) {
+        tseries_hvflip = (tseries_hvflip & 2) | (hmode ? 1 : 0);
+        result = tseries_v4l2_set(TISP_V4L2_CID_VFLIP, vmode);
+        if (result == 0) {
+            tseries_hvflip = (tseries_hvflip & 1) | (vmode ? 2 : 0);
+        }
+    }
+    return tseries_flip_end(&saved, guarded, result);
 }
 
 int IMP_ISP_Tuning_GetISPHVflip(IMPISPTuningOpsMode *phmode, IMPISPTuningOpsMode *pvmode)

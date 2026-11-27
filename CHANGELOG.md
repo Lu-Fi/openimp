@@ -11,6 +11,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T21/T30 ISP flips follow the vendor Temper guard + 120 ms wait (#948)
+
+- Vendor (Ghidra): T21 1.0.33 SetISPHflip 0x63534 / SetISPVflip 0x6391c and T30 1.0.5 SetISPHflip 0xd7e14 / SetISPVflip 0xd822c / SetISPHVflip 0xd8658 check tuning_state==2 (else -1), switch Temper AUTO (type 1) to MANUAL 0x28, send the flip, usleep(120000) and restore the saved Temper attribute (same as T20, #944).
+- Fix: SetISPHflip / SetISPVflip on T21/T30 and SetISPHVflip on T30 (one guard + one wait for both flips). Host test tests/t20/flip_guard_test.c (`make -C tests/t20 flip-guard-check`). Not modelled: T30 SetISPVflip skips wait+restore when a library flag (+0x15cc) is set; T21 set_framesource_changewait_cnt() (no effect).
+
 ## 2026-11-27: T20 light-box gate passed (5000 K + 3000 K), release.yaml lightbox_runs T20 (#230, #946)
 
 - The T20 (Wyze Cam v2, jxf23) light-box gate is green at 5000 K and 3000 K. `docs/status/release.yaml` `lightbox_runs.T20` now points to the 5000 K gate page, and the matrix has been regenerated.

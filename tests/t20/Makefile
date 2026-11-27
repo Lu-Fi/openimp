@@ -14,13 +14,13 @@ FLIP_TEST := $(BUILD)/t20-flip-test
 
 DECODER_TEST := $(BUILD)/t20-decoder-test
 
-.PHONY: check clean bypass-check flip-check decoder-check srccopy-check
+.PHONY: check clean bypass-check flip-check flip-guard-check flip-guard-check decoder-check srccopy-check
 
 ifeq ($(shell command -v $(T20_CC) 2>/dev/null),)
-check: bypass-check flip-check decoder-check srccopy-check
+check: bypass-check flip-check flip-guard-check decoder-check srccopy-check
 	@echo "t20_abi_test: skipped ($(T20_CC) not found; set T20_CC to a 32-bit compiler)"
 else
-check: $(OBJ) bypass-check flip-check decoder-check srccopy-check
+check: $(OBJ) bypass-check flip-check flip-guard-check decoder-check srccopy-check
 	@echo t20_abi_test: ok
 endif
 
@@ -69,3 +69,15 @@ $(OBJ): t20_abi_test.c $(PROJECT_DIR)/include/imp/imp_encoder.h \
 
 clean:
 	$(RM) $(OBJ) $(BYPASS_TEST) $(DECODER_TEST)
+
+# host test of the T21/T30 flips (vendor Temper guard + 120 ms wait, openimp #948)
+flip-guard-check: $(BUILD)/flip-guard-t21 $(BUILD)/flip-guard-t30
+	$(BUILD)/flip-guard-t21
+	$(BUILD)/flip-guard-t30
+
+$(BUILD)/flip-guard-t21 $(BUILD)/flip-guard-t30: $(BUILD)/flip-guard-%: flip_guard_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c
+	@mkdir -p $(BUILD)
+	$(CC) -std=gnu11 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-pie -no-pie \
+		"-D_Static_assert(a,b)=" -DPLATFORM_$(shell echo $* | tr a-z A-Z) -I$(PROJECT_DIR)/src -I$(PROJECT_DIR)/include \
+		flip_guard_test.c $(PROJECT_DIR)/src/isp/isp_tseries.c \
+		-Wl,--wrap=ioctl,--unresolved-symbols=ignore-all -lpthread -o $@
