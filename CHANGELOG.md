@@ -11,6 +11,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T21/T30 ISP flips follow the vendor Temper guard + 120 ms wait (#948)
+
+- Vendor (Ghidra): T21 1.0.33 SetISPHflip 0x63534 / SetISPVflip 0x6391c and T30 1.0.5 SetISPHflip 0xd7e14 / SetISPVflip 0xd822c / SetISPHVflip 0xd8658 check tuning_state==2 (else -1), switch Temper AUTO (type 1) to MANUAL 0x28, send the flip, usleep(120000) and restore the saved Temper attribute (same as T20, #944).
+- Fix: SetISPHflip / SetISPVflip on T21/T30 and SetISPHVflip on T30 (one guard + one wait for both flips). Host test tests/t20/flip_guard_test.c (`make -C tests/t20 flip-guard-check`). Not modelled: T30 SetISPVflip skips wait+restore when a library flag (+0x15cc) is set; T21 set_framesource_changewait_cnt() (no effect).
+
 ## 2026-11-27: T20 light-box gate passed (5000 K + 3000 K), release.yaml lightbox_runs T20 (#230, #946)
 
 - T10/T20 push model (#920 L1): `EncoderExit` waits (at most 500 ms) for the Encoder-N kicks still in flight before it destroys the channel locks (detached threads touched `ch->lock` after a kick). Host test `p2_push_t20_test` calls EncoderExit after the stop/start cycles. Rejected with reason in the issue: L3 (driver STREAMOFF does not complete the LISTEN_BUF wait, open-tx-isp), L4 (oldest-first as vendor VBMGetFrame, cannot occur with 2 buffers), L5 (counter semantics, open-tx-isp).
