@@ -15,6 +15,11 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: T32/T33 IMP_FrameSource_EnableChn on an enabled channel answers like the vendor (#960)
+- `IMP_FrameSource_EnableChn` on a channel that is already enabled returned 0; the vendor libimp (T32 2.2.0 0x144c0c-0x144c14 and 0x145b00, T33 2.1.0 0x13f174-0x13f17c and 0x1400f8) logs an error and returns 0x80010040. OpenIMP now does the same (the running channel is untouched). T31 vendor 1.1.6 answers 0 and stays unchanged. Found by the #931 apitest carrier case A1.
+
+
+
 ## 2026-11-27: T23 Helix H.264 command list: 0x4010c and 0x5004c like the vendor (#799, #767)
 - The last two structural differences of the #799 command-list diff are closed. 0x4010c bits 24..27 now carry the soc_vpu channel_id of the encoder (vendor 1.3.0 H264E_T21_SliceInit L12060-12062 packs slice +0x3a3, which hwicodec_pf_h264e_t21_enc L13679-13688 copies from hwicodec word 0xc53 = node +0x0c of the channel request ioctl 0xc0586300, L13110-13168); OpenIMP wrote 0x00400000 for every channel (vendor QEMU A12: main 0x03400000, sub 0x04400000).
 - 0x5004c (MCE frame-size control) follows the picture size as on the OEM T20/T30: 0x08080303 for pictures of at least 51 x 39 macroblocks, else 0 (OpenIMP wrote 0x08080303 on the 640x360 sub too). Rule measured on the vendor library in QEMU with a patched SDK sample (sub 1280x720 / 832x624: 0x08080303; 832x608 (52 x 38 MBs), 800x624 (50 x 39) and 640x360: 0; audit/issue767/q).

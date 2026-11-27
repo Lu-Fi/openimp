@@ -1164,8 +1164,12 @@ int IMP_FrameSource_EnableChn(int chnNum)
         return -1;
     }
     if (c->enabled) {
+        /* vendor libimp 2.2.0 IMP_FrameSource_EnableChn 0x144c0c-0x144c14: chn state 2 or 3 -> log (line 2729)
+         * and return 0x80010040 (0x145b00); T33 2.1.0 0x13f174-0x13f17c -> 0x1400f8 same value (#960).
+         * the running channel is not touched */
         pthread_mutex_unlock(&fs_lock);
-        return 0;
+        IMP_LOG_ERR(TAG, "EnableChn chn %d: already enabled", chnNum);
+        return (int)0x80010040;
     }
     c->direct = chnNum == 0 && OpenIMP_T32_IvdcDirectMode() != 0;
     if (c->direct && OpenIMP_T32_IvdcDirectMode() != 1) {
