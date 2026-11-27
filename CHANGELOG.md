@@ -11,6 +11,10 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 
 
+## 2026-11-27: docs: T10/T20 JPEG one-job plan (#954, user decision option B)
+
+- docs/OPENIMP_BEYOND_VENDOR.md section 3.x: vendor one-job JPEG vs OpenIMP stripes (#939 cause), the merged interim source copy, and the decided one-job-with-stripe-fallback (beyond vendor, in work).
+
 ## 2026-11-27: T10/T20 JPEG source frame is copied by default, no more gap trains after a snapshot (#939)
 
 - Cause: a snapshot starts the JPEG channel at 5 fps for 2-3 s; the lend path kept the ch0 capture frame until the Helix JPEG job was done (45-150 ms, queued behind the H.264 picture) while the video channel held the next one. With the two capture buffers of the T10 the ISP dropped a frame per JPEG picture: a train of 10+ gaps of 160-200 ms after every snapshot (OpenIMP 6/6 runs, vendor 0/6).
