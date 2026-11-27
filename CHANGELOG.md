@@ -13,6 +13,7 @@ Release plan: `next` goes to `aperto` (fast-forward only) and is tagged `vYYYY.M
 
 ## 2026-11-27: T20 light-box gate passed (5000 K + 3000 K), release.yaml lightbox_runs T20 (#230, #946)
 
+- T10/T20 push model (#920 L1): `EncoderExit` waits (at most 500 ms) for the Encoder-N kicks still in flight before it destroys the channel locks (detached threads touched `ch->lock` after a kick). Host test `p2_push_t20_test` calls EncoderExit after the stop/start cycles. Rejected with reason in the issue: L3 (driver STREAMOFF does not complete the LISTEN_BUF wait, open-tx-isp), L4 (oldest-first as vendor VBMGetFrame, cannot occur with 2 buffers), L5 (counter semantics, open-tx-isp).
 - The T20 (Wyze Cam v2, jxf23) light-box gate is green at 5000 K and 3000 K. `docs/status/release.yaml` `lightbox_runs.T20` now points to the 5000 K gate page, and the matrix has been regenerated.
 - #946 (5000 K "lamps on -> off" AE overshoot): this was a test-state fault, not an AE difference. A frame-exact read-only ISP and sensor register trace showed the same sensor writes, ISP digital gain and Iridix strength per frame on both stacks. The overshoot is the Iridix decay in the dark box. It looked "worse" because the open pass ran on a reloaded ISP module while the vendor pass started after a reboot. With both passes after a planned reboot (light-box runner fresh-boot guard, #955), 4 paired runs (alternating order) gave lamps-off overshoot open 2.8/4.4/6.1/1.3 % vs vendor 4.0/1.8/9.7/5.1 % (median 3.6 vs 4.55).
 

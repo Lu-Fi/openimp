@@ -58,6 +58,7 @@ int IMP_Encoder_GetJpegeQl(int, IMPEncoderJpegeQl *);
 
 static int failures;
 
+int EncoderExit(void);
 #define CHECK(cond) do { if (!(cond)) { failures++; \
     fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); } } while (0)
 
@@ -823,6 +824,18 @@ int main(void)
         settle();
         test_release_thread(!(e && e[0] == '0'));
         test_stop_waits_for_release();
+    }
+    /* #920 L1: exit with kicks just done must not leave Encoder-N on a
+     * destroyed lock (returns 0 when every channel is gone) */
+    {
+        int c;
+
+        for (c = 0; c < 2; c++) {
+            IMP_Encoder_StopRecvPic(c);
+            IMP_Encoder_UnRegisterChn(c);
+            IMP_Encoder_DestroyChn(c);
+        }
+        (void)EncoderExit();
     }
     if (failures) {
         fprintf(stderr, "p2_push_t20_test: %d failure(s)\n", failures);

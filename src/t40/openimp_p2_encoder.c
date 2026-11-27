@@ -2391,6 +2391,10 @@ int EncoderInit(void)
     return 0;
 }
 
+#if defined(PLATFORM_T20)
+static void p2_push_quiesce(void);
+#endif
+
 int EncoderExit(void)
 {
     int i;
@@ -2400,6 +2404,11 @@ int EncoderExit(void)
     for (i = P2_ALL_CHANNELS - 1; i >= 0; i--)
         if (p2_channels[i].created)
             return -1;
+#if defined(PLATFORM_T20)
+    /* #920 L1: the detached Encoder-N threads touch ch->lock after a kick;
+     * let the kicks in flight finish before the locks go */
+    p2_push_quiesce();
+#endif
     pthread_mutex_lock(&p2_state_lock);
     for (i = 0; i < P2_ALL_CHANNELS; i++) {
         pthread_cond_destroy(&p2_channels[i].jpeg_frame_ready);
@@ -3948,6 +3957,28 @@ static int p2_push_thread_on(void)
         on = !(e && e[0] == '0');
     }
     return on;
+}
+
+/* #920 L1: wait (at most 500 ms) until no push encode kick is in flight on
+ * any source (EncoderExit destroys the channel locks right after). */
+static void p2_push_quiesce(void)
+{
+    int n, i, busy;
+
+    pthread_once(&p2_push_thr_once, p2_push_thr_init);
+    for (n = 0; n < 500; n++) {
+        busy = 0;
+        for (i = 0; i < P2_MAX_SOURCE_CHANNELS; i++) {
+            P2PushSource *ps = &p2_push_src[i];
+
+            pthread_mutex_lock(&ps->mx);
+            busy |= ps->inflight != 0;
+            pthread_mutex_unlock(&ps->mx);
+        }
+        if (!busy)
+            return;
+        usleep(1000);
+    }
 }
 
 /* Called by the FrameSource capture worker after it published a frame of
