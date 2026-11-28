@@ -227,6 +227,8 @@ typedef struct {
     uint32_t n;                 /* pictures since init */
     int qp;                     /* QP of the last rcStart */
     int type;                   /* picture type the controller chose at the last rcStart (2 I) */
+    uint32_t umap, umap_n;      /* region 0: the SetChnMapRoi copy (T32, #977) */
+    uint32_t qmap, qmap_n;      /* region 0: the SetChnQpgAI copy (T32, #977) */
 #ifdef PLATFORM_T33
     T65Pending pend;            /* run-time changes for the next IDR (#718) */
 #endif
@@ -253,6 +255,10 @@ int t32_rc65_set_param(T32Rc65 *c, unsigned id, const uint32_t *a);
 int t32_rc65_open(T32Rc65 *c, uint32_t width, uint32_t height);
 void t32_rc65_close(T32Rc65 *c);
 void t32_rc65_set(T32Rc65 *c, uint32_t off, uint32_t v);
+/* #977 (T32 H.265): the SetChnMapRoi map (+0x1a0..0x1a8), SetChnQpgAIEnable / SetChnQpgAI (+0x2d4..0x2e5) */
+void t32_rc65_set_map(T32Rc65 *c, const uint8_t *map, uint32_t size);
+void t32_rc65_set_qpgai(T32Rc65 *c, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h,
+                        uint8_t fore, uint8_t mark);
 void t32_rc65_set8(T32Rc65 *c, uint32_t off, uint8_t v);
 uint32_t t32_rc65_get(T32Rc65 *c, uint32_t off);
 /* the parameter words the rate control reads (host test: IMP mapping vs vendor) */

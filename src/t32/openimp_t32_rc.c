@@ -1096,6 +1096,8 @@ void t32_rc_map_roi(T32Rc *rc, const uint8_t *map, uint32_t size)
 {
     if (rc->on && rc->t33 && map && size)
         t32_rc33_set_map(rc->t33, map, size);
+    else if (rc->on && rc->t65 && map && size)
+        t32_rc65_set_map(rc->t65, map, size);
 }
 
 void t32_rc_qpgai(T32Rc *rc, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h, uint8_t fore,
@@ -1103,6 +1105,8 @@ void t32_rc_qpgai(T32Rc *rc, int on, const uint8_t *map, uint32_t size, uint32_t
 {
     if (rc->on && rc->t33)
         t32_rc33_set_qpgai(rc->t33, on, map, size, w, h, fore, mark);
+    else if (rc->on && rc->t65)
+        t32_rc65_set_qpgai(rc->t65, on, map, size, w, h, fore, mark);
 }
 
 int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p)

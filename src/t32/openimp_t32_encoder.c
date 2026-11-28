@@ -810,8 +810,9 @@ static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m, int a
                                                     at->encAttr.bufSize, a->gop, a->rc_num, a->rc_den, e->hevc);
 
 #ifndef PLATFORM_T33
-    /* #977: a new controller keeps the SetChnMapRoi map (vendor: P+0x250.. survive i264e_ratecontrol_init) */
-    if (r == 0 && !e->hevc) {
+    /* #977: a new controller keeps the SetChnMapRoi / QpgAI maps (vendor: P+0x250.. survive
+     * i264e_ratecontrol_init; H.265 i265e+0x1a0.., +0x2d4) */
+    if (r == 0) {
         const uint8_t *mp;
         uint32_t ms;
 
@@ -820,6 +821,8 @@ static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m, int a
         (void)OpenIMP_T32_E1MapTake(chn_no(e), 0, &mp, &ms);
         t32_rc_map_roi(&a->rc, mp, ms);
         (void)OpenIMP_T32_E1QpgAITake(chn_no(e), 0, &qa);
+        if (e->hevc)
+            qa.map = NULL;              /* I265e: rcStart clears +0x2d8 after the picture it went into */
         t32_rc_qpgai(&a->rc, OpenIMP_T32_EncQpgAIOn(chn_no(e)), qa.map, qa.size, qa.width, qa.height, qa.fore,
                      qa.mark);
     }
@@ -966,6 +969,20 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
 
     if (roi_new && e->hevc)
         t32_rc_roi(&a->rc, roi);
+#ifndef PLATFORM_T33
+    /* #977 SetChnMapRoi / SetChnQpgAI, H.265: I265eReconfig_ReconfigPFrame (flags 4 / 0x400000) before rcStart */
+    if (e->hevc) {
+        const uint8_t *mp;
+        uint32_t ms;
+        T32E1QpgAI qa;
+
+        if (OpenIMP_T32_E1MapTake(chn_no(e), 1, &mp, &ms))
+            t32_rc_map_roi(&a->rc, mp, ms);
+        if (OpenIMP_T32_E1QpgAITake(chn_no(e), 1, &qa) && qa.map)
+            t32_rc_qpgai(&a->rc, OpenIMP_T32_EncQpgAIOn(chn_no(e)), qa.map, qa.size, qa.width, qa.height,
+                         qa.fore, qa.mark);
+    }
+#endif
     if (a->rc.on && (q = t32_rc_start(&a->rc, idr, a->gop_pos)) >= 0)
         qp = q;
     if (roi_new && !e->hevc)

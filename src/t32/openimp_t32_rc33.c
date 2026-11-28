@@ -871,10 +871,15 @@ int t32_rc65_open(T32Rc65 *c, uint32_t width, uint32_t height)
 {
     uint32_t w = t65_dim(width, 0x100), h = t65_dim(height, 0x80);
     uint32_t n32 = ((w + 0x1f) >> 5) * ((h + 0x1f) >> 5), map = t65_map_bytes(w, h);
-    uint32_t wb = A5_MAPS + 4 * map, size = wb - R0 + al4k(n32 * 0x100u + 0x4000u);
+    uint32_t mb = al4k(((w + 15) >> 4) * ((h + 15) >> 4));
+    uint32_t wb = A5_MAPS + 4 * map, size = wb - R0 + al4k(n32 * 0x100u + 0x4000u) + 5 * mb;  /* + MapRoi / QpgAI (#977) */
     E33 *X;
 
     memset(c, 0, sizeof(*c));
+    c->umap = R0 + size - 5 * mb;
+    c->umap_n = mb;
+    c->qmap = c->umap + mb;
+    c->qmap_n = 4 * mb;
     c->mem = calloc(1, size);
     if (!c->mem)
         return -1;
@@ -943,6 +948,43 @@ void t32_rc65_set(T32Rc65 *c, uint32_t off, uint32_t v)
     E33 *X = &c->X;
 
     SP32(off, v);
+}
+
+/* #977 SetChnMapRoi (T32 H.265): vendor 2.2.0 I265eReconfig_setRoi (0x959ac) kind 1 and
+ * I265eReconfig_ReconfigPFrame (0x94ee4) flag 4: i265e+0x1a0 = 1, +0x1a4 the copy, +0x1a8 its
+ * size (rcStart copies +0x110..0x1ab to rc+0x2a8..) */
+void t32_rc65_set_map(T32Rc65 *c, const uint8_t *map, uint32_t size)
+{
+    E33 *X = &c->X;
+
+    if (!c->mem || !c->umap_n)
+        return;
+    memcpy(c->mem + (c->umap - R0), map, size < c->umap_n ? size : c->umap_n);
+    SP8(0x1a0, 1);
+    SP32(0x1a4, c->umap);
+    SP32(0x1a8, size);
+}
+
+/* #977 SetChnQpgAI (T32 H.265): +0x2d4 the SetChnQpgAIEnable flag (channel_i265e_encoder_init
+ * 0xe5d40: chn+0x1644); with @map I265eReconfig_setQpgAi (0x975a4) / ReconfigPFrame flag
+ * 0x400000: +0x2d8 map, +0x2dc / +0x2e0 width / height, +0x2e4 / +0x2e5 the modes (rcStart
+ * clears +0x2d8 after the picture) */
+void t32_rc65_set_qpgai(T32Rc65 *c, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h,
+                        uint8_t fore, uint8_t mark)
+{
+    E33 *X = &c->X;
+
+    if (!c->mem)
+        return;
+    SP8(0x2d4, on != 0);
+    if (!map || !c->qmap_n)
+        return;
+    memcpy(c->mem + (c->qmap - R0), map, size < c->qmap_n ? size : c->qmap_n);
+    SP32(0x2d8, c->qmap);
+    SP32(0x2dc, w);
+    SP32(0x2e0, h);
+    SP8(0x2e4, fore);
+    SP8(0x2e5, mark);
 }
 
 void t32_rc65_set8(T32Rc65 *c, uint32_t off, uint8_t v)

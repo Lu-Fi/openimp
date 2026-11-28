@@ -183,6 +183,9 @@ static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
         return 1;
     }
     switch (reg) {
+    case 0x20038u:      /* #977: bit 1 the ROI QP table on (s+0x1c8, H265E_T32V_SliceInit revision 6) */
+        *v = (*v & ~2u) | (sl[0x1c8] & 1u) << 1;
+        return 1;
     case EFE_FRM_QP:    /* #977: max s+0x1c2, min +0x1c3, QP +0x1c1, +0xbf9 (H265E_T32V_SliceInit 0x5xxxx: 0x8002001c) */
         *v = (uint32_t)sl[0x1c2] << 24 | (uint32_t)sl[0x1c3] << 16 | (uint32_t)sl[0x1c1] << 8 | sl[0xbf9];
         return 1;
@@ -192,8 +195,11 @@ static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
             *v += (uint32_t)(sl[0x55 + 7u * i] & 1u) << i;
         return 1;
     case EFE_MBQP_CFG:                  /* the rate-control fields and the ROI enable (s+0x1c9) */
-        *v = (*v & ~(EFE_MBQP_RC | 1u << 3)) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
-             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9 | (sl[0x1c9] & 1u) << 3;
+        /* #977: + bit 8 the SMART / QpgAI still map (s+0x172) and its level s+0x173 (bits 4..7),
+         * H265E_T32V_SliceInit revision 6 (0x8002029c) */
+        *v = (*v & ~(EFE_MBQP_RC | 1u << 8 | 0xf0u | 1u << 3)) | (sl[0x90a] & 1u) << 22 | (sl[0xb4f] & 0x3fu) << 16 |
+             (sl[0xb4e] & 0x3fu) << 10 | (sl[0xb4d] & 1u) << 9 | (sl[0x172] & 1u) << 8 | (sl[0x173] & 0xfu) << 4 |
+             (sl[0x1c9] & 1u) << 3;
         return 1;
     case RC_ROW_CFG:
         *v = (uint32_t)sl[0x910] << 23 | (sl[0x90a] & 1u) | 0x500000u | ((rd32(sl + 0x90c) - 1u) & 0xffffu) << 4;
@@ -333,8 +339,9 @@ static uint32_t h265_field(const T32HeraH265Pic *p, uint32_t reg, uint32_t v, co
         return p->recon_y;
     case ODMA_BDCA:
         return p->recon_c;
-    case EMC_CTRL:
-        return !p->p_frame ? 0x107u : p->after_p ? 0x3147u : 0x2147u;
+    case EMC_CTRL:      /* #977: bit 9 the slice's ROI QP map (s+0x2ae, H265E_T32V_SliceInit revision 6) */
+        return (!p->p_frame ? 0x107u : p->after_p ? 0x3147u : 0x2147u) |
+               (sl ? (sl[0x2ae] & 1u) << 9 | (sl[0x2ad] & 1u) << 15 : 0u);     /* + the still map (s+0x2ad) */
     case EMC_BS0: case SDE_BS:
         return p->bs0;
     case EMC_BS1:

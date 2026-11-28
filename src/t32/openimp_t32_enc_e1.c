@@ -1236,11 +1236,11 @@ int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiCfg *m, IMPEncoderMappi
     pthread_mutex_lock(&e1_lock);
     rc = e1_get(encChn, &ci);
 #ifndef PLATFORM_T33
-    /* H.264 (#977): i264e_set_param(2, {1, map, size}); H.265: i265e_set_param(2), not ported
-     * (validated only); a JPEG channel: 0x80040002 */
+    /* #977: i264e_set_param(2, {1, map, size}) / i265e_set_param(2) (I265eReconfig_setRoi 0x959ac);
+     * a JPEG channel: 0x80040002 */
     if (!rc && ci.codec == 0)
         rc = T32_ENC_ERR_PARAM;
-    if (!rc && ci.codec == 1 && encChn < T32_E1_CHNS && m->mapSize) {
+    if (!rc && ci.codec != 0 && encChn < T32_E1_CHNS && m->mapSize) {
         if (!e1_map[encChn].map) {
             e1_map[encChn].map = malloc(m->mapSize);
             e1_map[encChn].cap = e1_map[encChn].map ? m->mapSize : 0;
@@ -1430,9 +1430,9 @@ int IMP_Encoder_SetChnQpgAI(int encChn, IMPEncoderQpgAICfg *q)
     else if (!rc && ci.codec == 0)
         rc = T32_ENC_ERR_MODE;
 #ifndef PLATFORM_T33
-    /* #977 H.264: i264e_set_param(0x15) -> i264e_reconfig_qpgai_set (vendor 2.2.0 0x81874), taken by
-     * the controller (P+0x260..0x26d, i264e_reconfig flag 0x200000); H.265 (0x16): not ported */
-    if (!rc && ci.codec == 1) {
+    /* #977: i264e_set_param(0x15) -> i264e_reconfig_qpgai_set (vendor 2.2.0 0x81874; P+0x260..0x26d,
+     * i264e_reconfig flag 0x200000), i265e_set_param(0x16) -> I265eReconfig_setQpgAi (0x975a4) */
+    if (!rc && ci.codec != 0) {
         uint32_t n = q->width * q->height;
 
         pthread_mutex_lock(&e1_lock);
