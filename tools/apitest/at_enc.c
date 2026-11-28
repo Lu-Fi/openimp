@@ -2777,7 +2777,8 @@ int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, v
 #include <pthread.h>
 static int push_env(const char *n, int d) { const char *v = getenv(n); return v && *v ? atoi(v) : d; }
 typedef struct { int chn; volatile int run; int pics, gaps, maxgap_ms, hold_ms; int64_t last_ts; int interval_us;
-                 int dts[41], dts_neg; FILE *dump; unsigned char *buf; } PushDrain;
+                 int dts[41], dts_neg; FILE *dump; unsigned char *buf;
+                 int64_t first_ts, t_start, t_up, early_ts[4], early_age[4]; int ngap, gap_pic[4], gap_ms[4], gap_at_ms[4], gap_wall_ms[4]; } PushDrain;
 static volatile int g_push_gf_run;
 static int g_push_gf_ok, g_push_gf_fail;
 
@@ -2800,6 +2801,11 @@ static void *push_drain(void *arg)
         if (s.packCount > 0 && s.pack) {
             int64_t ts = s.pack[0].timestamp;
 
+            if (!d->first_ts) d->first_ts = ts;
+            if (d->pics < 4) {     /* #974: capture time of the first pictures vs StartRecvPic, and their age at GetStream */
+                d->early_ts[d->pics] = ts;
+                d->early_age[d->pics] = (int64_t)IMP_System_GetTimeStamp() - ts;
+            }
             if (d->last_ts) {
                 int64_t st = ts - d->last_ts;
 
@@ -2811,6 +2817,12 @@ static void *push_drain(void *arg)
 
                 d->gaps++;
                 if (ms > d->maxgap_ms) d->maxgap_ms = ms;
+                if (d->ngap < 4) {     /* #974: where the gap is (picture index, stream time, wall time since the drain start) */
+                    d->gap_pic[d->ngap] = d->pics; d->gap_ms[d->ngap] = ms;
+                    d->gap_at_ms[d->ngap] = (int)((d->last_ts - d->first_ts) / 1000);
+                    d->gap_wall_ms[d->ngap] = (int)((now_us() - d->t_start) / 1000);
+                    d->ngap++;
+                }
             }
             d->last_ts = ts;
         }
@@ -2900,7 +2912,9 @@ int enc_push_run(void)
     if (gf) printf("push: SetFrameDepth(%d, %d) %d\n", CH_SUB, push_env("PUSH_DEPTH", 1),
                    IMP_FrameSource_SetFrameDepth(CH_SUB, push_env("PUSH_DEPTH", 1)));
     if (push_chn_up(0, CH_SUB, 0, SUB_W, SUB_H, fps)) return -1;
+    d[0].t_up = (int64_t)IMP_System_GetTimeStamp();
     if (two && push_chn_up(1, CH_MAIN, 1, g_sw, g_sh, fps)) { push_chn_down(0, CH_SUB, 0); return -1; }
+    d[1].t_up = (int64_t)IMP_System_GetTimeStamp();
     for (i = 0; i < n; i++) {
         d[i].chn = i; d[i].run = 1; d[i].interval_us = 1000000 / fps;
         d[i].hold_ms = i == 0 ? push_env("PUSH_HOLD_MS", 0) : 0;
@@ -2911,6 +2925,7 @@ int enc_push_run(void)
             d[i].dump = fopen(fn, "wb");
             d[i].buf = malloc(STREAMCAP);
         }
+        d[i].t_start = now_us();
         pthread_create(&th[i], NULL, push_drain, &d[i]);
     }
     if (gf) { g_push_gf_run = 1; pthread_create(&gth, NULL, push_getframe, NULL); }
@@ -2932,7 +2947,16 @@ int enc_push_run(void)
         for (k = 0; k <= 40; k++)
             if (d[i].dts[k]) printf(" %s%dms:%d", k == 40 ? ">=" : "", k * 10, d[i].dts[k]);
         printf(" nonpos:%d\n", d[i].dts_neg);
+        printf("push: chn %d first pictures (capture ts - StartRecvPic ms / age at GetStream ms):", i);
+        for (k = 0; k < 4 && k < d[i].pics; k++)
+            printf(" %lld/%lld", (long long)((d[i].early_ts[k] - d[i].t_up) / 1000), (long long)(d[i].early_age[k] / 1000));
+        printf("\n");
+        for (k = 0; k < d[i].ngap; k++)
+            printf("push: chn %d gap %d ms before picture %d (stream t+%d ms, wall t+%d ms)\n", i, d[i].gap_ms[k], d[i].gap_pic[k],
+                   d[i].gap_at_ms[k], d[i].gap_wall_ms[k]);
     }
+    if (n == 2 && d[0].first_ts && d[1].first_ts)
+        printf("push: first pack ts chn1 - chn0 %lld ms\n", (long long)((d[1].first_ts - d[0].first_ts) / 1000));
     if (gf) printf("push: getframe ok %d (%.2f fps) fail %d\n", g_push_gf_ok, g_push_gf_ok * 1e6 / t0, g_push_gf_fail);
     for (k = 0; k < cycles; k++) {
         int good = 1;
