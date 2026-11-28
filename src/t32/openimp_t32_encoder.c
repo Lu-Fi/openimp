@@ -1801,6 +1801,14 @@ static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
             continue;
         if (!e->rate_due)
             continue;
+#ifdef PLATFORM_T33
+        /* vendor 2.0.2.1 input thread (0xedba8): pad frames on and no pad frame in the queue (it cannot be filled,
+         * see IMP_Encoder_PadFrame): the capture is not coded (log 0x370) */
+        if (e->h264 && OpenIMP_T33_EncPadOn(chn_no(e))) {
+            e->skipped++;
+            continue;
+        }
+#endif
         if (frame->width != e->attr.encAttr.picWidth || frame->height != e->attr.encAttr.picHeight) {
             if (!e->size_logged++)
                 IMP_LOG_ERR(TAG, "chn %d: frame %ux%u, channel %ux%u (no scaling in the encoder)",

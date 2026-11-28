@@ -121,6 +121,15 @@ int IMP_OSD_RgnCreate_Query(IMPRgnHandle handle, IMPOSDRgnCreateStat *pstStatus)
 static void (*mark)(const char *);
 
 /* mean Y/U/V of 8 vertical bands over the middle rows of an NV12 frame */
+/* T32_PAD="match:tolLo:tolHi:fill" (#99 T33 gap, PadFrame A/B): every picture a copy of a captured frame, its luma
+ * filled with <fill>, is handed to IMP_Encoder_PadFrame before the poll; the encoder codes it instead of the
+ * captured frame (vendor 2.0.2.1 input thread 0xedba8..: pad queue, time-stamp match, tolerance) */
+static void pad_release(void *frame, void *priv)
+{
+    (void)priv;
+    IMP_FrameSource_ReleaseFrame(0, (IMPFrameInfo *)frame);
+}
+
 static void frame_report(const char *tag, const IMPFrameInfo *f)
 {
     const uint8_t *y = (const uint8_t *)(uintptr_t)f->virAddr;
@@ -726,12 +735,14 @@ int main(int argc, char **argv)
     si.switch_gpio = -1;
 
     memset(&fs, 0, sizeof fs);
-    fs.picWidth = enc_w;
-    fs.picHeight = enc_h;
+    /* T32_FS_W / T32_FS_H (#99 T33 gap): FrameSource channel size other than the encoder size
+     * (encoder scaling, SetChnResizeMode); default = encoder size */
+    fs.picWidth = getenv("T32_FS_W") ? atoi(getenv("T32_FS_W")) : enc_w;
+    fs.picHeight = getenv("T32_FS_H") ? atoi(getenv("T32_FS_H")) : enc_h;
     fs.pixFmt = PIX_FMT_NV12;
     fs.scaler.enable = 1;
-    fs.scaler.outwidth = enc_w;
-    fs.scaler.outheight = enc_h;
+    fs.scaler.outwidth = fs.picWidth;
+    fs.scaler.outheight = fs.picHeight;
     /* T32_FS_FPS=<n>: other channel rate (#921 frame-rate drop A/B); default 15 */
     fs.outFrmRateNum = getenv("T32_FS_FPS") ? atoi(getenv("T32_FS_FPS")) : 15;
     fs.outFrmRateDen = 1;
@@ -986,6 +997,21 @@ again:
         MUST(isposd_setup());
     }
     if (enc) {
+        int (*pad_set)(int, int, const void *) = (int (*)(int, int, const void *))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetPadFrameAttr");
+        int (*pad_frm)(int, void *, void *, void (*)(void *, void *)) =
+            (int (*)(int, void *, void *, void (*)(void *, void *)))dlsym(RTLD_DEFAULT, "IMP_Encoder_PadFrame");
+        unsigned pad_m = 0, pad_lo = 0, pad_hi = 0;
+        int pad_fill = -1;
+        if (getenv("T32_PAD") && sscanf(getenv("T32_PAD"), "%u:%u:%u:%d", &pad_m, &pad_lo, &pad_hi, &pad_fill) >= 1 &&
+            pad_set && pad_frm) {
+            uint32_t pa[8] = { 0, pad_m, pad_lo, pad_hi, 0, 0, 0, 0 };
+            if (pad_fill < 0)
+                pad_fill = 128;
+            printf("T32P SetPadFrameAttr = %d\n", pad_set(0, 1, pa));
+            printf("T32P SetFrameDepth = %d\n", IMP_FrameSource_SetFrameDepth(0, 2));
+        } else {
+            pad_frm = NULL;
+        }
         MUST(IMP_Encoder_StartRecvPic(0));
         if (mark)
             mark("streams");
@@ -1131,6 +1157,19 @@ again:
             struct timespec t0, t1;
             long ms;
             int prc;
+            if (pad_frm) {
+                IMPFrameInfo *pf = NULL;
+                int gr = IMP_FrameSource_GetFrame(0, (void **)&pf);
+                if (gr == 0 && pf && pf->virAddr) {
+                    memset((void *)(uintptr_t)pf->virAddr, pad_fill, (size_t)pf->width * pf->height);
+                    printf("T32P %d pad frame pa 0x%08x ts %lld PadFrame = %d\n", i, pf->phyAddr,
+                           (long long)pf->timeStamp, pad_frm(0, pf, NULL, pad_release));
+                } else {
+                    printf("T32P %d GetFrame = %d va %d\n", i, gr, pf ? (int)pf->virAddr : -1);
+                    if (gr == 0 && pf)
+                        IMP_FrameSource_ReleaseFrame(0, pf);
+                }
+            }
             clock_gettime(CLOCK_MONOTONIC, &t0);
             prc = IMP_Encoder_PollingStream(0, poll_ms);
             clock_gettime(CLOCK_MONOTONIC, &t1);

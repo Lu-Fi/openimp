@@ -1305,11 +1305,16 @@ static void e1_live(int h265)
     }
     if (IMP_Encoder_SetPadFrameAttr && IMP_Encoder_PadFrame) {
         char pad[32], frame[64];
+        int pa, pb, pr;
         memset(pad, 0, sizeof(pad)); memset(frame, 0, sizeof(frame));
         e1_pad_released = 0;
+        /* #99 T33 gap: pad frames on (vendor 2.0.2.1: no pad queue after CreateChn, 0x80044000 at once, frame handed back) */
+        pa = IMP_Encoder_SetPadFrameAttr(0, 1, pad); pb = IMP_Encoder_PadFrame(0, frame, NULL, e1_pad_release);
+        pr = e1_pad_released;
+        e1_pad_released = 0;
         a = IMP_Encoder_SetPadFrameAttr(0, 0, pad); b = IMP_Encoder_PadFrame(0, frame, NULL, e1_pad_release);
-        rep("IMP_Encoder_SetPadFrameAttr", 0, V_PASS, "%s: disable 0x%x", cn, X(a));
-        rep("IMP_Encoder_PadFrame", 0, V_PASS, "%s: pad frames off: 0x%x, release callbacks %d", cn, X(b), e1_pad_released);
+        rep("IMP_Encoder_SetPadFrameAttr", 0, V_PASS, "%s: enable 0x%x, disable 0x%x", cn, X(pa), X(a));
+        rep("IMP_Encoder_PadFrame", 0, V_PASS, "%s: pad frames on: 0x%x, release callbacks %d; off: 0x%x, release callbacks %d", cn, X(pb), pr, X(b), e1_pad_released);
     }
     if (IMP_Encoder_GetChnCrop && IMP_Encoder_SetChnCrop) {
         IMPEncoderCropCfg c0, c1 = { 1, 16, 8, 320, 180 }, c2, codd = { 1, 1, 0, 320, 180 }, cbig = { 1, 400, 0, 320, 180 }, off = { 0, 0, 0, 0, 0 };

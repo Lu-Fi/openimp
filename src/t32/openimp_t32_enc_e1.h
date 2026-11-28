@@ -21,6 +21,9 @@ int OpenIMP_T32_EncChnQuery(int encChn, T32EncChnInfo *ci);
 
 /* openimp_t32_enc_e1.c */
 void OpenIMP_T32_E1Reset(int encChn, const T32EncChnInfo *ci);
+#ifdef PLATFORM_T33
+int OpenIMP_T33_EncPadOn(int encChn);               /* #99: pad frames on (the T33 encoder codes no picture) */
+#endif
 int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui);
 void OpenIMP_T32_E1AutoVui(int encChn, int hevc);   /* IMP_Encoder_SetAutoVui, per frame (#930) */
 size_t OpenIMP_T32_E1Sei(int encChn, int hevc, uint8_t *out, size_t cap);
