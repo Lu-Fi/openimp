@@ -248,3 +248,11 @@ Difference found: FixQP H.264 IDRs after the first one were coded with the QP..Q
 against 160 kB in the vendor, which keeps the QPG AI deltas (MB QP 22..35 around the slice QP 32) in every picture except
 the first of the stream (`first` flag as in the H.265 list). Fixed in `openimp_t32_hera.c` (EFE_FRM_QP), #906: IDR 157 / 157 kB.
 Raw data: audit/issue295/rc (not published).
+
+## T32 setters against the vendor 2.2.0 library in QEMU (2026-11-28, #99, #975-#979)
+
+Method: `-M ingenic-t32`, `tools/t32/t32_trace_sample.c` (H.264 / H.265, 640x368, `T32_ENC_QP`) with the HERA capture of QEMU (`-global ingenic-hera.capture`), vendor libimp 2.2.0 and OpenIMP in the same guest image, one setter per three pictures (`T32_ENC_CHANGES`), every picture's register list compared (the input-statistics registers are skipped, as in the T33 comparison #784). FIXQP: equal for SetChnColor2Grey, SetChnHSkip, SetChangeRef, SetChnDenoise, SetMbRC, SetChnHSkipBlackEnhance, SetSrdCfg, SetChnCrop, SetH264TransCfg, SetSuperFrameCfg, SetGDRCfg, RequestGDR (also CBR since the 0x30048 refresh rule), SetChnRcTrigLevel, SetPskipCfg, SetMotionQuality*, H.265 SetChnCrop / SetH265TransCfg; every return code equal.
+
+Vendor behaviour found and now followed on the T32 (CBR, QP 45 42 39 ... sequence equal): SetChnCrop, SetH264TransCfg, SetChnColor2Grey and SetChnHSkip restart the controller at the next IDR (`T32_E1RC_RESTART`); QpgMode / RcTrigLevel / SuperFrameCfg reach the controller (group 2 of #784, no longer T33 only); crop and the chroma QP offsets are applied from the next IDR (SPS frame cropping / conformance window, PPS offsets, H.265 HERA words 0x38004 / 0x4001c / 0x48004 / 0x50004, cb = cr = the larger offset); a refresh or skipped picture clears bit 23 of MCE 0x30048 and a skipped one writes no 0x30048 (revision 6 controller state s+0x2c0 / 0x2c4 as in revision 7).
+
+Still different (issue #977): RequestPskip at FIXQP, SetChnMapRoi, SetQpgMode(ROWRC) followed by SetChnRcTrigLevel at FIXQP, H.265 first-IDR word after set_param, H.265 RequestIDR timing at 1080p (explained for the T33 in #791, QEMU timing). Raw runs: audit t32-gap-1128 (not published); QEMU only, no T32 camera run.
