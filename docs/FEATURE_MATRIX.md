@@ -1120,12 +1120,12 @@ Per area and SoC: functions that work (device-tested or vendor no-op) / function
 - **ISP tuning:** T10 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 66/66 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 97/97 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 87/87 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 60/113 ✅ · 53 🔧 · 0 gaps · 0 ? · T33 101/101 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 71/71 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 78/78 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **AE / AWB / AF:** T10 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 26/26 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 49/49 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 19/41 ✅ · 22 🔧 · 0 gaps · 0 ? · T33 37/37 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 39/39 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Encoder:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 92/92 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 45/45 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 39/116 ✅ · 77 🔧 · 0 gaps · 0 ? · T33 112/115 ✅ · 3 🔧 · 0 gaps · 0 ? · T40 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 61/61 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 19/19 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 25/25 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 24/47 ✅ · 23 🔧 · 0 gaps · 0 ? · T33 40/44 ✅ · 0 🔧 · 4 gaps · 0 ? · T40 28/28 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 31/31 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 19/19 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 25/25 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 24/47 ✅ · 23 🔧 · 0 gaps · 0 ? · T33 44/44 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 28/28 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 31/31 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **OSD:** T10 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 42/42 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 27/44 ✅ · 17 🔧 · 0 gaps · 0 ? · T33 43/44 ✅ · 1 🔧 · 0 gaps · 0 ? · T40 43/43 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 42/42 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T33 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 90/90 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 96/96 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 122/127 ✅ · 5 🔧 · 0 gaps · 0 ? · T33 123/123 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 99/99 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 107/107 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **System:** T10 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 60/60 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 46/46 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 64/64 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 32/99 ✅ · 67 🔧 · 0 gaps · 0 ? · T33 75/91 ✅ · 16 🔧 · 0 gaps · 0 ? · T40 50/50 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 41/51 ✅ · 10 🔧 · 0 gaps · 0 ?
-- **All areas:** T10 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 335/335 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 459/459 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 352/352 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 401/401 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 341/605 ✅ · 264 🔧 · 0 gaps · 0 ? · T33 549/573 ✅ · 20 🔧 · 4 gaps · 0 ? · T40 389/389 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
+- **All areas:** T10 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 335/335 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 459/459 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 352/352 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 401/401 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 341/605 ✅ · 264 🔧 · 0 gaps · 0 ? · T33 553/573 ✅ · 20 🔧 · 0 gaps · 0 ? · T40 389/389 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -1138,7 +1138,7 @@ Gaps (error, missing, stub, cache-only) in functions that at least one streamer 
 - **T30:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T31:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T32:** 0 streamer-used gaps; 0 further gaps no streamer calls
-- **T33:** 0 streamer-used gaps; 4 further gaps no streamer calls
+- **T33:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T40:** 0 streamer-used gaps; 0 further gaps no streamer calls
 - **T41:** 0 streamer-used gaps; 0 further gaps no streamer calls
 
@@ -1181,9 +1181,8 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 </details>
 
-<details><summary><b>T33</b>: 4 functions</summary>
+<details><summary><b>T33</b>: 0 functions</summary>
 
-- **FrameSource:** implement (4): `FrameSource_CreateJoint`, `FrameSource_DestroyJoint`, `FrameSource_GetJointByHandler`, `FrameSource_SetJointBackground`
 
 </details>
 
@@ -1984,7 +1983,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 
 ### FrameSource
 
-48 rows (4 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
+48 rows (0 with a gap or unknown state in at least one SoC). Columns: T10, T20, T21, T23, T30, T31, T32, T33, T40, T41.
 
 | Vendor function | T10 | T20 | T21 | T23 | T30 | T31 | T32 | T33 | T40 | T41 | Used by |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1994,10 +1993,10 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_ClearPoolId` | · | · | · | · | · | ✅ | 🔧+ | ✅ | · | · | – |
 | `FrameSource_CreateChn` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
 | `FrameSource_CreateChn_Ext` | · | · | · | · | · | · | · | · | · | · | – |
-| `FrameSource_CreateJoint` | · | · | · | · | · | · | 🔧+ | ⚠c | · | · | – |
+| `FrameSource_CreateJoint` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_DequeueBuffer` | · | · | · | · | · | · | 🔧a | ✅ | ✅ | ✅ | – |
 | `FrameSource_DestroyChn` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
-| `FrameSource_DestroyJoint` | · | · | · | · | · | · | 🔧+ | ⚠c | · | · | – |
+| `FrameSource_DestroyJoint` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_DisableChn` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
 | `FrameSource_EnableChn` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
 | `FrameSource_ExternInject_CreateChn` | · | · | · | · | · | · | 🔧+ | ✅ | ✅ | ✅ | – |
@@ -2016,7 +2015,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_GetDirectMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_GetFrame` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | r r† t |
 | `FrameSource_GetFrameEx` | · | · | · | · | · | · | ✅ | ✅ | ✅ | ✅ | – |
-| `FrameSource_GetJointByHandler` | · | · | · | · | · | · | 🔧+ | ⚠c | · | · | – |
+| `FrameSource_GetJointByHandler` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_GetTimedFrame` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | r† |
 | `FrameSource_PM_Resume` | · | · | · | · | · | · | 🔧a | ✅ | · | · | – |
 | `FrameSource_PM_Suspend` | · | · | · | · | · | · | 🔧a | ✅ | · | · | – |
@@ -2028,7 +2027,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_SetDirectMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_SetFrameDepthCopyType` | · | · | · | · | · | ✅rt | 🔧+ | ✅ | · | · | – |
 | `FrameSource_SetIvdcMemLine` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `FrameSource_SetJointBackground` | · | · | · | · | · | · | 🔧+ | ⚠c | · | · | – |
+| `FrameSource_SetJointBackground` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_SetSource` | · | · | · | · | ✅+ | ✅ | · | · | · | · | – |
 | `FrameSource_SetSubStreamOnlineMode` | · | · | · | · | · | · | · | · | · | · | – |
 | `FrameSource_SetYuvAlign` | · | · | · | · | · | · | 🔧+ | ✅+ | · | ✅rt | – |
