@@ -2771,7 +2771,10 @@ int enc_e1_pull(int chn, int n, void (*cb)(const unsigned char *, size_t, int, v
  * SetFrameDepth(1, PUSH_DEPTH=1)); PUSH_HOLD_MS: the drain of chn 0 holds each stream that long before ReleaseStream
  * (#917, a slow streamer); then PUSH_CYCLES (20) StopRecvPic / StartRecvPic rounds of both channels, each must give
  * 5 pictures within 2 s.  Lines "push: ..." carry the numbers.  #962 (T23 too): "push: chn N dts ..." is the
- * histogram of the pack timestamp steps in 10 ms bins (the keep pattern of an output rate below the sensor rate). */
+ * histogram of the pack timestamp steps in 10 ms bins (the keep pattern of an output rate below the sensor rate).
+ * #974: "push: chn N gap ..." places the first 4 gaps (picture index, stream and wall time), "first pictures" gives the
+ * capture time of the first 4 pictures relative to the channel's StartRecvPic and their age at GetStream (a negative
+ * capture time = a frame from before StartRecvPic, which the vendor never codes). */
 #if defined(PLATFORM_T20) || defined(PLATFORM_T10) || defined(PLATFORM_T21) || defined(PLATFORM_T30) || \
     defined(PLATFORM_T31) || defined(PLATFORM_T23)
 #include <pthread.h>
