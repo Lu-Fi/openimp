@@ -303,8 +303,10 @@ for every picture before.  The command list takes the controller's values
 when eprc runs, else the same values by picture type and width.  Checked
 in the `--mbrc` vectors (last two 'M' fields: the OEM SliceInit registers).
 
-OpenIMP switch: `OPENIMP_EPRC_MBRC=1` (the OEM behaviour) or 0/unset (the
-default until the device test: registers as before), per channel at run
+OpenIMP switch: unset or `OPENIMP_EPRC_MBRC=1` (the OEM behaviour, the
+default since #986: the OEM box streams at FixQP 25 carry macroblock QP 14 /
+17 in flat areas on T23 1.3.0 and T21 1.0.33), `0` = off (registers as
+before), per channel at run
 time with `IMP_Encoder_SetMbRC` (HWEncoderParams.mb_rc, from the next
 picture; `IMP_Encoder_GetMbRC` returns the switch).  It needs the eprc
 controller (`OPENIMP_T23_EPRC`, `OPENIMP_T21_EPRC`); the controller
@@ -609,5 +611,5 @@ for CBR/VBR), T21 default.  Each run 3 min, recorded via RTSP.
    IDR) with MB-RC on: no failures; the first picture after the restart
    keeps 0x40074|=15 with SAS offsets 0.
 
-If 1-6 pass on both cameras, make `OPENIMP_EPRC_MBRC` default to on (the
-OEM behaviour).
+Default on since #986 (T23 light-box enc A/B 2026-11-28, items 2-4 on the
+T23; items 1, 5, 6, the 30 min soak and the T21 run (#1000) are open).

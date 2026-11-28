@@ -944,7 +944,11 @@ static uint32_t rc_run(const HWEncoderParams *params,
             assert(OpenIMP_T30_HelixReconfigure(encoder, &change) == 0);
         }
         qp = rc_frame(encoder, mem, frame, &idr);
-        assert(qp >= params->min_qp && qp <= params->max_qp);
+        /* FIXQP IDR pictures sit 3 below the QP, outside the range (#986) */
+        if (params->rc_mode == HW_RC_MODE_FIXQP && idr)
+            assert(qp + 3u == params->qp);
+        else
+            assert(qp >= params->min_qp && qp <= params->max_qp);
         if (frame == 0u) {
             assert(idr);
             *first_idr_qp = qp;
@@ -1280,7 +1284,8 @@ static int rc_test(void)
     assert(first == 25u);
 
     /* FIXQP ignores the extras; the IDR is 3 below the QP, as the stock
-     * encoder's, and stays inside the QP range */
+     * encoder's, also below the channel's QP range (OEM T23 1.3.0: no
+     * range at FIXQP; #986) */
     rc_params(&params, HW_RC_MODE_FIXQP);
     params.rc_flags = HW_RC_FLAG_APP;
     params.bias_level = -3;
@@ -1290,7 +1295,7 @@ static int rc_test(void)
     rc_params(&params, HW_RC_MODE_FIXQP);
     params.min_qp = 29;
     (void)rc_run(&params, 0, 0, &first);
-    assert(first == 29u);
+    assert(first == 27u);
 
     printf("rate-control extras: P-to-P QP change %u without, %u with "
            "frmQPStep 1\n", plain_pp, limited_pp);

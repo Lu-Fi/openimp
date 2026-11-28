@@ -2587,24 +2587,20 @@ static void helix_eprc_drop(T30HelixEncoder *encoder)
 #endif
 
 /* FIXQP: the stock encoder codes I pictures 3 below the fixed QP
- * (i264e_ratecontrol_init), clamped to the QP range.  The channel's range
- * of a FIXQP channel is [qp, qp] (the encoder front end sets min = max =
- * qp), so the clamp would undo the 3 steps: the OEM T10 / T20 library
- * (3.12.0, i264e_ratecontrol_init 0x4ab38: I = qp - 3, P = qp, no range) does
- * not clamp, the T20 build keeps only 0..51 (#191).  The T30 1.0.5 library
- * does not clamp either (T30X b55: FixQP 25 -> I 22, FixQP 35 -> I 32, P at
- * the QP; #271). */
+ * (i264e_ratecontrol_init), without the channel range.  OpenIMP pins the
+ * range of a FIXQP channel to [qp, qp] (openimp_p2_encoder.c), so a clamp
+ * to it would undo the 3 steps; no OEM library clamps: T10 / T20 3.12.0
+ * (i264e_ratecontrol_init 0x4ab38: I = qp - 3, P = qp, no range; #191),
+ * T30 1.0.5 (T30X b55: FixQP 25 -> I 22, FixQP 35 -> I 32; #271) and
+ * T21 1.0.33 / T23 1.3.0 (#986): IMP_Encoder_CreateChn FIXQP sets only
+ * rc.i_rc_method 0 and rc.i_qp_constant (T23 0x500a4), and
+ * i264e_validate_parameters (T23 0x341e8) derives the I QP as
+ * trunc(qp - 6 * log2(rc.f_ip_factor) + 0.5), clipped to 0..51, with
+ * f_ip_factor 1.4 from i264e_param_default (T23 0x329fc, T21 0x29c14):
+ * qp - 3.  T23 .23 box 2026-11-27: vendor FixQP 25 -> I 22, 35 -> I 32. */
 static uint32_t t30_fixqp_idr_qp(const HWEncoderParams *params)
 {
-    uint32_t qp = params->qp > 3u ? params->qp - 3u : 0u;
-
-#if !defined(PLATFORM_T20) && !defined(PLATFORM_T30)
-    if (qp < params->min_qp)
-        qp = params->min_qp;
-    if (qp > params->max_qp)
-        qp = params->max_qp;
-#endif
-    return qp;
+    return params->qp > 3u ? params->qp - 3u : 0u;
 }
 
 #if defined(PLATFORM_T20)
@@ -3510,10 +3506,15 @@ int OpenIMP_T30_HelixCreate(T30HelixEncoder **encoder_out,
 #if defined(HELIX_T21_SYNTAX)
     encoder->eprc_qp = -1;
     {
-        /* off until device-tested; the OEM always runs it */
+        /* on as the OEM (#986): the T23 1.3.0 / T21 1.0.33 channels run
+         * the macroblock QP of h264_get_mb_qp (T23 0xc1cbc, SAS offsets
+         * h264_sas_ofst 0x104ec0) without an IMP_Encoder_SetMbRC call: box
+         * FixQP 25 streams carry MB QP 14 (I) / 17 (P) in flat macroblocks
+         * on both vendor libraries.  It reaches the Helix with the picture
+         * rate controller (eprc_on).  OPENIMP_EPRC_MBRC=0 switches it off. */
         const char *mbrc = getenv("OPENIMP_EPRC_MBRC");
 
-        encoder->mbrc_on = mbrc && mbrc[0] == '1';
+        encoder->mbrc_on = !(mbrc && mbrc[0] == '0');
         mbrc = getenv("OPENIMP_EPRC_MBRC_LOG");
         encoder->mbrc_log = mbrc ? (uint32_t)strtoul(mbrc, NULL, 0) : 0u;
     }

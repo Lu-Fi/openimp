@@ -2087,10 +2087,10 @@ static void test_eprc_runtime_hskip(void)
 #endif
 
 #if defined(PLATFORM_T21) && !defined(PLATFORM_T20)
-/* eprc macroblock rate control: off by default (OPENIMP_EPRC_MBRC unset),
- * on with OPENIMP_EPRC_MBRC=1 from the second picture (the OEM's first
- * picture has none), IMP_Encoder_SetMbRC (HWEncoderParams.mb_rc) switches
- * it from the next picture. */
+/* eprc macroblock rate control: on by default as the OEM (#986;
+ * OPENIMP_EPRC_MBRC unset or 1) from the second picture (the OEM's first
+ * picture has none), off with OPENIMP_EPRC_MBRC=0; IMP_Encoder_SetMbRC
+ * (HWEncoderParams.mb_rc) switches it from the next picture. */
 static void test_eprc_mbrc(void)
 {
     HWEncoderParams params;
@@ -2101,9 +2101,9 @@ static void test_eprc_mbrc(void)
     unsetenv("OPENIMP_T21_EPRC");
     for (k = 0; k < 2u; k++) {
         if (k)
-            setenv("OPENIMP_EPRC_MBRC", "1", 1);
-        else
             unsetenv("OPENIMP_EPRC_MBRC");
+        else
+            setenv("OPENIMP_EPRC_MBRC", "0", 1);
         memset(&params, 0, sizeof(params));
         params.width = 640;
         params.height = 360;
