@@ -3173,18 +3173,13 @@ api_links:
   issues:
   - 45
   functions:
-  - alloc_init
-  - alloc_unit
   - Buf_Alloc
   - Buf_CreatePool
   - Buf_DestroyPool
   - Buf_Free
   - Buf_Paddr2Vaddr
   - Buf_Vaddr2Paddr
-  - create_units
-  - destroy_units
   - DQbuffer
-  - free_unit
   - ISPOSD_Alloc
   - MemPool_GetById
   - MemPool_InitPool
@@ -3737,18 +3732,13 @@ api_links:
   issues:
   - 60
   functions:
-  - alloc_init
-  - alloc_unit
   - Buf_Alloc
   - Buf_CreatePool
   - Buf_DestroyPool
   - Buf_Free
   - Buf_Paddr2Vaddr
   - Buf_Vaddr2Paddr
-  - create_units
-  - destroy_units
   - DQbuffer
-  - free_unit
   - ISPOSD_Alloc
   - MemPool_GetById
   - MemPool_InitPool

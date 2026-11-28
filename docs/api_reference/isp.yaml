@@ -1640,6 +1640,12 @@ functions:
     returns: "0xfffff009 when the mode is not offline, 0xfffff008 when `OfflineInit(1)` did not open the node, 0xfffff004 for NULL."
     notes: "The job protocol behind an open node is not implemented yet (0xfffff001); with the open module the node never exists."
     soc: "T32, T33"
+  ISP_LDC_OfflineCreateJobExt:
+    group: ldc
+    summary: "Creates an offline LDC job with separate source and destination sizes (full-featured variant of `OfflineCreateJob`)."
+    returns: "0xfffff008 when the node is not open, otherwise 0xffffffff."
+    notes: "Not supported on T32 (the vendor 2.2.0 library logs and answers 0xffffffff on the T32 device kind, header: not supported on T32V); OpenIMP does the same. Not exported by the T33 build."
+    soc: "T32"
   ISP_LDC_OfflineDestroyJob:
     group: ldc
     summary: "Destroys an offline LDC job by its handle."
