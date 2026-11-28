@@ -69,6 +69,8 @@ typedef struct {
     int type;                   /* picture type of the last FRAME_START (2 IDR) */
     int mb_flags;               /* the MB map carried flags at the last FRAME_START */
     T33Pending pend;            /* run-time changes for the next IDR */
+    uint32_t umap, umap_n;      /* region 0: the SetChnMapRoi copy (T32, #977) */
+    uint32_t qmap, qmap_n;      /* region 0: the SetChnQpgAI copy (T32, #977) */
 } T32Rc33;
 
 /* Arena and i264e_param_default for a @width x @height channel; the caller
@@ -80,6 +82,11 @@ unsigned t32_rc33_param_words(const uint16_t **words);
 void t32_rc33_close(T32Rc33 *c);
 /* a 32-bit / 8-bit word of the i264e parameter block */
 void t32_rc33_set(T32Rc33 *c, uint32_t off, uint32_t v);
+/* #977: the SetChnMapRoi map of @size bytes into the parameter block (P+0x250..0x258) */
+void t32_rc33_set_map(T32Rc33 *c, const uint8_t *map, uint32_t size);
+/* #977: SetChnQpgAIEnable (@on) and the SetChnQpgAI map (P+0x25c, 0x260..0x26d) */
+void t32_rc33_set_qpgai(T32Rc33 *c, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h,
+                        uint8_t fore, uint8_t mark);
 void t32_rc33_set8(T32Rc33 *c, uint32_t off, uint8_t v);
 uint32_t t32_rc33_get(T32Rc33 *c, uint32_t off);
 /* i264e_validate_parameters: the clamps of the words the controller reads */

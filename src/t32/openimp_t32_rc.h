@@ -132,6 +132,11 @@ int t32_rc_idr_params(T32Rc *rc, unsigned flags, const uint32_t trig[2], const u
 uint32_t t32_rc_get_param(T32Rc *rc, uint32_t off);
 /* ROI regions (#726): 16 records of 9 bytes into the parameter block's ROI table */
 void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9]);
+/* #977 SetChnMapRoi (T32 H.264): the map into the parameter block (vendor i264e_reconfig flag 4) */
+void t32_rc_map_roi(T32Rc *rc, const uint8_t *map, uint32_t size);
+/* #977 SetChnQpgAIEnable / SetChnQpgAI (T32 H.264): the enable and the map into the parameter block */
+void t32_rc_qpgai(T32Rc *rc, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h, uint8_t fore,
+                  uint8_t mark);
 /* the picture's intra-refresh (GDR) fields to the controller (#784; T33 H.265 too) */
 /* the picture's P-skip fields to the controller (#784; T33 H.265 too) */
 void t32_rc_pskip(T32Rc *rc, uint32_t thr, uint8_t en, uint8_t req, uint32_t max_frames);

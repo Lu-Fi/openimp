@@ -770,16 +770,13 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32
         rc->have_stash = 1;
         rc->width = width;
         rc->height = height;
-#ifndef PLATFORM_T33
-        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
-            t32_rc33_close(c);
-            free(c);
-            return 0;
-        }
-#endif
         /* T33 (#790): vendor 2.0.2.1 i264e_encode calls i264e_ratecontrol_start
          * in every mode, FIXQP too (0x7a924, no mode test): the controller picks
-         * the fixed QPs and draws the intra-refresh bands */
+         * the fixed QPs and draws the intra-refresh bands.  T32 (#977): vendor
+         * 2.2.0 the same (i264e_encode 0x87be0 -> i264e_ratecontrol_start 0x88f0c,
+         * whose only test is the HW revision P+4 in 4..7, not the mode): at FIXQP
+         * the row RC of SetQpgMode(ROWRC) + RcTrigLevel, the skipped picture of
+         * RequestPskip and the SetChnMapRoi / QpgAI maps come from it */
         t32_rc33_init(c);
         if (t32_rc_params(m, width, height, gop, fps_num, fps_den, &p) == 0)
             rc->params = p;     /* for the log line only */
@@ -840,12 +837,6 @@ int t32_rc_reconfig(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, ui
     rc->height = height;
     rc->mode = (int)m->rcMode;
     rc->i_min = rc->i_max = -1;
-#ifndef PLATFORM_T33
-    if (m->rcMode == IMP_ENC_RC_MODE_FIXQP) {
-        rc->pend = pend;        /* the fixed QPs of a per-picture bound: t32_rc_fixqp_take */
-        return 0;
-    }
-#endif
     c = calloc(1, sizeof(*c));
     if (!c || t32_rc33_open(c, width, height) != 0) {
         free(c);
@@ -1096,6 +1087,19 @@ void t32_rc_roi(T32Rc *rc, const uint8_t rec[16][9])
             else if (rc->t65)
                 t32_rc65_set8(rc->t65, 0x110 + 9 * i + j, rec[i][j]);
         }
+}
+
+void t32_rc_map_roi(T32Rc *rc, const uint8_t *map, uint32_t size)
+{
+    if (rc->on && rc->t33 && map && size)
+        t32_rc33_set_map(rc->t33, map, size);
+}
+
+void t32_rc_qpgai(T32Rc *rc, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h, uint8_t fore,
+                  uint8_t mark)
+{
+    if (rc->on && rc->t33)
+        t32_rc33_set_qpgai(rc->t33, on, map, size, w, h, fore, mark);
 }
 
 int t32_rc_fixqp_take(T32Rc *rc, int *qp_i, int *qp_p)

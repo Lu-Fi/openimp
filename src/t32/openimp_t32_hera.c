@@ -207,6 +207,17 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
             return rd32(sl + 0x2c4) ? v : v & ~(1u << 23);
         case EFE_FRM_QP:                /* QP, MB QP min, max (vendor: s+0x153; the slice header's QP) */
             return (sl[0x18] & 0x1fu) | qp << 8 | (uint32_t)sl[0x826] << 16 | (uint32_t)sl[0x825] << 24;
+        /* #977: vendor 2.2.0 H264E_T32V_SliceInit (0x48968, revision 6 branch at 0x4a0xx / 0x4d9xx):
+         * the EFE control word and the EMC enables from the slice block (s+0x159 the byte map of
+         * SetChnMapRoi, s+0x112 the ROI map of SetChnQpgAI) */
+        case 0x20038u:
+            return (uint32_t)(sl[0x152] + sl[0x159] * 2u + sl[0x15b] * 4u + sl[0x15f] * 8u + sl[0x160] * 0x10u +
+                              sl[0x172] * 0x20u + rd32(sl + 0xe8) * 0x40u + sl[0x15c] * 0x100u +
+                              sl[0x15d] * 0x10000u + (uint32_t)(int32_t)(int8_t)sl[0x15e] * 0x1000000u);
+        case 0x90000u:
+            return 3u | (sl[0x260] & 1u) << 2 | (sl[0x261] & 1u) << 3 | (sl[0x262] & 1u) << 4 |
+                   (sl[0x263] & 1u) << 5 | (sl[0x264] & 1u) << 7 | (sl[0x159] & 1u) << 9 |
+                   (sl[0x860] & 1u) << 11 | (sl[0xcc] & 1u) << 13 | (sl[0x112] & 1u) << 15;
         case EFE_MBQP_CFG:
             return (sl[0x52a] & 1u) << 22 | (sl[0x76f] & 0x3fu) << 16 | (sl[0x76e] & 0x3fu) << 10 |
                    (sl[0x76d] & 1u) << 9 | (sl[0x112] & 1u) << 8 | (sl[0x113] & 0xfu) << 4 |

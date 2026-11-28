@@ -85,6 +85,9 @@ void OpenIMP_T32_EncSections(int jpeg, uint32_t jpeg_bs, uint32_t *section_kb, u
 #include "t32/openimp_t32_ivdc.h"
 #include "t32/openimp_t32_vpu.h"
 #include "t32/openimp_t32_enc_e1.h"
+#ifndef PLATFORM_T33
+int OpenIMP_T32_EncQpgAIOn(int encChn);         /* SetChnQpgAIEnable (openimp_t32_fs_enc_ext.c) */
+#endif
 #include "t32/openimp_t32_gdr.h"
 
 #if !defined(PLATFORM_T32)
@@ -806,6 +809,21 @@ static void rc_setup(struct t32_enc_chn *e, const IMPEncoderAttrRcMode *m, int a
     int r = (again ? t32_rc_reconfig : t32_rc_init)(&a->rc, m, at->encAttr.picWidth, at->encAttr.picHeight,
                                                     at->encAttr.bufSize, a->gop, a->rc_num, a->rc_den, e->hevc);
 
+#ifndef PLATFORM_T33
+    /* #977: a new controller keeps the SetChnMapRoi map (vendor: P+0x250.. survive i264e_ratecontrol_init) */
+    if (r == 0 && !e->hevc) {
+        const uint8_t *mp;
+        uint32_t ms;
+
+        T32E1QpgAI qa;
+
+        (void)OpenIMP_T32_E1MapTake(chn_no(e), 0, &mp, &ms);
+        t32_rc_map_roi(&a->rc, mp, ms);
+        (void)OpenIMP_T32_E1QpgAITake(chn_no(e), 0, &qa);
+        t32_rc_qpgai(&a->rc, OpenIMP_T32_EncQpgAIOn(chn_no(e)), qa.map, qa.size, qa.width, qa.height, qa.fore,
+                     qa.mark);
+    }
+#endif
     if (r != 0)
         IMP_LOG_WARN(TAG, "rate control init failed: fixed QP %d", a->qp_p);
     else if (a->rc.on)
@@ -952,6 +970,21 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
         qp = q;
     if (roi_new && !e->hevc)
         t32_rc_roi(&a->rc, roi);
+#ifndef PLATFORM_T33
+    /* #977 SetChnMapRoi: the same i264e_reconfig flag 4 after the start, for the next picture */
+    if (!e->hevc) {
+        const uint8_t *mp;
+        uint32_t ms;
+
+        T32E1QpgAI qa;
+
+        if (OpenIMP_T32_E1MapTake(chn_no(e), 1, &mp, &ms))
+            t32_rc_map_roi(&a->rc, mp, ms);
+        if (OpenIMP_T32_E1QpgAITake(chn_no(e), 1, &qa) && qa.map)     /* flag 0x200000 */
+            t32_rc_qpgai(&a->rc, OpenIMP_T32_EncQpgAIOn(chn_no(e)), qa.map, qa.size, qa.width, qa.height,
+                         qa.fore, qa.mark);
+    }
+#endif
     return qp;
 }
 

@@ -25,6 +25,18 @@ int OpenIMP_T32_E1AtIdr(int encChn, T32Vui *vui);
 void OpenIMP_T32_E1AutoVui(int encChn, int hevc);   /* IMP_Encoder_SetAutoVui, per frame (#930) */
 size_t OpenIMP_T32_E1Sei(int encChn, int hevc, uint8_t *out, size_t cap);
 int OpenIMP_T32_E1RoiTake(int encChn, uint8_t rec[16][9]);
+#ifndef PLATFORM_T33
+/* #977: 1 when SetChnMapRoi gave a new H.264 map not yet taken (@take: mark it taken);
+ * @map / @size: the channel's map copy (NULL / 0: none) */
+int OpenIMP_T32_E1MapTake(int encChn, int take, const uint8_t **map, uint32_t *size);
+/* #977: the channel's SetChnQpgAI map (map NULL: none), 1 when not yet taken */
+typedef struct {
+    const uint8_t *map;
+    uint32_t size, width, height;
+    uint8_t fore, mark;
+} T32E1QpgAI;
+int OpenIMP_T32_E1QpgAITake(int encChn, int take, T32E1QpgAI *q);
+#endif
 
 /* what the next IDR's headers / pictures carry (#784): the crop window (SPS frame cropping /
  * conformance window) and the H.264 chroma QP offset (PPS, HERA) */

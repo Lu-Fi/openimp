@@ -63,12 +63,16 @@ static uint32_t mb_map(uint32_t w, uint32_t h)
 int t32_rc33_open(T32Rc33 *c, uint32_t width, uint32_t height)
 {
     uint32_t map = mb_map(width, height), mbs = ((width + 15) >> 4) * ((height + 15) >> 4);
-    uint32_t wb = A_MAPS + 8 * map, size = wb - R0 + 0x4000 + mbs * 64;
+    uint32_t wb = A_MAPS + 8 * map, size = wb - R0 + 0x4000 + mbs * 64 + 5 * map;   /* + the MapRoi / QpgAI copies (#977) */
     uint32_t u = (((width + 0x1f) >> 5) * ((height + 0x1f) >> 5) * 4 + 0xfu) & ~0xfu;
     uint32_t ssize = u * 2 + 0x7b0;
     E33 *X;
 
     memset(c, 0, sizeof(*c));
+    c->umap = R0 + size - 5 * map;
+    c->umap_n = map;
+    c->qmap = c->umap + map;
+    c->qmap_n = 4 * map;
     c->mem = calloc(1, size);
     c->state = calloc(1, ssize);
     if (!c->mem || !c->state) {
@@ -129,6 +133,43 @@ void t32_rc33_set(T32Rc33 *c, uint32_t off, uint32_t v)
     E33 *X = &c->X;
 
     SP32(off, v);
+}
+
+/* #977 SetChnMapRoi (T32): vendor 2.2.0 i264e_reconfig_roi_set (0x7fae0) kind 1 and
+ * i264e_reconfig flag 4: P+0x250 = 1, P+0x254 = the copy, P+0x258 = its size, which
+ * i264e_ratecontrol_start takes to P+0x7d0.. (the controller's cur+0x43c.. map) */
+void t32_rc33_set_map(T32Rc33 *c, const uint8_t *map, uint32_t size)
+{
+    E33 *X = &c->X;
+
+    if (!c->mem || !c->umap_n)
+        return;
+    memcpy(c->mem + (c->umap - R0), map, size < c->umap_n ? size : c->umap_n);
+    SP8(0x250, 1);
+    SP32(0x254, c->umap);
+    SP32(0x258, size);
+}
+
+/* #977 SetChnQpgAI (T32): P+0x25c the channel's SetChnQpgAIEnable (vendor 2.2.0
+ * channel_i264e_encoder_init 0xe56cc: chn+0x1644 -> P+0x25c); with @map the
+ * i264e_reconfig flag 0x200000 words P+0x260 map, +0x264 / +0x268 its width / height,
+ * +0x26c / +0x26d the modes, which i264e_ratecontrol_start turns into P+0xb3c..0xb42 */
+void t32_rc33_set_qpgai(T32Rc33 *c, int on, const uint8_t *map, uint32_t size, uint32_t w, uint32_t h,
+                        uint8_t fore, uint8_t mark)
+{
+    E33 *X = &c->X;
+
+    if (!c->mem)
+        return;
+    SP8(0x25c, on != 0);
+    if (!map || !c->qmap_n)
+        return;
+    memcpy(c->mem + (c->qmap - R0), map, size < c->qmap_n ? size : c->qmap_n);
+    SP32(0x260, c->qmap);
+    SP32(0x264, w);
+    SP32(0x268, h);
+    SP8(0x26c, fore);
+    SP8(0x26d, mark);
 }
 
 void t32_rc33_set8(T32Rc33 *c, uint32_t off, uint8_t v)
