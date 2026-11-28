@@ -145,6 +145,8 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint8_t mq;                         /* #784: H.265 MotionQuality from the last IDR on */
     T32VpuBuf list, ring, ebs, aux[T32_HERA5_AUX];
     T32VpuBuf grey;                     /* #788: Color2Grey chroma plane (0x80), T33 */
+    uint32_t grey_fail;                 /* #788: the plane size whose allocation failed (logged once) */
+    int grey_warned;                    /* #788: "no effect on IVDC pictures" logged */
     T32H264Seq seq;
     T32H265Seq seq5;
     uint8_t vps[T32_H265_PARAM_MAX], sps[T32_H265_PARAM_MAX], pps[T32_H265_PARAM_MAX];
@@ -518,9 +520,18 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
     e->vpu.node.vtype = e->hevc ? 0x80u : e->h264 ? 0x91u : 0u;
 }
 
-/* #788 (beyond vendor, T33): Color2Grey.  Vendor 2.0.2.1 writes a user-space address into the HERA chroma
- * source EFE_RAWC; here the engine reads a real DMA plane of 0x80 (neutral chroma), stride = the source
- * stride, height/2 rows, so the coded picture is grey whatever the source chroma holds. */
+/* #788 (beyond vendor, T33): Color2Grey.  Vendor 2.0.2.1 (i264e_idr_reconfig 0x72314: c_alloc of ALIGN16(w) *
+ * ALIGN16(h) / 2 bytes, memset 127, flag off when the allocation fails 0x723d4; i264e_reconfig 0x71918 puts it in
+ * as the picture's chroma) hands the HERA a user-space address as EFE_RAWC.  Here the engine reads a real DMA
+ * plane of 0x80 (neutral chroma, stride x height/2), so the coded picture is grey whatever the source chroma holds.
+ * Device runs 2026-11-28 (T33L):
+ * - the plane is a cached mapping: written back after the memset, else the engine read stale DDR (QEMU has no
+ *   cache, so only the camera showed it);
+ * - the plane must cover every byte the engine reads: a chroma stride of 0 with a one-row buffer is NOT "repeat
+ *   the row", the engine read past the buffer (top of rmem = end of DDR) and the bus hang reset the camera;
+ * - IVDC direct mode: with any EFE_RAWC other than the IVDC chroma the engine codes that picture and then stops
+ *   (the IVDC chroma lines are not consumed): an IVDC picture keeps its chroma, Color2Grey has no effect there;
+ * - an allocation that fails (1080p in buffered mode: 1 MB, 496 KB rmem left) is not retried every picture. */
 static void enc_grey_source(struct t32_enc_chn *e, uint32_t stride, uint32_t h, uint32_t *c)
 {
 #ifdef PLATFORM_T33
@@ -528,13 +539,25 @@ static void enc_grey_source(struct t32_enc_chn *e, uint32_t stride, uint32_t h, 
 
     if (!OpenIMP_T32_E1GreyChroma(chn_no(e)))
         return;
-    if (e->avc.grey.size < need) {
-        OpenIMP_T32_VpuBufFree(&e->avc.grey);
-        if (OpenIMP_T32_VpuBufAlloc(&e->avc.grey, need, "t33_grey_c") != 0)
-            return;                     /* no buffer: keep the source chroma */
-        memset(t32_vpu_buf_va(&e->avc.grey), 0x80, e->avc.grey.size);
+    if (*c == OI_T32_IVDC_SRC_C) {
+        if (!e->avc.grey_warned)
+            IMP_LOG_WARN(TAG, "chn %d: Color2Grey has no effect on IVDC pictures (direct mode)", chn_no(e));
+        e->avc.grey_warned = 1;
+        return;
     }
-    *c = t32_vpu_buf_pa(&e->avc.grey);
+    if (e->avc.grey.size < need) {
+        if (e->avc.grey_fail >= need)
+            return;                     /* this size failed already (logged once): keep the source chroma */
+        OpenIMP_T32_VpuBufFree(&e->avc.grey);
+        if (OpenIMP_T32_VpuBufAlloc(&e->avc.grey, need, "t33_grey_c") != 0) {
+            e->avc.grey_fail = need;
+            return;
+        }
+        memset(t32_vpu_buf_va(&e->avc.grey), 0x80, e->avc.grey.size);
+        OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&e->avc.grey), e->avc.grey.size, OI_T32_VPU_FLUSH_WBACK);
+    }
+    if (e->avc.grey.size >= need)       /* guard: never a plane smaller than what the engine reads */
+        *c = t32_vpu_buf_pa(&e->avc.grey);
 #else
     (void)e; (void)stride; (void)h; (void)c;
 #endif
@@ -2933,17 +2956,26 @@ int IMP_Encoder_UnRegisterChn(int encChn)
 int IMP_Encoder_StartRecvPic(int encChn)
 {
     struct t32_enc_chn *e;
-    int rc = -1, grp = -1, fs = -1;
+    int rc = -1, grp = -1, fs = -1, started;
 
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
     if (e && e->registered)
         grp = e->grp;
+    started = e && e->recv;
     pthread_mutex_unlock(&enc_lock);
-    /* IVDC direct mode (#301): a channel fed by FrameSource channel 0
-     * (also through OSD) codes its pictures over IVDC */
-    if (grp >= 0 && OpenIMP_T32_IvdcMode())
+    /* the FrameSource channel feeding the group (also through OSD); IVDC direct mode (#301): a channel fed
+     * by FrameSource channel 0 codes its pictures over IVDC */
+    if (grp >= 0)
         fs = OpenIMP_T32_FsSourceOf(DEV_ID_ENC, grp);
+    /* #993: vendor 2.0.2.1 IMP_Encoder_StartRecvPic 0xe46bc (T32 2.2.0 0xdd9e4 the same): a started channel
+     * returns 0 at once (chn +0x148 != 0, 0xe474c); otherwise it walks the binds up to a FrameSource
+     * (system_get_bind_src loop 0xe47a4..0xe47b4) and, without one, returns 0x80048000 (0xe47c0/0xe47c8)
+     * and keeps the channel stopped */
+    if (grp >= 0 && !started && fs < 0) {
+        IMP_LOG_ERR(TAG, "StartRecvPic chn %d: group %d has no bound source", encChn, grp);
+        return (int)0x80048000;
+    }
 
     pthread_mutex_lock(&enc_lock);
     e = chn_get(encChn);
