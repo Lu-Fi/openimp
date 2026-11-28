@@ -103,7 +103,7 @@ check: $(YUVRC_BIN) $(DBK_BIN) $(ENCQ_BIN) $(TEST_BIN) $(HERA_BIN) $(RC_BIN) $(R
 	$(ACODEC_BIN)
 	# H.264 (#293) and H.265 (#294) on HERA: command lists + parameter sets / slice
 	# headers vs vendor 2.2.0
-	gzip -dc vendor-2.2.0-hera-h264.txt.gz vendor-2.2.0-hera-h265.txt.gz > $(BUILD)/t32-hera-lists.txt
+	gzip -dc vendor-2.2.0-hera-h264.txt.gz vendor-2.2.0-hera-h265.txt.gz vendor-2.2.0-hera-noshare.txt.gz > $(BUILD)/t32-hera-lists.txt
 	$(HERA_BIN) $(BUILD)/t32-hera-lists.txt vendor-2.2.0-h264-headers.txt vendor-2.2.0-h265-headers.txt
 	for p in T32 T31 T41 T23; do $(CC) $(PROFILE_FLAGS) -DPLATFORM_$$p -I$(PROJECT_DIR)/include \
 		encoder_profile_test.c || exit 1; done; echo "encoder profile numbering (T32 2.x, T31/T41/T23): ok"

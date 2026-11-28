@@ -278,20 +278,22 @@ static uint32_t h265_field(const T32HeraH265Pic *p, uint32_t reg, uint32_t v, co
         return 0xfc000001u | (p->after_p ? 1u << 11 : 0u);
     case MCE_FRM_STRD:
         return rs << 16 | rs;
-    case MCE_RLUT_Y:
-        return p->ring_y;
+    case MCE_RLUT_Y:                    /* no share: the reconstruction (vendor 2.2.0, QEMU, #99 row 37) */
+        return p->noshare ? p->recon_y : p->ring_y;
     case MCE_RLUT_C:
-        return p->ring_c;
+        return p->noshare ? p->recon_c : p->ring_c;
     case MCE_BFSH_ADRY:
         return p->ref_y;
     case MCE_BFSH_ADRC:
         return p->ref_c;
     case MCE_BOTM_ID:                   /* 64-row units from the reference to the ring's end, - 1 */
+        if (p->noshare)
+            return 0x3fu;
         return (p->ring_y_end - p->ref_y) / rs / 64u - 1u;
     case JRFD_CTRL:
-        return BUF_SHARE | h16 << 14 | w;
+        return (p->noshare ? 0u : BUF_SHARE) | h16 << 14 | w;
     case ODMA_CTRL:
-        return BUF_SHARE | h << 14 | w;
+        return (p->noshare ? 0u : BUF_SHARE) | h << 14 | w;
     case JRFD_REF_Y:                    /* an I list names the ring's base */
         return p->p_frame ? p->ref_y : p->ring_y;
     case JRFD_REF_C:

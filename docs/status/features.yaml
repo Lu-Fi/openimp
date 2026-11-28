@@ -1708,9 +1708,10 @@ features:
       text: '~0.57 MB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 173 / 504 against 1063 / 328 / 1024 (file / xz / RAM, KB).'
     T32:
       sym: 📋
-      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-28 (#99, size measurement, `strip --strip-unneeded` on both sides, PRJ007 thingino toolchain, QEMU / host only): OpenIMP T32 build (build-t32.sh, next 3757bc23) 777 / 233 / 952 KB (file / xz / text+data+bss) against the vendor libimp 2.2.0 of the PRJ007 image 2089 / 562 / 2168 KB (same measurement as the T33 row, beyond-vendor row ''libimp.so smaller than the vendor libimp'', user OK 2026-11-14). A measurement of the build, no device needed: symbol change proposed to the main session. No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
+      - 99
     T33:
       sym: ✅+
       text: '2026-11-21 (size measurement, `strip --strip-unneeded` on both sides, PRJ007 thingino toolchain): OpenIMP T33 build (build-t33.sh, next 892ff9aa) 777 / 233 / 978 KB (file / xz / text+data+bss) against the vendor libimp 2.0.2.1 of the T33L image 2096 / 563 / 2432 KB. The OpenIMP build runs on the T33L module (main + sub streams, apitest). Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14).'
@@ -1759,9 +1760,10 @@ features:
       - 231
     T32:
       sym: 📋
-      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-28 (#99, size measurement, `strip --strip-unneeded`): driver/t32 tx-isp-t32.ko of the 3.10.14 PRJ007 image (open-tx-isp e437fc877, md5 92b3b236) 857 KB file / 257 KB xz / 857 KB text+data+bss; the only vendor tx-isp-t32.ko at hand is the 4.4.94 build of the QEMU reference rootfs with 1217 / 318 / 974 KB (other kernel: not like for like). The loaded size on .136 (`/proc/modules` against the vendor module) is in audit/t32t33-rows-1128/DEVICE_PLAN.md. No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
+      - 99
     T33:
       sym: ✅+
       text: '2026-11-21 (size measurement, `strip --strip-unneeded` on both sides, T33 3.10 kernel): open tx-isp-t33.ko (open-tx-isp next 24780fd88, md5 89ed310e) 904 KB file, 275 KB xz, 994 KB text+data+bss against the vendor tx-isp-t33.ko 1532 / 294 / 1265 KB; loaded on the T33L .122: `lsmod` 1,073,030 B against the vendor module''s 1,428,423 B (#684 vendor run). Beyond-vendor row: open-tx-isp BEYOND_VENDOR.md ''Kernel module smaller than the vendor module'' (user OK 2026-11-14).'
@@ -1844,9 +1846,10 @@ features:
       text: not in this SoC's encoder (vendor has none either)
     T32:
       sym: 📋
-      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-28 (#99, QEMU): IMP_Encoder_SetRdBufShare(0) before CreateChn works like vendor 2.2.0 (before: stored, no effect): ODMA / JRFD control without BUF_SHARE, ring registers 0, every picture into one of two whole pictures in turn (ALIGN16 w x h x 3 / 2, the reference is the other one), MCE 0x30078 = 0x3f, the H.264 list without the reference look-up 0x30800 / 0x30804 (H.265 keeps it, = reconstruction). QEMU -M ingenic-t32 1920x1080, CBR and FIXQP 25, H.264 and H.265, 5 pictures each: command lists equal to vendor 2.2.0 in every non-address word (928 / 857 pairs; share-on lists unchanged); host vectors tests/t32/vendor-2.2.0-hera-noshare.txt.gz. QEMU only, no device run: no symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
+      - 980
     T33:
       sym: ✅
       text: '2026-11-21: IMP_Encoder_SetRdBufShare(0) clears BUF_SHARE like the vendor (#736). No symbol change. Earlier: 2026-11-21 (#736): default = vendor 2.0.2.1 (BUF_SHARE set, the compressed shared area; QEMU lists equal). `IMP_Encoder_SetRdBufShare(0)` before CreateChn now switches to two whole reconstruction pictures like the vendor: QEMU -M ingenic-t33 1280x720 H.264 and H.265 lists equal to the vendor in every non-address word (BUF_SHARE off, area registers 0, 0x30004 / 0x301c0 / 0x30048 / 0x10188 as the vendor). T33L .122: 1080p H.264 / H.265 with share on and off decode clean with the same picture (SSIM 0.97..0.99 per frame index). Branch claude/t33-rdbufshare-736.'
@@ -2152,9 +2155,10 @@ features:
       text: '2026-10-27: `GetChnEvalInfo` returns the header layout of `IMPEncoderStreamInfo` (`iNumBytes` first, then the counters, QP at 28/30/32) instead of the vendor''s one-word-shifted bytes: beyond vendor, a deliberate ABI difference a streamer must not compensate for (AVC: iNumBytes 3993 of a 4003-byte access unit; JPEG: size and quality 75); apitest enc on the T31L camera PASS 122 / FAIL 0. Earlier: ditto'
     T32:
       sym: 📋
-      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-28 (#99, QEMU, T32_ENC_QUERY probe against vendor 2.2.0): IMP_Encoder_Query words curPacks / leftStreamBytes (stream buffer size minus the last stream''s length, kept through GetStream / ReleaseStream) / leftStreamFrames follow the vendor for H.264, H.265 and JPEG (was: sum of the queued streams); the JPEG stream buffer is capped at the JPEG limit (512000 / SetJpegBsSize) like vendor 2.2.0 (jms=1, jms=0, default and jbs=200000 equal) instead of 3.1 MB; JPEG work_done 1. Open: leftPics / work_done of H.264 (vendor 1 / 0 on every probe line, ours 0 / 1) depend on the encode timing of the QEMU model, not equal yet. No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
+      - 981
     T33:
       sym: ✅
       text: '2026-11-21 (QEMU, #741): JPEG IMP_Encoder_Query words (leftStreamBytes, curPacks, leftStreamFrames, work_done) like vendor 2.0.2.1, 12 of 12 Query lines equal. No symbol change. Earlier: 2026-11-21: IMP_Encoder_Query work_done / curPacks (#738) and the stream buffer size (#740) as vendor 2.0.2.1; JPEG Query words still open (#741). No symbol change. Earlier: 2026-11-21 (#738): `IMP_Encoder_Query` follows the vendor 2.0.2.1 encoder thread: curPacks of the last coded stream (IDR 3, P 1), kept after GetStream / ReleaseStream, work_done 0 only while a picture is coded; QEMU 720p equal to the vendor, T33L 1080p 60/60. leftStreamBytes = stream buffer size - stream length as the vendor, but the buffer size itself differs (vendor ~1.39 MB at 720p, OpenIMP 921600; #740). Branch claude/t33-query-738.'
@@ -2194,10 +2198,11 @@ features:
       text: 'beyond vendor: `IMP_Encoder_Set/GetChnRoiAttr` through the AVPU macroblock QP table (H.264 only), device-tested: delta -10 gives 2.7x the bit rate, a relative -20 is clamped to -19, absolute 51 blurs the region, 0 decoder errors in 20 VA-API checks; 2026-10-10: 20 phases valid in VA-API and strict ffmpeg (`-err_detect`); known deviation: under FixQP 42 an absolute 5 or relative -25 window drives the P-frames to QP about 14 almost frame-wide (bit rate about x4, stream valid); `OPENIMP_T31_ROI=0` refuses the call'
     T32:
       sym: 📋
-      text: '2026-11-21: SetChnROI wired as on the T33 (#734). No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      text: '2026-11-28 (#99, QEMU against vendor 2.2.0, 2 regions, H.264 CBR): all HERA lists equal in every non-address word, the ROI registers 0x20054 / 0x20064 / 0x20068 / 0x200c0 included; the vendor applies the new regions in picture 12, OpenIMP in picture 11 (twice, reproducible): one picture early, open. Device ROI check in audit/t32t33-rows-1128/DEVICE_PLAN.md. No symbol change. Earlier: 2026-11-21: SetChnROI wired as on the T33 (#734). No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
       - 734
+      - 982
     T33:
       sym: ✅
       text: '2026-11-21: SetChnROI feeds the regions into the controller and the EFE ROI like vendor 2.0.2.1 (#726). No symbol change. Earlier: 2026-11-21 (#726): `IMP_Encoder_SetChnROI` regions reach the controller''s ROI table and the EFE ROI registers like vendor 2.0.2.1 (record per region as `IMP_Encoder_SetChnROI` 0xfc8c4; H.264 after the start like `i264e_reconfig`, H.265 before rcStart like `ReconfigPFrame`; lists take 0x200c0, 0x20054..0x200a0 and the ROI bit of 0x2029c from the slice block). QEMU -M ingenic-t33 CBR 1080p, two regions: vendor and OpenIMP lists equal job for job apart from buffer addresses (H.264, H.265). T33L device: abs QP 45 / QP 18 regions blur / sharpen exactly the region (Sobel edge level 4.74 -> 0.89 and 4.98 -> 12.33 H.264, 8.31 -> 0.46 and 8.41 -> 12.55 H.265), streams decode clean. FIXQP channels keep the stored regions (no controller).'

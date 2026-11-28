@@ -260,9 +260,9 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
     case EFE_QPG_DLT:
         return hera_qpg_dlt(qp);
     case JRFD_CTRL:
-        return BUF_SHARE | JRFD_BIT30 | h << 14 | w;
+        return (p->noshare ? 0u : BUF_SHARE) | JRFD_BIT30 | h << 14 | w;
     case ODMA_CTRL:
-        return BUF_SHARE | h << 14 | w;
+        return (p->noshare ? 0u : BUF_SHARE) | h << 14 | w;
     case JRFD_REF_Y:                    /* an I list names the ring's base */
         return p->p_frame ? p->ref_y : p->ring_y;
     case JRFD_REF_C:
@@ -290,6 +290,8 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
     case MCE_BFSH_ADRC:
         return p->ref_c;
     case MCE_BOTM_ID: {                 /* 64-row units from the reference to the ring's end, - 1 */
+        if (p->noshare)                 /* vendor 2.2.0, no shared ring: 0x3f (QEMU, #99 row 37) */
+            return 0x3fu;
         uint32_t rows = (p->ring_y_end - p->ref_y) / t32_hera_ring_stride(w);
         return rows / 64u - 1u;
     }
@@ -348,6 +350,9 @@ size_t t32_hera_h264_list(const T32HeraH264Pic *p, uint32_t *list)
         uint32_t def = p->p_frame ? e->vp : e->vi;
 
         if (!(e->when & want))
+            continue;
+        /* SetRdBufShare(0): the vendor 2.2.0 H.264 list has no reference look-up (QEMU, #99 row 37) */
+        if (p->noshare && (e->reg == MCE_RLUT_Y || e->reg == MCE_RLUT_C))
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->reg == SDE_CTX_TBL ? e->reg + 4u * k : e->reg;

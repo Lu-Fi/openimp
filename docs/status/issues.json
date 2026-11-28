@@ -6900,7 +6900,7 @@
   {
    "number": 703,
    "title": "[T30] NCU bin in the vendor 1.0.5 layout (0xec8, SDK sensor-iq) not supported, falls back to Temper",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/703",
    "labels": [
     "enhancement",
@@ -7738,7 +7738,7 @@
   {
    "number": 803,
    "title": "[T33] Vendor 2.0.2.1 SetYuvAlign fails EnableChn, SetFrameDepthCopyType(1) frames unreadable (QEMU); OpenIMP only stores both",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/803",
    "labels": [
     "area:FrameSource",
@@ -7858,7 +7858,7 @@
   {
    "number": 865,
    "title": "QEMU T32: apitest enc area sometimes stops delivering pictures from SetChnQpBounds on (2 of 5 runs)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/865",
    "labels": [
     "soc:T32"
@@ -7992,7 +7992,7 @@
   {
    "number": 921,
    "title": "T33: FrameSource dequeues 23 buffers for 12 GetFrame frames (vendor 12)",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/921",
    "labels": [
     "area:FrameSource",
@@ -8479,7 +8479,7 @@
   {
    "number": 961,
    "title": "T32: a second IMP_FrameSource_GetFrame before ReleaseFrame is refused by OpenIMP, vendor 2.2.0 returns 0",
-   "state": "open",
+   "state": "closed",
    "url": "https://github.com/Lu-Fi/openimp/issues/961",
    "labels": [
     "severity:low",
@@ -8488,6 +8488,260 @@
    "created": "2026-11-27T18:49:51Z",
    "closed": null,
    "milestone": "Release 1"
+  },
+  {
+   "number": 965,
+   "title": "[T30] encoder rate drop: vendor keep mask from the frame's sensor rate (encoder_get_fps_mask 0xb6524), OpenIMP paces by wall clock (cross-SoC of #921)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/965",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T30",
+    "type:gap"
+   ],
+   "created": "2026-11-27T21:11:27Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 967,
+   "title": "[T40] encoder source rate: vendor takes the frame's sensor rate (on_encoder_group_data_update 0x74ae0), OpenIMP paces by wall clock (cross-SoC of #921)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/967",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T40",
+    "type:gap"
+   ],
+   "created": "2026-11-27T21:11:36Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 968,
+   "title": "[T41] encoder source rate: vendor takes the frame's sensor rate (FUN_0004272c), OpenIMP paces by wall clock (cross-SoC of #921)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/968",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T41",
+    "type:gap"
+   ],
+   "created": "2026-11-27T21:11:42Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 969,
+   "title": "T32: CSCCR stream-on init refused section modes above 2 (PRJ007 day bin, mode 3)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/969",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-27T21:35:42Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 970,
+   "title": "T32: DECMP block not programmed at stream-on (vendor lib_tisp_init runs tisp_decmp_init)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/970",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-27T21:35:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 972,
+   "title": "T33: encoder takes a FrameSource channel of another size (CPU scaling like vendor c_resize_c)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/972",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-28T00:40:12Z",
+   "closed": null,
+   "milestone": "Release 1"
+  },
+  {
+   "number": 973,
+   "title": "T33: PadFrame with pad frames on: vendor answers 0x80044000 and stops the encoder",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/973",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T33",
+    "type:gap"
+   ],
+   "created": "2026-11-28T00:41:37Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 974,
+   "title": "[T31] main stream loses one frame per 30 s run in the 2-channel push case (vendor none)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/974",
+   "labels": [
+    "area:Encoder",
+    "repo:openimp",
+    "severity:low",
+    "soc:T31",
+    "type:bug"
+   ],
+   "created": "2026-11-28T00:43:18Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 975,
+   "title": "T32: PM mode, FrameSource_PM_Resume, WDR_OPEN took the wrong chip-class path vs vendor 2.2.0; LDC CreateJobExt and the FrameSource LDC attribute calls were missing (QEMU A/B, #99)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/975",
+   "labels": [
+    "area:ISP",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-28T01:12:57Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 976,
+   "title": "T32: SetChnCrop, H.264/H.265 TransCfg and the RC setters were stored only; CBR restart, VUI reset and H.265 chroma words differ from vendor 2.2.0 (QEMU A/B, #99)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/976",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:bug"
+   ],
+   "created": "2026-11-28T01:14:22Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 977,
+   "title": "T32 encoder: RequestPskip, MapRoi, QpgMode ROWRC + RcTrigLevel and the H.265 first-IDR word differ from vendor 2.2.0 in QEMU (#99)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/977",
+   "labels": [
+    "area:Encoder",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-28T01:15:38Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 978,
+   "title": "T32: FrameSource LDC channel attribute (Expand / UpdateChnLut) is stored only, the EnableChn LDC job and the per-frame submit are not ported (#99)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/978",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:openimp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-28T01:15:55Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 979,
+   "title": "T32: ExternInject_EnableChn fails on the vendor library with the open module in QEMU (Failed to get format of fr), OpenIMP succeeds (#99)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/979",
+   "labels": [
+    "area:FrameSource",
+    "prio:long-term",
+    "repo:open-tx-isp",
+    "severity:low",
+    "soc:T32",
+    "type:gap"
+   ],
+   "created": "2026-11-28T01:15:59Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 980,
+   "title": "T32: IMP_Encoder_SetRdBufShare(0) is ignored, lists keep BUF_SHARE (cross-SoC of #736)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/980",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-28T01:37:08Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 981,
+   "title": "T32: IMP_Encoder_Query words and the JPEG stream buffer size differ from vendor 2.2.0 (cross-SoC of #738 / #740 / #741)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/981",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-28T01:37:09Z",
+   "closed": null,
+   "milestone": null
+  },
+  {
+   "number": 982,
+   "title": "T32: SetChnROI takes effect one picture earlier than vendor 2.2.0 (QEMU)",
+   "state": "open",
+   "url": "https://github.com/Lu-Fi/openimp/issues/982",
+   "labels": [
+    "severity:low",
+    "soc:T32"
+   ],
+   "created": "2026-11-28T01:37:10Z",
+   "closed": null,
+   "milestone": null
   }
  ]
 }

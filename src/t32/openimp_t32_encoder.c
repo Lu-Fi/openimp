@@ -78,8 +78,8 @@
 #include "t32/openimp_t33_hera.h"
 #include "t32/openimp_t33_hera_h265.h"
 #include "t32/openimp_t33_sections.h"
-int OpenIMP_T32_EncTakeRdBufShareOff(int encChn);    /* openimp_t32_fs_enc_ext.c: SetRdBufShare(0) */
 #endif
+int OpenIMP_T32_EncTakeRdBufShareOff(int encChn);    /* openimp_t32_fs_enc_ext.c: SetRdBufShare(0) */
 int OpenIMP_T32_EncJpegMultiSection(void);           /* openimp_t32_fs_enc_ext.c: SetJpegMultiSectionMode */
 void OpenIMP_T32_EncSections(int jpeg, uint32_t jpeg_bs, uint32_t *section_kb, uint32_t *bytes);   /* #784 group 3 */
 #include "t32/openimp_t32_ivdc.h"
@@ -161,9 +161,9 @@ struct t32_h264 {                       /* H.264 / H.265 channel state */
     uint32_t hdr_set;                   /* HERA v1.6: the header set the next picture writes */
     uint32_t odma_y, odma_c;            /* HERA ODMA write position after the last picture */
     uint32_t recon_y, recon_c;          /* the last picture's reconstruction (the next reference) */
-    int noshare;                        /* SetRdBufShare(0) before CreateChn (#736) */
-    uint32_t pp;                        /* no share: the picture buffer the next picture writes */
 #endif
+    int noshare;                        /* SetRdBufShare(0) before CreateChn (#736; T32: #99 row 37) */
+    uint32_t pp;                        /* no share: the picture buffer the next picture writes */
     int bs_engine;                      /* ebs is the engine's shared buffer: 1 HERA, 2 JPEG */
     /* vendor GetChnAttrRcMode reads the encoder's live parameters (i264e_get_param 3 =
      * i264e_reconfig_rc_get, +0xdc..), which the run-time setters change only at the next IDR
@@ -205,8 +205,7 @@ struct t32_enc_chn {
     int ivdc;                           /* fed by the IVDC direct channel (#301) */
     int yuv;                            /* stand-alone context (YuvInit / InputJpege, #752): no channel number */
     int yuv_mq;                         /* #784: MotionQuality_Yuv on for the next picture (H.265 P lists) */
-#ifdef PLATFORM_T33
-    /* IMP_Encoder_Query of vendor 2.0.2.1 (#738): the encoder thread writes
+    /* IMP_Encoder_Query of vendor 2.0.2.1 / 2.2.0 (#738; T32 H.264 / H.265: #99 row 44): the encoder thread writes
      * the channel's status words after every picture (0xdd6bc / 0xdebf4:
      * packs and the stream buffer size minus the stream's length), work_done
      * 0 while a picture is coded and 1 otherwise (0xdd140 / 0xdd36c, CreateChn
@@ -215,8 +214,7 @@ struct t32_enc_chn {
      * the stream semaphore) only after its stream-ready notify (bal 0xdb1e0,
      * words at 0xdc504..0xdc520), and never sets work_done back to 1 */
     uint32_t q_packs, q_bytes, q_frames;
-    int q_done, q_post;                 /* q_post: JPEG picture notified, words pending */
-#endif
+    int q_done, q_post;                 /* q_post: JPEG picture notified, words pending (T33) */
 };
 
 struct t32_enc_grp {
@@ -1104,6 +1102,25 @@ static void pskip_take(struct t32_enc_chn *e, T32Rc *rc)
     t32_rc_pskip(rc, ps.thr, ps.en, ps.req, ps.max_frames);
 }
 
+#ifndef PLATFORM_T33
+/* SetRdBufShare(0), vendor libimp 2.2.0 (QEMU lists, 1920x1080 H.264 and H.265, #99 row 37): no shared
+ * ring; every picture is written into one of two whole pictures (luma ALIGN16 w x ALIGN16 h, chroma
+ * after it) in turn, the other one is the reference, the ring registers are 0. */
+static void t32_noshare_pics(const struct t32_h264 *a, uint32_t w, uint32_t h, uint32_t *ring_y, uint32_t *ring_y_end,
+                             uint32_t *ring_c, uint32_t *ring_c_end, uint32_t *recon_y, uint32_t *recon_c,
+                             uint32_t *ref_y, uint32_t *ref_c)
+{
+    uint32_t base = t32_vpu_buf_pa(&a->ring), ysz = ALIGN16(w) * ALIGN16(h), pic = ysz * 3u / 2u;
+    uint32_t cur = base + (a->pp & 1u) * pic, ref = base + ((a->pp & 1u) ^ 1u) * pic;
+
+    *ring_y = *ring_y_end = *ring_c = *ring_c_end = 0;
+    *recon_y = cur;
+    *recon_c = cur + ysz;
+    *ref_y = ref;
+    *ref_c = ref + ysz;
+}
+#endif
+
 static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_enc_slot *s)
 {
     struct t32_h264 *a = &e->avc;
@@ -1153,6 +1170,16 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         p.recon_y = t32_hera_ring_prev(a->ref_y, p.ring_y, p.ring_y_end, rs * T32_HERA_RING_EXTRA);
         p.recon_c = t32_hera_ring_prev(a->ref_c, p.ring_c, p.ring_c_end, rs * T32_HERA_RING_EXTRA / 2u);
     }
+#ifndef PLATFORM_T33
+    if (a->noshare) {
+        uint32_t ry, rc2;
+
+        p.noshare = 1;
+        t32_noshare_pics(a, w, h, &p.ring_y, &p.ring_y_end, &p.ring_c, &p.ring_c_end, &p.recon_y, &p.recon_c, &ry, &rc2);
+        p.ref_y = idr ? 0 : ry;
+        p.ref_c = idr ? 0 : rc2;
+    }
+#endif
     p.bs0 = t32_vpu_buf_pa(&a->ebs);
     p.bs1 = p.bs0 + a->section_kb * 1024u;
     p.section_kb = a->section_kb;
@@ -1246,6 +1273,9 @@ static int h264_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_SBASE;   /* vendor 2.2.0: P = SBASE */
     a->ref_y = p.recon_y;
     a->ref_c = p.recon_c;
+#ifndef PLATFORM_T33
+    a->pp ^= 1u;                        /* no share (SetRdBufShare(0)): the other whole picture next */
+#endif
     a->have_ref = 1;
     a->pictures++;
     if (idr) {
@@ -1432,6 +1462,16 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
         p.recon_y = t32_hera_ring_prev(a->ref_y, p.ring_y, p.ring_y_end, rs * T32_HERA_RING_EXTRA);
         p.recon_c = t32_hera_ring_prev(a->ref_c, p.ring_c, p.ring_c_end, rs * T32_HERA_RING_EXTRA / 2u);
     }
+#ifndef PLATFORM_T33
+    if (a->noshare) {
+        uint32_t ry, rc2;
+
+        p.noshare = 1;
+        t32_noshare_pics(a, w, h, &p.ring_y, &p.ring_y_end, &p.ring_c, &p.ring_c_end, &p.recon_y, &p.recon_c, &ry, &rc2);
+        p.ref_y = idr ? 0 : ry;
+        p.ref_c = idr ? 0 : rc2;
+    }
+#endif
     p.bs0 = t32_vpu_buf_pa(&a->ebs);
     p.bs1 = p.bs0 + a->section_kb * 1024u;
     p.section_kb = a->section_kb;
@@ -1511,6 +1551,9 @@ static int h265_encode(struct t32_enc_chn *e, const IMPFrameInfo *f, struct t32_
     s->ref = idr ? IMP_Encoder_FSTYPE_IDR : IMP_Encoder_FSTYPE_SBASE;   /* vendor 2.2.0: P = SBASE */
     a->ref_y = p.recon_y;
     a->ref_c = p.recon_c;
+#ifndef PLATFORM_T33
+    a->pp ^= 1u;                        /* no share (SetRdBufShare(0)): the other whole picture next */
+#endif
     a->have_ref = 1;
     a->last_p = !idr;
     a->pictures++;
@@ -1546,9 +1589,7 @@ static void *enc_thread(void *arg)
         fs = g->fs_chn;
         e->pending = 0;
         e->busy = 1;
-#ifdef PLATFORM_T33
         e->q_done = 0;
-#endif
         si = slot_free_locked(e);       /* reserved by the sink */
         pthread_mutex_unlock(&enc_lock);
 
@@ -1577,10 +1618,12 @@ static void *enc_thread(void *arg)
             s->seq = e->seq++;
 #ifdef PLATFORM_T33
             if (e->h264) {
+#else
+            {                           /* T32 2.2.0 (QEMU): the JPEG words are there at the first poll, as H.264 */
+#endif
                 e->q_packs = (uint32_t)s->npacks;
                 e->q_bytes = s->length < e->bs_size ? e->bs_size - s->length : 0u;
             }
-#endif
             t32_encq_ready(&e->q, si);
             e->encoded++;
 #ifdef PLATFORM_T33
@@ -1617,6 +1660,8 @@ static void *enc_thread(void *arg)
 #ifdef PLATFORM_T33
         if (e->h264)
             e->q_done = 1;              /* JPEG: no +212 store (#741) */
+#else
+        e->q_done = 1;                  /* T32 2.2.0: work_done 1 after JPEG pictures too (QEMU) */
 #endif
         if (--g->refs == 0) {
             g->frame = NULL;
@@ -1832,7 +1877,14 @@ static uint32_t t33_bs_size(const IMPEncoderCHNAttr *a, int share)
     uint32_t w = a->encAttr.picWidth, h = a->encAttr.picHeight, size = a->encAttr.bufSize;
     uint32_t cap = enc_jpeg_bs_size ? enc_jpeg_bs_size : T32_JPEG_BS_1080P;
     double area = (double)w * (double)h * 3.0 * 0.5;
-    int jpeg = a->encAttr.enType == PT_JPEG, jcap = jpeg && !OpenIMP_T32_EncJpegMultiSection();
+    int jpeg = a->encAttr.enType == PT_JPEG;
+#ifdef PLATFORM_T33
+    int jcap = jpeg && !OpenIMP_T32_EncJpegMultiSection();
+#else
+    /* T32 2.2.0 CreateChn 0xdc240: the system variable at 0x205118 is 0 here, so the JPEG limit applies whatever the
+     * multi-section byte (QEMU, vendor 2.2.0: jms=1, jms=0 and default all give 512000, jbs=200000 gives 200000; #99 row 44) */
+    int jcap = jpeg;
+#endif
 
     if (!size) {
         size = (uint32_t)(area + 8192.0 + 128.0);
@@ -1975,6 +2027,12 @@ static int h264_setup(struct t32_enc_chn *e)
         t33_hera_ring_layout(w, ALIGN16(at->encAttr.picHeight), &r);
         ring_bytes = 2u * t33_noshare_bytes(w, at->encAttr.picHeight) + 2u * (r.hy + r.hc);
     }
+#else
+    /* SetRdBufShare(0) (#99 row 37, vendor 2.2.0): two whole pictures instead of the shared ring */
+    a->noshare = OpenIMP_T32_EncTakeRdBufShareOff(chn_no(e));
+    a->pp = 0;
+    if (a->noshare)
+        ring_bytes = 2u * ALIGN16(w) * ALIGN16(at->encAttr.picHeight) * 3u / 2u;
 #endif
     if (OpenIMP_T32_VpuBufAlloc(&a->list, T32_HERA_LIST_BYTES, "t32_hera_list") != 0 ||
         OpenIMP_T32_VpuBufAlloc(&a->ring, ring_bytes, "t32_hera_ring") != 0 ||
@@ -2110,9 +2168,7 @@ int IMP_Encoder_CreateChn(int encChn, IMPEncoderCHNAttr *attr)
     }
     memset(e, 0, sizeof(*e));
     e->created = 1;                     /* reserved; the rest outside the lock */
-#ifdef PLATFORM_T33
     e->q_done = 1;                      /* vendor CreateChn 0xe2ac0: work_done 1 */
-#endif
     e->attr = *attr;
     e->h264 = attr->encAttr.enType == PT_H264 || attr->encAttr.enType == PT_H265;
     e->hevc = attr->encAttr.enType == PT_H265;
@@ -2915,11 +2971,11 @@ int IMP_Encoder_Query(int encChn, IMPEncoderCHNStat *stat)
         stat->leftStreamFrames = (uint32_t)e->q.rcount;
         stat->curPacks = e->q.rcount ? e->slot[t32_encq_peek(&e->q, 0)].npacks : 0;
         stat->work_done = e->recv ? 0 : 1;
-#ifdef PLATFORM_T33
-        /* vendor 2.0.2.1 (#738): the words of the last coded picture */
+        /* vendor 2.0.2.1 / 2.2.0 (#738, #741): the words of the last coded picture */
         stat->leftStreamBytes = e->q_bytes;
         stat->curPacks = e->q_packs;
         stat->work_done = (uint32_t)e->q_done;
+#ifdef PLATFORM_T33
         if (!e->h264) {
             stat->leftStreamFrames = e->q_frames;
             if (e->q_post)

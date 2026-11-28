@@ -39,6 +39,7 @@ case "$SOC:$IP" in
   T31:*)   : ${SENSOR:=sc2336}; : ${I2C:=0x30}; : ${W:=1920}; : ${H:=1080};;
   T40:*)   : ${SENSOR:=sc830ai};: ${I2C:=0x30}; : ${W:=3840}; : ${H:=2160};;
   T41:*)   : ${SENSOR:=sc5336}; : ${I2C:=0x30}; : ${W:=2880}; : ${H:=1620};;     # sc5336 mode of the open driver (2592x1944 distorts the geometry cases)
+  T32:*)   : ${SENSOR:=gc4653}; : ${I2C:=0x29}; : ${W:=2560}; : ${H:=1440}; : ${EXTRA_ENV:=T32_NO_PROC=1};;   # PRJ007 module (T32NQ gc4653, #99)
   T33:*)   : ${SENSOR:=cv2005}; : ${I2C:=0x35}; : ${W:=1920}; : ${H:=1080}; : ${EXTRA_ENV:=T32_NO_PROC=1};;   # T33L module (bench), cv2005 PRJ008 mode
   *) echo "unknown SoC $SOC"; exit 2;;
 esac

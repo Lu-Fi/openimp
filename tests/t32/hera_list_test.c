@@ -61,6 +61,7 @@ static int check_list(const char *name, const uint32_t *v, size_t pairs)
     p.src_y = find(v, pairs, 0x2000c, 0);
     p.src_c = find(v, pairs, 0x20010, 0);
     p.src_stride = find(v, pairs, 0x20014, 0) & 0xffffu;
+    p.noshare = !(find(v, pairs, 0x10004, 0) >> 31);    /* SetRdBufShare(0): no BUF_SHARE, ring regs 0 */
     p.ring_y = find(v, pairs, 0x10030, 0);
     p.ring_c = find(v, pairs, 0x10034, 0);
     p.ring_y_end = find(v, pairs, 0x10038, 0);
@@ -134,6 +135,7 @@ static int check_list5(const char *name, const uint32_t *v, size_t pairs)
     p.src_y = find(v, pairs, 0x2000c, 0);
     p.src_c = find(v, pairs, 0x20010, 0);
     p.src_stride = find(v, pairs, 0x20014, 0) & 0xffffu;
+    p.noshare = !(find(v, pairs, 0x10004, 0) >> 31);    /* SetRdBufShare(0): no BUF_SHARE, ring regs 0 */
     p.ring_y = find(v, pairs, 0x10030, 0);
     p.ring_c = find(v, pairs, 0x10034, 0);
     p.ring_y_end = find(v, pairs, 0x10038, 0);
