@@ -624,3 +624,6 @@ Vendor 2.0.2.1 `IMP_Encoder_SetChnColor2Grey(chn, {1})` (setter 0xf80bc -> `i264
 
 ### 6.18 Encoder fps mask: timer fallback where the vendor fails (all p2 SoCs, 2026-11-28, #962-#968; approved by the user 2026-11-28)
 The vendor keep mask needs the sensor rate on the frame and a window of at most 64 frames; outside that the vendor encoder reports an error and codes nothing. OpenIMP falls back to the old wall-clock pacing there (unknown sensor rate, or len > 64), so the channel keeps coding. `OPENIMP_ENC_FPS_MASK=0` uses the timer everywhere. Status: approved by the user 2026-11-28 (beyond vendor, kept).
+
+### 6.19 T33 FrameSource Joint robustness (T33, 2026-11-28, #784; approved by the user 2026-11-28)
+Vendor 2.0.2.1 segfaults on GetFrame of a joint channel in copy mode, keeps waiting in a GetFrame after DisableChn and frees the joint pool in DestroyJoint while channels still use it. OpenIMP returns a copied frame, ends the wait on DisableChn and frees the pool after the last DisableChn. The joined picture itself needs open-tx-isp #1007 (MSCA stride, also beyond vendor).
