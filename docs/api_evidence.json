@@ -7891,7 +7891,7 @@
         "T23": "dev",
         "T30": "dev",
         "T31": "n.a.",
-        "T32": "cache",
+        "T32": "qemu",
         "T33": "dev",
         "T40": "n.a.",
         "T41": "n.a."
@@ -7901,12 +7901,13 @@
           "r†"
         ]
       },
-      "note": "T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetQpgMode: ret=0 initial 0; Encoder_SetQpgMode: ret=0 CRP (1), read back 1). T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (H.264 at once, H.265 from the next IDR; no range check like the vendor); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1): i264e_set_param 15 (i264e_reconfig_qpgmode_set 0x831b4, Ghidra) keeps the mode with flag 0x8000, i264e_reconfig (0x818e4) copies it to P+0x194 before each picture; only i264e_ratecontrol_init reads it (objdump 0x7b660, into the controller configuration), so it takes effect when the controller restarts (RcTrigLevel, SuperFrameCfg, SetChnAttrRcMode). OpenIMP (2026-11-22, #784 group 2) does the same for H.264 (t32_rc_idr_params). QEMU A/B (CBR, SetQpgMode 3 = ROWRC at picture 4): vendor vq3 = vendor vb4 (no restart, no effect), vendor vq3t (QpgMode 3 + RcTrigLevel restart) = vendor vtr = OpenIMP oq3t, 0 non-address HERA register differences in 30 jobs (rdiff address guard (values >= 0x01000000 with a zero low byte) masked only the buffer address registers 0x10008..0x1003c, 0x28008..0x2802c, 0x30070..0x3007c, 0x30800/4, 0x90008..0x90068; oq3t: none differed); H.265 vendor v5qg = v5b4 and v5q3s = v5sf (no visible effect), OpenIMP H.265 stores the mode.",
+      "note": "T21: kept without range check as the vendor libimp (nothing reads it there); apitest roundtrip PASS; real QPG after the release. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. QEMU T30 (sc4236 model, no camera): PASS (Encoder_GetQpgMode: ret=0 initial 0; Encoder_SetQpgMode: ret=0 CRP (1), read back 1). T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (H.264 at once, H.265 from the next IDR; no range check like the vendor); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1): i264e_set_param 15 (i264e_reconfig_qpgmode_set 0x831b4, Ghidra) keeps the mode with flag 0x8000, i264e_reconfig (0x818e4) copies it to P+0x194 before each picture; only i264e_ratecontrol_init reads it (objdump 0x7b660, into the controller configuration), so it takes effect when the controller restarts (RcTrigLevel, SuperFrameCfg, SetChnAttrRcMode). OpenIMP (2026-11-22, #784 group 2) does the same for H.264 (t32_rc_idr_params). QEMU A/B (CBR, SetQpgMode 3 = ROWRC at picture 4): vendor vq3 = vendor vb4 (no restart, no effect), vendor vq3t (QpgMode 3 + RcTrigLevel restart) = vendor vtr = OpenIMP oq3t, 0 non-address HERA register differences in 30 jobs (rdiff address guard (values >= 0x01000000 with a zero low byte) masked only the buffer address registers 0x10008..0x1003c, 0x28008..0x2802c, 0x30070..0x3007c, 0x30800/4, 0x90008..0x90068; oq3t: none differed); H.265 vendor v5qg = v5b4 and v5q3s = v5sf (no visible effect), OpenIMP H.265 stores the mode. T32 (2026-11-28, #977, commits 0b1d64ef / fb42cc99): QEMU T32 640x368 H.264 and H.265, FIXQP 110-picture sequence of all 32 setters plus CBR single setters (maproi, qpg3, trig, qpgai ...): HERA command lists equal to vendor 2.2.0 in every non-address word (H.265 RequestPskip excepted); cell cache -> qemu.",
       "ref": {
         "T21": "apitest agg63 2026-10-31 .24",
         "T23": "apitest agg47 2026-10-26 .30",
         "T30": "apitest T30X lab 2026-11-03 .231",
-        "T33": "apitest t33-cache d6 2026-11-22 .122 (OpenIMP, md5 62924dd4): PASS 379 FAIL 0; QEMU HERA vq3t = oq3t (CBR, QpgMode 3 + restart), v5q3s = v5sf (H.265)"
+        "T33": "apitest t33-cache d6 2026-11-22 .122 (OpenIMP, md5 62924dd4): PASS 379 FAIL 0; QEMU HERA vq3t = oq3t (CBR, QpgMode 3 + restart), v5q3s = v5sf (H.265)",
+        "T32": "QEMU 1127 #977 T32 PRJ007 H.264 / H.265 vendor 2.2.0 A/B 2026-11-28 (audit/t32t33-rows-1128)"
       }
     },
     "Encoder_Get/SetStreamBufSize": {
@@ -9018,16 +9019,17 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "cache",
+        "T32": "qemu",
         "T33": "cache",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "| T41 (vendor libimp 1.2.6 disassembly + device tests): stores the 10 windows / the map, the encoder builds the QP table before the next picture; works under CBR, VBR and, beyond the vendor, under FixQP (docs/ROI.md, roitest on the T41 test cameras 2026-10-18 and 2026-10-24) T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested (apitest enc): a 40x23 block map (one byte per 16x16 block of the 640x360 channel) is accepted and the stream keeps flowing, a map of the wrong size, the absolute mode and a quality of 26 are refused, a NULL map removes it. Return codes and stream flow only; the bit-rate effect is documented in docs/ROI.md. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (map NULL 0x80040010, type >= 2 0x80040002); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): i264e/i265e set_param 2 after IMP_Encoder_MappingTransform (ROI records) -> the vendor applies it; still cache in OpenIMP (port open in #784).",
+      "note": "| T41 (vendor libimp 1.2.6 disassembly + device tests): stores the 10 windows / the map, the encoder builds the QP table before the next picture; works under CBR, VBR and, beyond the vendor, under FixQP (docs/ROI.md, roitest on the T41 test cameras 2026-10-18 and 2026-10-24) T40 pass 2026-11-04 (Eufy T40XP, OpenIMP libimp of next loaded from /tmp, apitest): device-tested (apitest enc): a 40x23 block map (one byte per 16x16 block of the 640x360 channel) is accepted and the stream keeps flowing, a map of the wrong size, the absolute mode and a quality of 26 are refused, a NULL map removes it. Return codes and stream flow only; the bit-rate effect is documented in docs/ROI.md. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal (map NULL 0x80040010, type >= 2 0x80040002); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): i264e/i265e set_param 2 after IMP_Encoder_MappingTransform (ROI records) -> the vendor applies it; still cache in OpenIMP (port open in #784). T32 (2026-11-28, #977, commits 0b1d64ef / fb42cc99): QEMU T32 640x368 H.264 and H.265, FIXQP 110-picture sequence of all 32 setters plus CBR single setters (maproi, qpg3, trig, qpgai ...): HERA command lists equal to vendor 2.2.0 in every non-address word (H.265 RequestPskip excepted); cell cache -> qemu.",
       "ref": {
         "T41": "apitest t41pass 2026-11-04 .34",
         "T40": "apitest t40pass 2026-11-04 .184",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)",
+        "T32": "QEMU 1127 #977 T32 PRJ007 H.264 / H.265 vendor 2.2.0 A/B 2026-11-28 (audit/t32t33-rows-1128)"
       },
       "better": [
         "T41"
@@ -20484,15 +20486,16 @@
         "T23": "n.a.",
         "T30": "n.a.",
         "T31": "n.a.",
-        "T32": "cache",
+        "T32": "qemu",
         "T33": "no-op",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "QEMU 0731/751 yuv_devtest s/sq/c/cq A/B 2026-11-25 (#781, audit/issue781): vendor 2.0.2.1 streams equal with/without map"
+        "T33": "QEMU 0731/751 yuv_devtest s/sq/c/cq A/B 2026-11-25 (#781, audit/issue781): vendor 2.0.2.1 streams equal with/without map",
+        "T32": "QEMU 1127 #977 T32 PRJ007 H.264 / H.265 vendor 2.2.0 A/B 2026-11-28 (audit/t32t33-rows-1128)"
       },
-      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): code equal (0x80048000 without SetChnQpgAIEnable); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): i264e_set_param 21 (i264e_reconfig_qpgai_set 0x843f4: map copied, per-picture P+0x260 ..; see #781) -> the vendor applies it; still cache in OpenIMP (port open in #784). T33 (#781, 2026-11-25): vendor 2.0.2.1 keeps the map in malloc memory (i264e_reconfig_qpgai_set 0x743f4 -> i264e_reconfig 0x71a28 -> i264e_ratecontrol_start 0x7bd10); QEMU fresh-boot A/B: SMART, CBR and H.265 streams byte-identical with and without the map, per-MB QP unchanged, no HERA register carries it; OpenIMP stores it the same way -> no-op (#784)."
+      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): code equal (0x80048000 without SetChnQpgAIEnable); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): i264e_set_param 21 (i264e_reconfig_qpgai_set 0x843f4: map copied, per-picture P+0x260 ..; see #781) -> the vendor applies it; still cache in OpenIMP (port open in #784). T33 (#781, 2026-11-25): vendor 2.0.2.1 keeps the map in malloc memory (i264e_reconfig_qpgai_set 0x743f4 -> i264e_reconfig 0x71a28 -> i264e_ratecontrol_start 0x7bd10); QEMU fresh-boot A/B: SMART, CBR and H.265 streams byte-identical with and without the map, per-MB QP unchanged, no HERA register carries it; OpenIMP stores it the same way -> no-op (#784). T32 (2026-11-28, #977, commits 0b1d64ef / fb42cc99): QEMU T32 640x368 H.264 and H.265, FIXQP 110-picture sequence of all 32 setters plus CBR single setters (maproi, qpg3, trig, qpgai ...): HERA command lists equal to vendor 2.2.0 in every non-address word (H.265 RequestPskip excepted); cell cache -> qemu."
     },
     "Encoder_SetChnQpgAIEnable": {
       "area": "Encoder",
