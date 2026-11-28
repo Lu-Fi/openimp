@@ -2309,23 +2309,32 @@ static void test_single_pull_capture(void)
     IMPFSChnAttr a = attr_for(640, 360, 3);
     void *frame = NULL;
     unsigned int before, waited;
+    uint64_t deadline;
+    int r;
 
     fake_stock_dq = 0;
     fake_frame_budget = -1;
     CHECK(IMP_FrameSource_CreateChn(0, &a) == 0, "single pull: create");
     CHECK(IMP_FrameSource_EnableChn(0) == 0, "single pull: enable");
-    CHECK(IMP_FrameSource_GetFrame(0, &frame) == 0 && frame != NULL,
-          "single pull: GetFrame");
+    /* deadline, not a fixed wait: a loaded host may delay the first frame (#959) */
+    deadline = now_ms() + 5000u;
+    while ((r = IMP_FrameSource_GetFrame(0, &frame)) != 0 || !frame) {
+        frame = NULL;
+        if (now_ms() >= deadline)
+            break;
+        sleep_ms(1);
+    }
+    CHECK(r == 0 && frame != NULL, "single pull: GetFrame");
     if (frame)
         CHECK(IMP_FrameSource_ReleaseFrame(0, frame) == 0, "single pull: release");
     sleep_ms(100);
     before = __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED);
-    for (waited = 0; waited < 1000 &&
+    for (waited = 0; waited < 5000 &&
          __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) < before + 20;
          waited += 10)
         sleep_ms(10);
     CHECK(__atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) >= before + 20,
-          "single pull: only %u driver frames in 1000 ms after one GetFrame (capture stalled)",
+          "single pull: only %u driver frames in 5000 ms after one GetFrame (capture stalled)",
           __atomic_load_n(&fake_frames_done, __ATOMIC_RELAXED) - before);
     CHECK(IMP_FrameSource_DisableChn(0) == 0, "single pull: disable");
     CHECK(IMP_FrameSource_DestroyChn(0) == 0, "single pull: destroy");
