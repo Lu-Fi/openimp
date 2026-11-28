@@ -182,6 +182,10 @@ static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
             *v += ((uint32_t)(sl[0x57 + 7u * (i0 + i)] & 0x3fu) << 2 | (sl[0x56 + 7u * (i0 + i)] & 3u)) << (8u * i);
         return 1;
     }
+    if (reg >= 0x40400u && reg <= 0x4047cu) {  /* #977: 32 refresh mask words from s+0x430 (H265E_T32V_SliceInit) */
+        *v = rd32(sl + 0x430 + (reg - 0x40400u));
+        return 1;
+    }
     switch (reg) {
     case 0x20038u:      /* #977: bit 1 the ROI QP table on (s+0x1c8, H265E_T32V_SliceInit revision 6) */
         *v = (*v & ~2u) | (sl[0x1c8] & 1u) << 1;
@@ -236,6 +240,34 @@ static uint32_t h265_cqp(int c, uint32_t reg, uint32_t v)
         return v | ((uint32_t)c & 0xffu) << 20;
     case 0x50004u:
         return v | ((uint32_t)c & 0xfu) << 24;
+    }
+    return v;
+}
+
+/* #977 RequestPskip (revision 6): the bits of the controller's skipped picture; vendor 2.2.0
+ * H265E_T32V_SliceInit reads the same slice bytes as the T33 one (openimp_t33_hera_h265.c
+ * t33_h265_skip_bits: 0x20020 s+0xe0 / +0xe4, 0x20304 s+0x4b0 / +0x4b3, 0x30000 s+0x422, 0x40020
+ * s+0x4b1 / +0x4b2, 0x40164 s+0x4b5, 0x40234 s+0x4c8 / +0x4ca / +0x4cc, 0x40240 s+0x513, 0x40284
+ * s+0x536 / +0x535); only these bits, the rest stays the list's */
+static uint32_t h265_skip_bits(const uint8_t *sl, uint32_t reg, uint32_t v)
+{
+    switch (reg) {
+    case 0x20020u:
+        return (v & 0xffu) | ((uint32_t)sl[0xe0] | (uint32_t)sl[0xe1] << 8) << 16 | (uint32_t)sl[0xe4] << 8;
+    case 0x20304u:
+        return (v & ~0xf0u) | (sl[0x4b0] & 1u) << 7 | (sl[0x4b3] & 7u) << 4;
+    case 0x30000u:
+        return (v & ~(1u << 16)) | (sl[0x422] & 1u) << 16;
+    case 0x40020u:
+        return (v & ~3u) | (sl[0x4b1] & 1u) << 1 | (sl[0x4b2] & 1u);
+    case 0x40164u:
+        return (v & ~(1u << 19)) | (sl[0x4b5] & 1u) << 19;
+    case 0x40234u:
+        return (v & 0x1fffffffu) | (sl[0x4c8] & 1u) << 29 | (sl[0x4ca] & 1u) << 30 | (uint32_t)(sl[0x4cc] & 1u) << 31;
+    case 0x40240u:
+        return (v & 0x7fffffffu) | (uint32_t)(sl[0x513] & 1u) << 31;
+    case 0x40284u:
+        return (v & ~(1u << 18 | 1u)) | (sl[0x536] & 1u) << 18 | (sl[0x535] & 1u);
     }
     return v;
 }
@@ -388,6 +420,8 @@ size_t t32_hera_h265_list(const T32HeraH265Pic *p, uint32_t *list)
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
             uint32_t v = h265_cqp(p->chroma_qp_offset, e->reg, h265_field(p, e->reg, def, st, k));
 
+            if (rc_slice6(p))
+                v = h265_skip_bits(rc_slice6(p), e->reg, v);
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
                 return 0;
             list[2 * n] = v;

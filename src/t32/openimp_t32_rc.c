@@ -1062,10 +1062,8 @@ void t32_rc_pskip(T32Rc *rc, uint32_t thr, uint8_t en, uint8_t req, uint32_t max
 {
     if (rc->on && rc->t33)
         t32_rc33_set_pskip(rc->t33, thr, en, req, max_frames);
-#ifdef PLATFORM_T33
-    if (rc->on && rc->t65)
+    if (rc->on && rc->t65)      /* T32 too (#977: vendor 2.2.0 H.265 RequestPskip, QEMU A/B) */
         t32_rc65_set_pskip(rc->t65, thr, en, req, max_frames);
-#endif
 }
 
 void t32_rc_gdr(T32Rc *rc, uint8_t gate, uint8_t req, uint8_t en, uint32_t req_frames, uint32_t frames,
