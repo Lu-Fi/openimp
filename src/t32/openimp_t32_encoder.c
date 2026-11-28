@@ -497,6 +497,10 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
         *y = OI_T32_IVDC_SRC_Y;
         *c = OI_T32_IVDC_SRC_C;
         *stride = OI_T32_IVDC_STRIDE;
+    } else if (!e->yuv && OpenIMP_T32_FsFrameLayout(f->phyAddr, stride, c)) {
+        /* a frame in a FrameSource joint frame (#784, vendor frame +0xa0 UV / +0xa4 stride): the joint's stride
+         * and UV plane; the rows below belong to the joint (no padding) */
+        *y = f->phyAddr;
     } else {
         *stride = ALIGN16(f->width);
         *y = f->phyAddr;

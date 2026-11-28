@@ -53,6 +53,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,6 +106,9 @@ struct t32_fs_buf {
     int out;                    /* dequeued, not queued back yet */
     IMPDMABufferInfo i2d;       /* T32: the I2D output of this buffer (#445) */
     IMPDMABufferInfo ldc;       /* T32: the offline LDC output of this buffer (#978) */
+    uint32_t uv_off;            /* UV plane - Y plane of the picture (stride x ALIGN16(h), or the joint's) */
+    int jview;                  /* dma is a view into a joint frame (#784), not owned */
+    int jheld;                  /* sub channel of a joint: held until the joint frame is queued again */
 };
 
 enum { SLOT_FREE, SLOT_FILLING, SLOT_READY, SLOT_USER };
@@ -126,6 +130,9 @@ struct t32_fs_chn {
     int fd;
     /* geometry of the enabled channel */
     uint32_t width, height, stride, length, alloc;
+    /* the picture the sinks see: the channel's own, or the whole joint frame for a joint's output channel (#784) */
+    uint32_t pw, ph, pstride, palloc;
+    struct fs_joint *joint;     /* the joint the enabled channel writes into (#784), NULL none */
     int nbufs;
     struct t32_fs_buf buf[T32_FS_MAX_BUFS];
     pthread_t thread;
@@ -287,8 +294,8 @@ static void fs_fill_frame(const struct t32_fs_chn *c, int chn, int index,
     memset(f, 0, sizeof(*f));
     f->index = index;
     f->pool_idx = chn;
-    f->width = c->width;
-    f->height = c->height;
+    f->width = c->pw;               /* the joint size for a joint's output channel (#784) */
+    f->height = c->ph;
     f->pixfmt = PIX_FMT_NV12;
     f->size = c->length;
     f->phyAddr = c->direct ? OI_T32_IVDC_SRC_Y : d->phys_addr;
@@ -305,17 +312,21 @@ static void fs_fill_qbuf(const struct t32_fs_chn *c, struct t32_fs_buf *b, int i
     q->memory = T32_BUF_MEMORY_USERPTR;
     q->m = c->direct ? OI_T32_IVDC_SRC_Y : b->dma.phys_addr;
     q->length = c->length;
-    q->uv_addr = c->direct ? 0 : b->dma.phys_addr + c->stride * ALIGN_UP(c->height, 16);
-    q->stride = c->stride;
+    q->uv_addr = c->direct ? 0 : b->dma.phys_addr + b->uv_off;
+    q->stride = c->direct ? c->stride : c->pstride;     /* a joint's stride (#784) */
     q->state = 1;
     q->geom = c->height << 16 | c->width;
     q->reserved = (uint32_t)(uintptr_t)b;
 }
 
+static void fs_joint_requeue_locked(struct t32_fs_chn *c, struct t32_fs_buf *b);
+
 static int fs_qbuf(struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
     T32IocBuffer q = b->q;
 
+    if (c->joint)
+        fs_joint_requeue_locked(c, b);
     if (FS_IOCTL(c->fd, QBUF, &q) < 0)
         return -1;
     b->out = 0;
@@ -326,7 +337,7 @@ static int fs_qbuf(struct t32_fs_chn *c, struct t32_fs_buf *b)
 /* bytes of one GetFrame depth copy: the I2D output when the channel turns its frames */
 static uint32_t fs_slot_size(const struct t32_fs_chn *c)
 {
-    return c->i2d_on && c->i2d_geom.dst_size > c->alloc ? c->i2d_geom.dst_size : c->alloc;
+    return c->i2d_on && c->i2d_geom.dst_size > c->palloc ? c->i2d_geom.dst_size : c->palloc;
 }
 
 /* no-copy depth (#784): give the slot's capture buffer back (queued again once nobody holds it) */
@@ -375,6 +386,8 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
 /* attribute the running channel works with: the EnableChn snapshot (vendor 2.2.0 SetChnAttr only stores, #938) */
 #define FS_LIVE(c) ((c)->enabled ? &(c)->attr_run : &(c)->attr)
 
+#include "t32/openimp_t32_fs_joint.inc"
+
 /* ---- frame thread ------------------------------------------------------- */
 /* No frame-rate drop here (#921): the vendor FrameSource hands every sensor frame on, whatever the channel's
  * outFrmRate.  T33 2.0.2.1: the DQBUF callback 0x134638 (DQBUF at 0x1346d8) only records the fps word
@@ -415,14 +428,14 @@ static const IMPDMABufferInfo *fs_pic_dma(const struct t32_fs_chn *c, const stru
 static void fs_pack_nv12(const struct t32_fs_chn *c, const struct t32_fs_buf *b, uint8_t *dst)
 {
     const uint8_t *y = (const uint8_t *)(uintptr_t)fs_pic_dma(c, b)->virt_addr;
-    const uint8_t *uv = y + c->stride * ALIGN_UP(c->height, 16);
+    const uint8_t *uv = y + b->uv_off;
     uint32_t r;
 
-    for (r = 0; r < c->height; r++)
-        memcpy(dst + r * c->width, y + r * c->stride, c->width);
-    dst += c->width * c->height;
-    for (r = 0; r < c->height / 2; r++)
-        memcpy(dst + r * c->width, uv + r * c->stride, c->width);
+    for (r = 0; r < c->ph; r++)
+        memcpy(dst + r * c->pw, y + r * c->pstride, c->pw);
+    dst += c->pw * c->ph;
+    for (r = 0; r < c->ph / 2; r++)
+        memcpy(dst + r * c->pw, uv + r * c->pstride, c->pw);
 }
 
 static void fs_packed_info(const struct t32_fs_chn *c, int chn, const struct t32_fs_buf *b,
@@ -430,10 +443,10 @@ static void fs_packed_info(const struct t32_fs_chn *c, int chn, const struct t32
 {
     *f = b->frame;
     f->pool_idx = chn;
-    f->width = c->width;
-    f->height = c->height;
+    f->width = c->pw;
+    f->height = c->ph;
     f->pixfmt = PIX_FMT_NV12;
-    f->size = c->width * c->height * 3 / 2;     /* vendor: w x h x 3/2 for NV12 */
+    f->size = c->pw * c->ph * 3 / 2;            /* vendor: w x h x 3/2 for NV12 */
     f->phyAddr = 0;
     f->virAddr = (uint32_t)(uintptr_t)data;
 }
@@ -451,7 +464,7 @@ static void fs_cache_feed(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
         e->valid = 0;           /* being refilled: GetTimedFrame skips it */
         c->cache_next = (c->cache_next + 1) % c->cache_cap;
         if (!e->data)
-            e->data = malloc(c->width * c->height * 3 / 2);
+            e->data = malloc(c->pw * c->ph * 3 / 2);
         if (!e->data)
             e = NULL;
     }
@@ -915,14 +928,18 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
          * the same driver, 640x360: vendor chroma aligned with the luma, ours shifted down by 8 chroma rows because the
          * UV plane followed ALIGN16(height) = 368 luma rows).  IMPFrameInfo has no stride, so pack when the capture
          * buffer is padded. */
-        if (!c->i2d_on && (c->stride != c->width || ALIGN_UP(c->height, 16) != c->height))
+        if (!c->i2d_on && (c->pstride != c->pw || ALIGN_UP(c->ph, 16) != c->ph))
             fs_pack_nv12(c, b, (uint8_t *)(uintptr_t)slot->dma.virt_addr);
+        else
+#else
+        if (!c->i2d_on && c->joint && (int)(c - fs_chn) != c->joint->out)
+            fs_joint_copy_sub(c, b, (uint8_t *)(uintptr_t)slot->dma.virt_addr);
         else
 #endif
         /* NV12 as captured: Y, then UV after ALIGN16(height) rows */
         memcpy((void *)(uintptr_t)slot->dma.virt_addr,
                (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : fs_pic_dma(c, b)->virt_addr),
-               c->i2d_on ? c->i2d_geom.dst_size : c->alloc);
+               c->i2d_on ? c->i2d_geom.dst_size : c->palloc);
         pthread_mutex_lock(&fs_lock);
         fs_fill_frame(c, chn, (int)(slot - c->slot), &slot->dma, &slot->frame);
         if (c->i2d_on)
@@ -1009,7 +1026,9 @@ static void *fs_thread(void *arg)
         b = &c->buf[q.index];
         b->out = 1;
         b->frame.timeStamp = (int64_t)fs_now_us();
-        if (!c->direct)
+        if (c->joint)
+            fs_joint_flush(c, b);
+        else if (!c->direct)
             DMA_RmemFlushCache((void *)(uintptr_t)b->dma.virt_addr, c->alloc, 2);
         pthread_mutex_lock(&fs_lock);
         c->frames++;
@@ -1026,6 +1045,8 @@ static void *fs_thread(void *arg)
         if (c->i2d_on)
             fs_i2d_run(c, b);
 #endif
+        if (c->joint)
+            fs_joint_frame(c, chn, b);  /* #784: the output channel waits for the joint frame */
         fs_deliver(chn, c, b);        /* every frame, no rate drop (#921) */
         pthread_mutex_lock(&fs_lock);
         if (c->direct)
@@ -1260,6 +1281,7 @@ static void fs_release_bufs_locked(struct t32_fs_chn *c)
 
     c->i2d_on = 0;
     c->ldc_on = 0;
+    fs_joint_detach_locked(c, (int)(c - fs_chn));      /* joint views are not ours to free (#784) */
     for (i = 0; i < T32_FS_MAX_BUFS; i++) {
         fs_free_dma(&c->buf[i].dma);
         fs_free_dma(&c->buf[i].i2d);
@@ -1362,10 +1384,17 @@ int IMP_FrameSource_EnableChn(int chnNum)
         goto fail_reqbufs;
     }
     c->nbufs = (int)rq.count;
+    for (i = 0; i < T32_FS_MAX_BUFS; i++) {
+        c->buf[i].uv_off = c->stride * ALIGN_UP(c->height, 16);
+        c->buf[i].jview = c->buf[i].jheld = 0;
+    }
+    /* a channel in a joint (#784, vendor VBMCreateJointPool): its buffers are views into the joint frames */
+    if (fs_joint_attach_locked(c, chnNum) < 0)
+        goto fail_bufs;
     for (i = 0; i < c->nbufs; i++) {
         struct t32_fs_buf *b = &c->buf[i];
 
-        if (!c->direct && fs_alloc_chn(chnNum, &b->dma, c->alloc) < 0)
+        if (!c->direct && !b->jview && fs_alloc_chn(chnNum, &b->dma, c->alloc) < 0)
             goto fail_bufs;
         fs_fill_frame(c, chnNum, i, &b->dma, &b->frame);
         fs_fill_qbuf(c, b, i);
@@ -1377,6 +1406,10 @@ int IMP_FrameSource_EnableChn(int chnNum)
     fs_ldc_arm_locked(c, chnNum);       /* before the I2D: LDC first, I2D on its output (vendor order) */
 #endif
     fs_i2d_arm_locked(c, chnNum);
+    if (c->joint && (c->i2d_on || c->ldc_on || c->rot_mode)) {
+        IMP_LOG_ERR(TAG, "EnableChn chn %d: a joint channel with I2D / LDC / rotation is not supported", chnNum);
+        goto fail_bufs;
+    }
     if (FS_IOCTL(c->fd, FRAME_STREAMON, &on) < 0)
         goto fail_bufs;
     c->enabled = 1;
