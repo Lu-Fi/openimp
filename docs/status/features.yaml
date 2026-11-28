@@ -1707,8 +1707,8 @@ features:
       sym: ✅+
       text: '~0.57 MB. Beyond-vendor row: OPENIMP_BEYOND_VENDOR.md ''libimp.so smaller than the vendor libimp'' (user OK 2026-11-14); docs/SIZE.md 2026-10-19, ours against vendor libimp: 453 / 173 / 504 against 1063 / 328 / 1024 (file / xz / RAM, KB).'
     T32:
-      sym: 📋
-      text: '2026-11-28 (#99, size measurement, `strip --strip-unneeded` on both sides, PRJ007 thingino toolchain, QEMU / host only): OpenIMP T32 build (build-t32.sh, next 3757bc23) 777 / 233 / 952 KB (file / xz / text+data+bss) against the vendor libimp 2.2.0 of the PRJ007 image 2089 / 562 / 2168 KB (same measurement as the T33 row, beyond-vendor row ''libimp.so smaller than the vendor libimp'', user OK 2026-11-14). A measurement of the build, no device needed: symbol change proposed to the main session. No symbol change. Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: ✅+
+      text: '2026-11-28 user decision: ✅+ on the build measurement (same rule as T33). 2026-11-28 (#99, size measurement, `strip --strip-unneeded` on both sides, PRJ007 thingino toolchain, QEMU / host only): OpenIMP T32 build (build-t32.sh, next 3757bc23) 777 / 233 / 952 KB (file / xz / text+data+bss) against the vendor libimp 2.2.0 of the PRJ007 image 2089 / 562 / 2168 KB (same measurement as the T33 row, beyond-vendor row ''libimp.so smaller than the vendor libimp'', user OK 2026-11-14). A measurement of the build, no device needed: Earlier: in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
       issues:
       - 300
       - 99
@@ -1931,8 +1931,8 @@ features:
       sym: —
       text: SOC_VPU not built
     T32:
-      sym: 📋
-      text: 'in development (T32, not a release gate), this function is not started yet: QEMU only (OpenIMP T32 build, vendor 2.x kernel ABI, open-tx-isp driver/t32), no T32 camera yet'
+      sym: —
+      text: '2026-11-28 user decision: not applicable. The T32 HERA / JPEG engines sit behind the vendor in-kernel /dev/soc_vpu of the PRJ007 kernel; the 3.10 Helix hardening patches (0097-0105) are not ported, no extra kernel patch planned. Earlier: in development, not started (QEMU only).'
       issues:
       - 300
     T33:
