@@ -183,6 +183,9 @@ static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
         return 1;
     }
     switch (reg) {
+    case EFE_FRM_QP:    /* #977: max s+0x1c2, min +0x1c3, QP +0x1c1, +0xbf9 (H265E_T32V_SliceInit 0x5xxxx: 0x8002001c) */
+        *v = (uint32_t)sl[0x1c2] << 24 | (uint32_t)sl[0x1c3] << 16 | (uint32_t)sl[0x1c1] << 8 | sl[0xbf9];
+        return 1;
     case EFE_ROI_EN:
         *v = 0;
         for (unsigned i = 0; i < 16u; i++)

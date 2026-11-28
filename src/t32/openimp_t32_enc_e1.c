@@ -521,6 +521,11 @@ int IMP_Encoder_SetH265TransCfg(int encChn, const IMPEncoderH265TransCfg *t)
         m = m < -12 ? -12 : m > 12 ? 12 : m;
         E1.trans265_pend.chroma_cr_qp_offset = m;
         E1.trans265_pend.chroma_cb_qp_offset = m;
+#ifndef PLATFORM_T33
+        /* #977: vendor 2.2.0 (QEMU A/B, FIXQP): the i265e rate control restarts at the next IDR (its
+         * first-IDR QP window 0x2001c) */
+        E1.rc_new |= T32_E1RC_RESTART;
+#endif
     }
     pthread_mutex_unlock(&e1_lock);
     return 0;

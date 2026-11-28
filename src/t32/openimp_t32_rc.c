@@ -729,7 +729,10 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32
             free(c);
             return -1;
         }
-        if (m->rcMode == IMP_ENC_RC_MODE_FIXQP ||
+        if (
+#ifdef PLATFORM_T33
+            m->rcMode == IMP_ENC_RC_MODE_FIXQP ||
+#endif
             t32_rc65_params(c, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, NULL) != 0) {
             t32_rc65_close(c);
             free(c);
