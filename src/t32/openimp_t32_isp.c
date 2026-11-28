@@ -169,11 +169,14 @@ int OpenIMP_T32_SystemInitDone(void)
 int IMP_OSD_Init_ISP(void);
 void IMP_OSD_Exit_ISP(void);
 void OpenIMP_T32_IspOsdModule(int up);
+void OpenIMP_T32_TimeStampInit(void);
 
 int IMP_System_Init(void)
 {
     pthread_mutex_lock(&t32.lock);
     if (!t32.system_init) {
+        /* vendor system_init: time stamps count from here (#994) */
+        OpenIMP_T32_TimeStampInit();
         /* FrameSource and encoder modules both learn whether the ISP feeds
          * the encoder directly (IVDC, the kernel's direct_mode; #301) */
         int fs_mode = OpenIMP_T32_IvdcDirect(), enc_mode = OpenIMP_T32_IvdcDirect();

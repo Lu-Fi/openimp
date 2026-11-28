@@ -85,25 +85,53 @@ int IMP_System_GetVersion(IMPVersion *pstVersion)
     return 0;
 }
 
-static int64_t ts_offset_us;
+/*
+ * Time stamps like the vendor (#994): vendor 2.2.0 / 2.0.2.1 keep one 64-bit
+ * timestamp_base (T33 2.0.2.1: .bss 0x2075d8, T32 2.2.0: 0x205648).
+ * system_init (T33 0x2d96c, T32 0x295dc) stores clock_gettime(4 =
+ * CLOCK_MONOTONIC_RAW) in us; system_gettime(0) (T33 0x2c1d8, T32 0x27e48)
+ * returns MONOTONIC_RAW - base, 0 when the clock fails; system_rebasetime
+ * (T33 0x2c448, T32 0x280b8) sets base = now - basets.  Before the first
+ * IMP_System_Init the base is 0 (absolute), like the vendor .bss.
+ */
+static int64_t ts_base_us;
 
-uint64_t IMP_System_GetTimeStamp(void)
+static int t32_raw_now_us(int64_t *us)
 {
     struct timespec ts;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts) != 0)
+        return -1;
+    *us = (int64_t)((uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u);
+    return 0;
+}
+
+/* called by IMP_System_Init (openimp_t32_isp.c) */
+void OpenIMP_T32_TimeStampInit(void)
+{
+    int64_t now;
+
+    if (t32_raw_now_us(&now) == 0)
+        ts_base_us = now;
+}
+
+uint64_t IMP_System_GetTimeStamp(void)
+{
+    int64_t now;
+
+    if (t32_raw_now_us(&now) != 0)
         return 0;
-    return (uint64_t)((int64_t)((uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u) + ts_offset_us);
+    return (uint64_t)(now - ts_base_us);
 }
 
 /* vendor: GetTimeStamp continues from the base given here (QEMU: base 5000000 -> 5000073 us later) */
 int IMP_System_RebaseTimeStamp(uint64_t basets)
 {
-    struct timespec ts;
+    int64_t now;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+    if (t32_raw_now_us(&now) != 0)
         return -1;
-    ts_offset_us = (int64_t)basets - (int64_t)((uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u);
+    ts_base_us = now - (int64_t)basets;
     return 0;
 }
 

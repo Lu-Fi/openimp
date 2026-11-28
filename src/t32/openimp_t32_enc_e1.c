@@ -894,7 +894,7 @@ int IMP_Encoder_SetChnRcTrigLevel(int encChn, uint32_t level, int mode)
     return rc;
 }
 
-#ifdef PLATFORM_T33
+/* T32 2.2.0 and T33 2.0.2.1 alike (#99: T32 QEMU A/B 2026-11-28, vendor 2.2.0 PadFrame 0xe7718 -> 0x80044000 at 0xe7a1c) */
 #define T33_ENC_ERR_PADQ ((int)0x80044000)
 
 /* SetPadFrameAttr(on) of an H.264 channel: the encoder codes no picture (see IMP_Encoder_PadFrame) */
@@ -909,7 +909,6 @@ int OpenIMP_T33_EncPadOn(int encChn)
     }
     return r;
 }
-#endif
 
 int IMP_Encoder_SetPadFrameAttr(int encChn, int enable, const void *attr)
 {
@@ -928,8 +927,8 @@ int IMP_Encoder_SetPadFrameAttr(int encChn, int enable, const void *attr)
 }
 
 /* vendor order: channel, frame, created and receiving, H.264 only (H.265: 0, frame kept), pad frames on.
- * T32: pad-frame encoding is not implemented: with pad frames on the frame is handed back (0x80040080).
- * T33: as the vendor 2.0.2.1 (see below): 0x80044000 and the encoder codes no picture while pad frames are on. */
+ * T32 / T33: as the vendor 2.2.0 / 2.0.2.1 (see below): 0x80044000 and the encoder codes no picture while
+ * pad frames are on. */
 int IMP_Encoder_PadFrame(int encChn, void *frame, void *priv, void (*release)(void *frame, void *priv))
 {
     T32EncChnInfo ci;
@@ -943,14 +942,12 @@ int IMP_Encoder_PadFrame(int encChn, void *frame, void *priv, void (*release)(vo
         pthread_mutex_lock(&e1_lock);
         int ok = e1_get(encChn, &ci) == 0;
         rc = !ok || !ci.recv ? T32_ENC_ERR_MODE : ci.codec != 1 ? 1 : T32_ENC_ERR_MODE;
-#ifdef PLATFORM_T33
-        /* 2.0.2.1 (0xfed28, Ghidra; QEMU A/B pad-v1): the pad queue (semaphore 0x2df0, depth chn+0x1458) is only
+        /* 2.0.2.1 (0xfed28, Ghidra; QEMU A/B pad-v1; T32 2.2.0 0xe7718 the same: sem_timedwait, 0x80044000 at 0xe7a1c): the pad queue (semaphore 0x2df0, depth chn+0x1458) is only
          * built by CreateChn, which reads the enable that SetPadFrameAttr can set only on a created channel:
          * with pad frames on the free-slot wait (__jz_video_sem_timedwait, timeout words 0) fails at once,
          * 0x80044000, the frame is handed back (release callback) */
         if (ok && ci.recv && ci.codec == 1 && E1.pad)
             rc = T33_ENC_ERR_PADQ;
-#endif
         pthread_mutex_unlock(&e1_lock);
         if (rc == 1)
             return 0;
