@@ -85,6 +85,18 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
     return 0;
 }
 void VBMWakeReaders(int chn) { (void)chn; }
+/* #974: StartRecvPic gives the ready frames published before it back */
+static unsigned int stub_tag = 7;
+static int stub_expire_calls, stub_expire_chn = -1;
+static unsigned int stub_expire_tag;
+unsigned int VBMReadyTag(int chn) { (void)chn; return stub_tag; }
+int VBMExpireReadyUpTo(int chn, unsigned int tag)
+{
+    stub_expire_calls++;
+    stub_expire_chn = chn;
+    stub_expire_tag = tag;
+    return 0;
+}
 int OpenIMP_T31_HwJpegActive(void) { return 0; }
 int openimp_t31_osd_apply(int group, void *frame) { (void)group; (void)frame; return 0; }
 int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
@@ -349,7 +361,12 @@ int main(void)
 
         memset(s, 0, sizeof(s));
         stub_out_max = 0;
+        stub_expire_calls = 0;
+        stub_tag = 7u + (unsigned int)n;
         r = up(n);
+        CHECK(stub_expire_calls == 1 && stub_expire_chn == 0 && stub_expire_tag == stub_tag,
+              "N=%d #974 StartRecvPic gave back old frames: calls %d chn %d tag %u", n, stub_expire_calls,
+              stub_expire_chn, stub_expire_tag);
         CHECK(r == 0, "N=%d up %d", n, r);
         h = hold_all(n, s, 6);
         printf("N=%d: held %d (vendor %d)\n", n, h, want);
@@ -376,7 +393,29 @@ int main(void)
         for (k = h - 1; k >= 0; k--)
             CHECK(IMP_Encoder_ReleaseStream(0, &s[k]) == 0, "N=%d release %d", n, k);
         CHECK(stub_released - rel0 == h + (h >= 2), "N=%d released %d", n, stub_released - rel0);
+        stub_expire_calls = 0;
         CHECK(IMP_Encoder_StartRecvPic(0) == 0, "N=%d restart", n);
+        CHECK(stub_expire_calls == 1, "N=%d #974 restart gave back old frames: calls %d", n, stub_expire_calls);
+        /* a second StartRecvPic of a receiving channel takes nothing from its own queue */
+        CHECK(IMP_Encoder_StartRecvPic(0) == 0 && stub_expire_calls == 1, "N=%d #974 repeated start: calls %d", n,
+              stub_expire_calls);
+        if (n == 0) {   /* #974: a second channel on the receiving source leaves the ready frames to it */
+            IMPEncoderCHNAttr a2;
+
+            memset(&a2, 0, sizeof(a2));
+            a2.encAttr.profile = IMP_ENC_PROFILE_AVC_MAIN;
+            a2.encAttr.uWidth = 640;
+            a2.encAttr.uHeight = 360;
+            a2.rcAttr.attrRcMode.rcMode = IMP_ENC_RC_MODE_FIXQP;
+            a2.rcAttr.attrRcMode.attrFixQp.iInitialQP = 30;
+            a2.rcAttr.outFrmRate.frmRateNum = 100;
+            a2.rcAttr.outFrmRate.frmRateDen = 1;
+            CHECK(IMP_Encoder_CreateChn(1, &a2) == 0 && IMP_Encoder_RegisterChn(0, 1) == 0, "#974 second channel up");
+            CHECK(IMP_Encoder_StartRecvPic(1) == 0 && stub_expire_calls == 1,
+                  "#974 second channel on a receiving source: give-back calls %d (want none)", stub_expire_calls - 1);
+            CHECK(IMP_Encoder_StopRecvPic(1) == 0 && IMP_Encoder_UnRegisterChn(1) == 0 && IMP_Encoder_DestroyChn(1) == 0,
+                  "#974 second channel down");
+        }
         /* normal flow: poll/get/release keeps one buffer out */
         stub_out_max = 0;
         for (k = 0; k < 20; k++) {

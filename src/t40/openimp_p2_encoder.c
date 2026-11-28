@@ -3722,6 +3722,57 @@ int IMP_Encoder_UnRegisterChn(int channel)
     return 0;
 }
 
+#if defined(PLATFORM_T31)
+/*
+ * #974: the vendor encoder codes only the frames the FrameSource thread hands
+ * it while the channel receives (T31 1.1.6, Ghidra addresses as elsewhere in
+ * this file = ELF symbol + 0x10000: on_encoder_group_data_update 0x8ece0
+ * skips a channel whose +0x170 word is 0, IMP_Encoder_StartRecvPic 0x949c8
+ * sets it to 1, StopRecvPic 0x9591c clears it): a frame captured before StartRecvPic never reaches the stream, and
+ * the capture buffers stay with the driver.  OpenIMP encodes on demand from
+ * the FrameSource ready queue, which without a reader keeps the frames it
+ * dequeued (a 2-buffer main channel: both, capture stalls until the idle
+ * recycle).  The first PollingStream then coded those old frames and, while
+ * it did, the driver had no buffer: one gap of two frames at every main
+ * stream start (200 ms at 15 fps).  So StartRecvPic gives the ready frames
+ * published before it back to the driver, unless another receiving channel
+ * reads the same source (it may be about to take them).
+ * OPENIMP_ENC_START_FRESH=0: the old behaviour.
+ */
+static int p2_start_drop_stale_on(void)
+{
+    static int on = -1;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_ENC_START_FRESH");
+
+        on = !(e && e[0] == '0');
+    }
+    return on;
+}
+
+static void p2_start_drop_stale(int channel, int source)
+{
+    unsigned int tag;
+    int i;
+
+    if (source < 0)
+        return;
+    for (i = 0; i < P2_ALL_CHANNELS; i++)
+        if (i != channel &&
+            __atomic_load_n(&p2_channels[i].receiving, __ATOMIC_RELAXED) &&
+            p2_channels[i].source_channel == source)
+            return;
+    tag = VBMReadyTag(source);
+    if (tag) {
+        int n = VBMExpireReadyUpTo(source, tag);
+
+        p2_trace("openimp/P2: StartRecv ch=%d gave back %d old frame(s) of source %d\n",
+                 channel, n, source);
+    }
+}
+#endif
+
 int IMP_Encoder_StartRecvPic(int channel)
 {
     P2EncoderChannel *ch;
@@ -3741,6 +3792,10 @@ int IMP_Encoder_StartRecvPic(int channel)
     memset(&p2_fps_masks[channel], 0, sizeof(p2_fps_masks[channel]));
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
+#if defined(PLATFORM_T31)
+    if (!ch->receiving && p2_start_drop_stale_on())
+        p2_start_drop_stale(channel, ch->source_channel);
+#endif
     ch->receiving = 1;
 #if defined(PLATFORM_T20)
     __atomic_store_n(&ch->push_on,

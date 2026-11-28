@@ -2176,7 +2176,7 @@ static int vbm_recycle_ready(int chn)
 }
 #endif
 
-#if defined(PLATFORM_T20) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30) || defined(PLATFORM_T31) /* T31: #974 publish tags */
 /*
  * #420: ready frames nobody picked up go back to the bank ring.  The
  * T10/T20 (and T30) ISP writes a ring of DMA banks, one per nrVBs buffer,
@@ -2770,7 +2770,7 @@ int VBMKernelDequeue(int chn, int fd, void **frame_out) {
     pool->available_queue[pool->queue_tail] = idx;
     pool->queue_tail = (pool->queue_tail + 1) % pool->frame_count;
     pool->queue_count++;
-#if defined(PLATFORM_T20) || defined(PLATFORM_T30)
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30) || defined(PLATFORM_T31) /* T31: #974 publish tags */
     vbm_publish_ms[chn] = vbm_now_ms();
     pool->ready_tag[idx] = __atomic_add_fetch(&vbm_publish_tag[chn], 1u,
                                               __ATOMIC_RELEASE);

@@ -86,6 +86,8 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
     return 0;
 }
 void VBMWakeReaders(int chn) { (void)chn; }
+unsigned int VBMReadyTag(int chn) { (void)chn; return 0; }
+int VBMExpireReadyUpTo(int chn, unsigned int tag) { (void)chn; (void)tag; return 0; }
 int OpenIMP_T31_HwJpegActive(void) { return 0; }
 int openimp_t31_osd_apply(int group, void *frame) { (void)group; (void)frame; return 0; }
 int openimp_t31_osd_apply_ex(int group, void *frame, unsigned int flags)
