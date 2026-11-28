@@ -658,6 +658,28 @@ static struct {
     .fps_den = 1,
 };
 
+/* #962-#968: the sensor rate the vendor FrameSource writes on every frame
+ * (frame words +0x30/+0x34; set_framesource_fps from EnableTuning and
+ * Get/SetSensorFPS); the encoder's keep mask reads it here. */
+static volatile uint32_t p3_source_fps;     /* num << 16 | den, 0 unknown */
+
+static void p3_note_source_fps(uint32_t num, uint32_t den)
+{
+    if (num && den && num <= 0xffffU && den <= 0xffffU)
+        p3_source_fps = (num << 16) | den;
+}
+
+int OpenIMP_EncoderSourceFps(uint32_t *num, uint32_t *den)
+{
+    uint32_t v = p3_source_fps;
+
+    if (!(v >> 16) || !(v & 0xffffU))
+        return -1;
+    *num = v >> 16;
+    *den = v & 0xffffU;
+    return 0;
+}
+
 static int p3_tuning_set(int32_t id, int32_t value)
 {
     return p3_tuning_scalar(IMPVI_MAIN, 0, id, &value);
@@ -992,6 +1014,7 @@ int32_t IMP_ISP_Tuning_SetSensorFPS(IMPVI_NUM num, uint32_t *numerator,
     if (result == 0) {
         p3_controls.fps_num = *numerator;
         p3_controls.fps_den = *denominator;
+        p3_note_source_fps(*numerator, *denominator);
 #if defined(PLATFORM_T40) || defined(PLATFORM_T41)
         if (OpenIMP_P1_AlgoNotifyFps)
             OpenIMP_P1_AlgoNotifyFps((int)num);     /* vendor: an active custom AE library is told */
@@ -1020,10 +1043,24 @@ int32_t IMP_ISP_Tuning_GetSensorFPS(IMPVI_NUM num, uint32_t *numerator,
     if (result == 0) {
         p3_controls.fps_num = ((uint32_t)value >> 16) & 0xffffU;
         p3_controls.fps_den = (uint32_t)value & 0xffffU;
+        p3_note_source_fps(p3_controls.fps_num, p3_controls.fps_den);
     }
     *numerator = p3_controls.fps_num;
     *denominator = p3_controls.fps_den;
     return result;
+}
+
+/* IMP_ISP_EnableTuning succeeded: the vendor reads the sensor rate and hands
+ * it to the FrameSource (set_framesource_fps). */
+void OpenIMP_P3_TuningEnabledFps(void)
+{
+    int32_t value = 0;
+
+    if (p3_tuning_get(TISP_CID_SENSOR_FPS, &value) == 0) {
+        p3_controls.fps_num = ((uint32_t)value >> 16) & 0xffffU;
+        p3_controls.fps_den = (uint32_t)value & 0xffffU;
+        p3_note_source_fps(p3_controls.fps_num, p3_controls.fps_den);
+    }
 }
 
 #if defined(PLATFORM_T41)

@@ -233,6 +233,8 @@ p2-pace:
 	mkdir -p $(PROJECT_DIR)/build/tests
 	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror p2_pace_test.c -o $(PROJECT_DIR)/build/tests/t40-p2-pace-test
 	$(PROJECT_DIR)/build/tests/t40-p2-pace-test
+	$(CC) -std=gnu99 -O2 -Wall -Wextra -Werror -I$(PROJECT_DIR)/src p2_fps_mask_test.c -o $(PROJECT_DIR)/build/tests/p2-fps-mask-test
+	$(PROJECT_DIR)/build/tests/p2-fps-mask-test
 
 .PHONY: mempool
 mempool:
