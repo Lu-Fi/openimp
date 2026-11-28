@@ -2885,6 +2885,12 @@ int enc_push_run(void)
 
     wdog("cases", sec + cycles * 4 + 60);
     memset(d, 0, sizeof(d));
+    uint32_t sn0 = 0, sd0 = 0;
+    int sensor_set = push_env("PUSH_SENSOR_FPS", 0);    /* #962: SetSensorFPS(N, 1) first, the old rate back at the end */
+
+    IMP_ISP_Tuning_GetSensorFPS(&sn0, &sd0);
+    if (sensor_set > 0)
+        printf("push: SetSensorFPS(%d, 1) %d\n", sensor_set, IMP_ISP_Tuning_SetSensorFPS((uint32_t)sensor_set, 1));
     {
         uint32_t sn = 0, sd = 0;
         int sr = IMP_ISP_Tuning_GetSensorFPS(&sn, &sd);
@@ -2952,6 +2958,8 @@ int enc_push_run(void)
         cyc_ok += good;
     }
     printf("push: stop/start cycles %d/%d gave 5 pictures per channel\n", cyc_ok, cycles);
+    if (sensor_set > 0 && sn0 && sd0)
+        printf("push: SetSensorFPS(%u, %u) back %d\n", sn0, sd0, IMP_ISP_Tuning_SetSensorFPS(sn0, sd0));
     if (two) push_chn_down(1, CH_MAIN, 1);
     push_chn_down(0, CH_SUB, 0);
     r = cyc_ok == cycles ? 0 : -1;
