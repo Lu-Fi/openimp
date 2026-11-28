@@ -22,7 +22,7 @@ Project board status of an open issue (https://github.com/users/Lu-Fi/projects/1
   - (a) streamer functions: 🟢 2533 of 2533 cells work, 0 missing
   - (b) no open issue with severity critical or high: 🔴 0 critical, 6 high
   - (c) no open issue in milestone RC3: 🟢 0 open
-- **Release 1: 🔴 RED** (0 of 10 SoCs have a green light-box run and a 3-day soak of the box camera; soak as of 2026-11-28 06:51)
+- **Release 1: 🔴 RED** (0 of 10 SoCs have a green light-box run and a 3-day soak of the box camera; soak as of 2026-11-28 10:29)
   - Counting (decision 2026-11-28): per SoC only the light-box camera, 3 days from the end of its green box run (a later reset restarts it).
 
 ### RC3: blocking issues
@@ -69,9 +69,9 @@ Per SoC only the camera of the green light-box run counts. Stable days = from th
 
 | SoC | light-box run | cameras | best stable days | progress | unplanned reboots | oops |
 |---|---|---|--:|---|--:|--:|
-| T10 | 🟢 [report](lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-5000.html) | .31 | 1.9/3 | `█████████████░░░░░░░` | 0 | 0 |
-| T20 | 🟢 [report](lightbox/wyze-t20x-jxf23-kajplats-gate-1127-2026-11-27-5000.html) | .107 | 0.2/3 | `█░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
-| T21 | 🟢 [report](lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html) | .24 | 1.9/3 | `█████████████░░░░░░░` | 0 | 0 |
+| T10 | 🟢 [report](lightbox/secuplug-t10-jxh42-kajplats-gate-1125-2026-11-26-5000.html) | .31 | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T20 | 🟢 [report](lightbox/wyze-t20x-jxf23-kajplats-gate-1127-2026-11-27-5000.html) | .107 | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
+| T21 | 🟢 [report](lightbox/victure-pc420-t21n-jxf23-kajplats-1123-2026-11-24-5000.html) | .24 | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T23 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T30 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |
 | T31 | 🔴 none | – | 0.0/3 | `░░░░░░░░░░░░░░░░░░░░` | 0 | 0 |

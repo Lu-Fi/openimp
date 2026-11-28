@@ -90,11 +90,11 @@ gates:
       - id: release1.lightbox-soak
         text: >-
           Decision 2026-11-28: after its green light-box run the box camera runs a 3-day soak (no flash, no reboot test); only that
-          soak counts. lightbox_soak maps each gate SoC to the box camera and the end of the box run (time of the last report).
+          soak counts. The soak runs with load from the always-on docker host on a current image; the box run stays valid for that image (user 2026-11-28). lightbox_soak maps each gate SoC to the box camera, the box-run end, and soak_start / image of the counted soak (counting starts at soak_start when set).
         lightbox_soak:
-          T10: {camera: ".31", box_end: "2026-11-26 08:26"}
-          T20: {camera: ".107", box_end: "2026-11-27 13:02"}
-          T21: {camera: ".24", box_end: "2026-11-24 16:14"}
+          T10: {camera: ".31", box_end: "2026-11-26 08:26", soak_start: "2026-11-28 10:29", image: "claude/rel1-fw+4f09212"}
+          T20: {camera: ".107", box_end: "2026-11-27 13:02", soak_start: "2026-11-28 10:29", image: "claude/rel1-fw+4f09212"}
+          T21: {camera: ".24", box_end: "2026-11-24 16:14", soak_start: "2026-11-28 10:29", image: "claude/rel1-fw+4f09212"}
       - id: release1.cameras-per-soc
         text: At least 1 camera per gate SoC reaches the stable days (counted per camera; a SoC is as good as its best camera).
         min_cameras_per_soc: 1

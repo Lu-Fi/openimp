@@ -143,7 +143,7 @@ class Gates:
             ls = self.lb_soak.get(s) or {}
             cs = [dict(c) for c in cams if c["soc"] == s and c["camera"] == ls.get("camera")]
             for c in cs:
-                since = max(x for x in (ls.get("box_end"), c.get("stable_since")) if x) if c.get("stable_since") else None
+                since = max(x for x in (ls.get("soak_start") or ls.get("box_end"), c.get("stable_since")) if x) if c.get("stable_since") else None
                 end = c.get("last_sample")
                 c["soak_since"] = since
                 c["stable_days"] = round(max(0.0, (_ts(end) - _ts(since)) / 86400.0), 2) if since and end else 0.0

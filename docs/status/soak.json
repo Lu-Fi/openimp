@@ -1,10 +1,10 @@
 {
  "_comment": "Daily soak summary per fleet camera. Written by tools/status_soak.py on the host from the soak sampler logs and the camera STATUS files (not in CI); read by tools/release_gates.py. Do not edit by hand. Rules: docs/status/release.yaml.",
- "image": "agg69a",
- "asof": "2026-11-28 06:51",
+ "image": "fleet",
+ "asof": "2026-11-28 10:29",
  "sources": {
   "sampler_logs": [
-   "logs1114/soak-agg69a.log"
+   "logsdocker/soak-fleet.log"
   ],
   "status": "cam-N.STATUS (coordinator log)"
  },
@@ -12,514 +12,226 @@
   {
    "camera": ".21",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 17:06",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-25 19:43",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 209288,
-   "unplanned_reboots": 1,
+   "uptime_s": 225973,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-17 16:07",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-17 16:08)"
-   },
-   "stable_since": "2026-11-17 16:07",
-   "stable_days": 10.61,
-   "events": [
-    {
-     "time": "2026-11-17 16:07",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-17 16:08)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-25 19:43",
+   "stable_days": 2.62,
+   "events": []
   },
   {
    "camera": ".23",
    "soc": "T23",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:22",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-28 09:23",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 6220,
-   "unplanned_reboots": 3,
+   "uptime_s": 3981,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-27 16:55",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 16:57)"
-   },
-   "stable_since": "2026-11-27 16:55",
-   "stable_days": 0.58,
-   "events": [
-    {
-     "time": "2026-11-25 11:08",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-25 11:08)"
-    },
-    {
-     "time": "2026-11-25 11:15",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-25 11:19)"
-    },
-    {
-     "time": "2026-11-27 16:55",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 16:57)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-28 09:23",
+   "stable_days": 0.05,
+   "events": []
   },
   {
    "camera": ".24",
    "soc": "T21",
-   "image": "agg69a",
-   "first_seen": "2026-11-14 09:55",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-28 10:20",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 165712,
-   "unplanned_reboots": 1,
+   "uptime_s": 544,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-26 08:49",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 08:57)"
-   },
-   "stable_since": "2026-11-26 08:49",
-   "stable_days": 1.92,
-   "events": [
-    {
-     "time": "2026-11-26 08:49",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 08:57)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-28 10:20",
+   "stable_days": 0.01,
+   "events": []
   },
   {
    "camera": ".25",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:34",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 21:34",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1757833,
+   "uptime_s": 1774518,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-07 22:34",
-   "stable_days": 20.35,
+   "stable_since": "2026-11-07 21:34",
+   "stable_days": 20.54,
    "events": []
   },
   {
    "camera": ".26",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 17:15",
-   "last_sample": "2026-11-28 06:51",
-   "online": true,
-   "uptime_s": 833711,
+   "image": "fleet",
+   "first_seen": null,
+   "last_sample": null,
+   "online": false,
+   "uptime_s": null,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-13 17:15",
-   "stable_days": 14.57,
+   "stable_since": null,
+   "stable_days": 0.0,
    "events": []
   },
   {
    "camera": ".28",
    "soc": "T23",
-   "image": "agg69a",
-   "first_seen": "2026-11-12 18:54",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-12 17:54",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1339058,
+   "uptime_s": 1355742,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-12 18:54",
-   "stable_days": 15.5,
+   "stable_since": "2026-11-12 17:54",
+   "stable_days": 15.69,
    "events": []
   },
   {
    "camera": ".29",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:28",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 21:28",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1758194,
+   "uptime_s": 1774880,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-07 22:28",
-   "stable_days": 20.35,
+   "stable_since": "2026-11-07 21:28",
+   "stable_days": 20.54,
    "events": []
   },
   {
    "camera": ".30",
    "soc": "T23",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 16:54",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-27 19:40",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 36690,
-   "unplanned_reboots": 2,
+   "uptime_s": 53375,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-27 20:40",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 20:45)"
-   },
-   "stable_since": "2026-11-27 20:40",
-   "stable_days": 0.42,
-   "events": [
-    {
-     "time": "2026-11-27 20:33",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 20:34)"
-    },
-    {
-     "time": "2026-11-27 20:40",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 20:45)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-27 19:40",
+   "stable_days": 0.62,
+   "events": []
   },
   {
    "camera": ".31",
    "soc": "T10",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 16:51",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-26 07:49",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 165765,
-   "unplanned_reboots": 2,
+   "uptime_s": 988,
+   "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-26 08:49",
+    "time": "2026-11-28 10:13",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 08:57)"
+    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-28 10:29)"
    },
-   "stable_since": "2026-11-26 08:49",
-   "stable_days": 1.92,
+   "stable_since": "2026-11-28 10:13",
+   "stable_days": 0.01,
    "events": [
     {
-     "time": "2026-11-17 14:34",
+     "time": "2026-11-28 10:13",
      "kind": "reboot",
      "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-17 14:37)"
-    },
-    {
-     "time": "2026-11-26 08:49",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 08:57)"
+     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-28 10:29)"
     }
    ]
   },
   {
    "camera": ".32",
    "soc": "T41",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 17:36",
-   "last_sample": "2026-11-15 13:02",
+   "image": "fleet",
+   "first_seen": null,
+   "last_sample": null,
    "online": false,
    "uptime_s": null,
    "unplanned_reboots": 1,
    "oops": 0,
    "last_reset": {
-    "time": "2026-11-15 09:39",
+    "time": "2026-10-25 19:46",
     "kind": "reboot",
     "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 09:40)"
+    "reason": "recovery reboot (vendor ko rmmod oops)"
    },
-   "stable_since": "2026-11-15 09:39",
+   "stable_since": null,
    "stable_days": 0.0,
    "events": [
     {
-     "time": "2026-11-15 09:39",
+     "time": "2026-10-25 19:46",
      "kind": "reboot",
      "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 09:40)"
+     "reason": "recovery reboot (vendor ko rmmod oops)"
     }
    ]
   },
   {
    "camera": ".33",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:40",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 21:40",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1757455,
+   "uptime_s": 1774140,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-07 22:40",
-   "stable_days": 20.34,
+   "stable_since": "2026-11-07 21:40",
+   "stable_days": 20.53,
    "events": []
   },
   {
    "camera": ".34",
    "soc": "T41",
-   "image": "agg69a",
-   "first_seen": "2026-11-13 17:55",
-   "last_sample": "2026-11-28 06:51",
-   "online": true,
-   "uptime_s": 74744,
-   "unplanned_reboots": 28,
+   "image": "fleet",
+   "first_seen": null,
+   "last_sample": null,
+   "online": false,
+   "uptime_s": null,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-27 10:05",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 10:06)"
-   },
-   "stable_since": "2026-11-27 10:05",
-   "stable_days": 0.87,
-   "events": [
-    {
-     "time": "2026-11-14 20:48",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-14 20:54)"
-    },
-    {
-     "time": "2026-11-15 00:12",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 00:15)"
-    },
-    {
-     "time": "2026-11-15 01:43",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 01:46)"
-    },
-    {
-     "time": "2026-11-15 02:35",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 02:36)"
-    },
-    {
-     "time": "2026-11-15 02:39",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 02:47)"
-    },
-    {
-     "time": "2026-11-15 07:51",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 07:59)"
-    },
-    {
-     "time": "2026-11-15 09:44",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 09:50)"
-    },
-    {
-     "time": "2026-11-15 10:11",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 10:20)"
-    },
-    {
-     "time": "2026-11-15 10:35",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 10:41)"
-    },
-    {
-     "time": "2026-11-15 10:45",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 10:51)"
-    },
-    {
-     "time": "2026-11-15 11:09",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 11:11)"
-    },
-    {
-     "time": "2026-11-15 11:20",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 11:21)"
-    },
-    {
-     "time": "2026-11-15 11:39",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 11:41)"
-    },
-    {
-     "time": "2026-11-15 11:53",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 12:01)"
-    },
-    {
-     "time": "2026-11-15 12:11",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 12:21)"
-    },
-    {
-     "time": "2026-11-15 12:43",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 12:52)"
-    },
-    {
-     "time": "2026-11-15 13:11",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 13:12)"
-    },
-    {
-     "time": "2026-11-15 13:26",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 13:32)"
-    },
-    {
-     "time": "2026-11-15 20:25",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 20:26)"
-    },
-    {
-     "time": "2026-11-16 08:13",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-16 08:22)"
-    },
-    {
-     "time": "2026-11-16 08:43",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-16 08:52)"
-    },
-    {
-     "time": "2026-11-18 14:55",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-18 15:03)"
-    },
-    {
-     "time": "2026-11-18 15:03",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-18 15:14)"
-    },
-    {
-     "time": "2026-11-26 20:45",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 20:53)"
-    },
-    {
-     "time": "2026-11-27 01:28",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 01:36)"
-    },
-    {
-     "time": "2026-11-27 06:18",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 06:19)"
-    },
-    {
-     "time": "2026-11-27 09:30",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 09:44)"
-    },
-    {
-     "time": "2026-11-27 10:05",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 10:06)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": null,
+   "stable_days": 0.0,
+   "events": []
   },
   {
    "camera": ".107",
    "soc": "T20",
-   "image": "agg69a",
-   "first_seen": "2026-11-14 00:40",
-   "last_sample": "2026-11-27 16:47",
-   "online": false,
-   "uptime_s": null,
-   "unplanned_reboots": 6,
+   "image": "fleet",
+   "first_seen": "2026-11-28 10:18",
+   "last_sample": "2026-11-28 10:29",
+   "online": true,
+   "uptime_s": 710,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-27 08:51",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 09:01)"
-   },
-   "stable_since": "2026-11-27 08:51",
-   "stable_days": 0.0,
-   "events": [
-    {
-     "time": "2026-11-14 20:27",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-14 20:33)"
-    },
-    {
-     "time": "2026-11-15 10:48",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 10:51)"
-    },
-    {
-     "time": "2026-11-15 17:10",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-15 17:14)"
-    },
-    {
-     "time": "2026-11-20 19:35",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-20 19:41)"
-    },
-    {
-     "time": "2026-11-26 07:56",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-26 08:03)"
-    },
-    {
-     "time": "2026-11-27 08:51",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-27 09:01)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-28 10:18",
+   "stable_days": 0.01,
+   "events": []
   },
   {
    "camera": ".122",
    "soc": "T33",
-   "image": "agg69a",
+   "image": "fleet",
    "first_seen": null,
    "last_sample": null,
    "online": false,
@@ -534,22 +246,22 @@
   {
    "camera": ".124",
    "soc": "T23",
-   "image": "agg69a",
-   "first_seen": "2026-11-08 00:30",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 23:30",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1750852,
+   "uptime_s": 1767537,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-08 00:30",
-   "stable_days": 20.26,
+   "stable_since": "2026-11-07 23:30",
+   "stable_days": 20.46,
    "events": []
   },
   {
    "camera": ".136",
    "soc": "T32",
-   "image": "agg69a",
+   "image": "fleet",
    "first_seen": null,
    "last_sample": null,
    "online": false,
@@ -564,94 +276,82 @@
   {
    "camera": ".145",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-08 00:33",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 23:33",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1750669,
+   "uptime_s": 1767353,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-08 00:33",
-   "stable_days": 20.26,
+   "stable_since": "2026-11-07 23:33",
+   "stable_days": 20.46,
    "events": []
   },
   {
    "camera": ".151",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:31",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 21:31",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1758010,
+   "uptime_s": 1774694,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-07 22:31",
-   "stable_days": 20.35,
+   "stable_since": "2026-11-07 21:31",
+   "stable_days": 20.54,
    "events": []
   },
   {
    "camera": ".163",
    "soc": "T20",
-   "image": "agg69a",
-   "first_seen": "2026-11-07 22:09",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-07 21:09",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 1759325,
+   "uptime_s": 1776009,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-07 22:09",
-   "stable_days": 20.36,
+   "stable_since": "2026-11-07 21:09",
+   "stable_days": 20.56,
    "events": []
   },
   {
    "camera": ".184",
    "soc": "T40",
-   "image": "agg69a",
-   "first_seen": "2026-11-14 10:04",
-   "last_sample": "2026-11-28 06:51",
+   "image": "fleet",
+   "first_seen": "2026-11-20 18:34",
+   "last_sample": "2026-11-28 10:29",
    "online": true,
-   "uptime_s": 645426,
-   "unplanned_reboots": 1,
+   "uptime_s": 662110,
+   "unplanned_reboots": 0,
    "oops": 0,
-   "last_reset": {
-    "time": "2026-11-20 19:34",
-    "kind": "reboot",
-    "planned": false,
-    "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-20 19:41)"
-   },
-   "stable_since": "2026-11-20 19:34",
-   "stable_days": 7.47,
-   "events": [
-    {
-     "time": "2026-11-20 19:34",
-     "kind": "reboot",
-     "planned": false,
-     "reason": "no STATUS entry (boot time derived from uptime, seen 2026-11-20 19:41)"
-    }
-   ]
+   "last_reset": null,
+   "stable_since": "2026-11-20 18:34",
+   "stable_days": 7.66,
+   "events": []
   },
   {
    "camera": ".224",
    "soc": "T31",
-   "image": "agg69a",
-   "first_seen": "2026-11-08 01:01",
-   "last_sample": "2026-11-28 06:51",
-   "online": true,
-   "uptime_s": 283453,
+   "image": "fleet",
+   "first_seen": null,
+   "last_sample": null,
+   "online": false,
+   "uptime_s": null,
    "unplanned_reboots": 0,
    "oops": 0,
    "last_reset": null,
-   "stable_since": "2026-11-08 01:01",
-   "stable_days": 20.24,
+   "stable_since": null,
+   "stable_days": 0.0,
    "events": []
   },
   {
    "camera": ".231",
    "soc": "T30",
-   "image": "agg69a",
+   "image": "fleet",
    "first_seen": null,
    "last_sample": null,
    "online": false,
@@ -666,7 +366,7 @@
   {
    "camera": ".234",
    "soc": "T23",
-   "image": "agg69a",
+   "image": "fleet",
    "first_seen": null,
    "last_sample": null,
    "online": false,
@@ -680,1743 +380,95 @@
   }
  ],
  "days": {
-  "2026-11-14": {
-   ".21": {
-    "samples": 81,
-    "offline": 1,
-    "max_uptime_s": 109128,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 610394,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 50428,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 609663,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 102568,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 190888,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 610024,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 111684,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 111852,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 81,
-    "offline": 71,
-    "max_uptime_s": 65852,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 609285,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 96481,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 64642,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 602683,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 602499,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 609839,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 611155,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 12671,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 81,
-    "offline": 0,
-    "max_uptime_s": 600840,
-    "max_oops": 0
-   }
-  },
-  "2026-11-15": {
-   ".21": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 72047,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 696948,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 136983,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 696217,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 63077,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 277442,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 696579,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 198238,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 197196,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 143,
-    "offline": 122,
-    "max_uptime_s": 12151,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 695839,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 143,
-    "offline": 14,
-    "max_uptime_s": 24572,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 143,
-    "offline": 1,
-    "max_uptime_s": 51198,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 689237,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 689053,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 696394,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 697709,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 143,
-    "offline": 1,
-    "max_uptime_s": 15824,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 687394,
-    "max_oops": 0
-   }
-  },
-  "2026-11-16": {
-   ".21": {
-    "samples": 142,
-    "offline": 9,
-    "max_uptime_s": 50243,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 782867,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 222902,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 782136,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 103984,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 363361,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 782497,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 284157,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 29420,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 142,
-    "offline": 142,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 781758,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 142,
-    "offline": 1,
-    "max_uptime_s": 54402,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 100745,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 775155,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 774972,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 782313,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 783628,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 81550,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 142,
-    "offline": 0,
-    "max_uptime_s": 773313,
-    "max_oops": 0
-   }
-  },
-  "2026-11-17": {
-   ".21": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 108327,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 869387,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 309421,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 868655,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 190503,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 449880,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 869017,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 370676,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 33485,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 143,
-    "offline": 143,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 868278,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 140922,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 187264,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 861675,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 861492,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 868832,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 870147,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 134189,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 143,
-    "offline": 0,
-    "max_uptime_s": 859833,
-    "max_oops": 0
-   }
-  },
-  "2026-11-18": {
-   ".21": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 107142,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 948640,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 89,
-    "offline": 3,
-    "max_uptime_s": 388024,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 947908,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 245841,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 529133,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 948270,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 449929,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 112738,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 89,
-    "offline": 89,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 947530,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 89,
-    "offline": 11,
-    "max_uptime_s": 194961,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 266517,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 940928,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 940744,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 948085,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 949400,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 28784,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 89,
-    "offline": 2,
-    "max_uptime_s": 939085,
-    "max_oops": 0
-   }
-  },
-  "2026-11-19": {
-   ".21": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 200574,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1042072,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 90,
-    "offline": 90,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1041340,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 117218,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 622565,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1041702,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 543361,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 206170,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 90,
-    "offline": 90,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1040962,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 90,
-    "offline": 90,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 359948,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1034360,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1034176,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1041517,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1042832,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 122216,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 90,
-    "offline": 0,
-    "max_uptime_s": 1032517,
-    "max_oops": 0
-   }
-  },
-  "2026-11-20": {
-   ".21": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 286965,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1128462,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1127731,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 203609,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 708956,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1128093,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 629752,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 292561,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1127353,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 133,
-    "offline": 128,
-    "max_uptime_s": 2745,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 430750,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1120751,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1120567,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1127908,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1129223,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 193018,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1118908,
-    "max_oops": 0
-   }
-  },
-  "2026-11-21": {
-   ".21": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 317493,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1164188,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 55,
-    "offline": 55,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1163455,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 239333,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 744680,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1163817,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 665476,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 328285,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 55,
-    "offline": 55,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1163078,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 55,
-    "offline": 55,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 12432,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1156475,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1156291,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1163632,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1164947,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 51049,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 55,
-    "offline": 0,
-    "max_uptime_s": 1154633,
-    "max_oops": 0
-   }
-  },
-  "2026-11-22": {
-   ".21": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 142182,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1249256,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 11888,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1300524,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 376402,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 881749,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1300886,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 802546,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 92518,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 91,
-    "offline": 91,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1300147,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 91,
-    "offline": 91,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 91,
-    "offline": 91,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1293544,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1293360,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1300701,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1302017,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 188118,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 91,
-    "offline": 10,
-    "max_uptime_s": 1291702,
-    "max_oops": 0
-   }
-  },
-  "2026-11-23": {
-   ".21": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 228588,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 50737,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 20392,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1386930,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 462808,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 968155,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1387292,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 888951,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 178923,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1386552,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1379950,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1379766,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1387107,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1388422,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 274524,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1378108,
-    "max_oops": 0
-   }
-  },
-  "2026-11-24": {
-   ".21": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 315007,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 124279,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 33387,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1473349,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 549227,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1054574,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1473711,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 975370,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 239361,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1472971,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1466369,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1466185,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1473526,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1474841,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 360943,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1464527,
-    "max_oops": 0
-   }
-  },
-  "2026-11-25": {
-   ".21": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 390072,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 164336,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 111,
-    "offline": 4,
-    "max_uptime_s": 52199,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1560107,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 635985,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1141332,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1560469,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1047838,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 13162,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 111,
-    "offline": 111,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1559729,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 111,
-    "offline": 111,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 111,
-    "offline": 111,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1553127,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1552943,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1560284,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1561599,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 447701,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 111,
-    "offline": 2,
-    "max_uptime_s": 1465176,
-    "max_oops": 0
-   }
-  },
-  "2026-11-26": {
-   ".21": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 98008,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 132123,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 84033,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1646552,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 722430,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1227777,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1646913,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 100288,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 133,
-    "offline": 5,
-    "max_uptime_s": 54484,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 133,
-    "offline": 133,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1646174,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 133,
-    "offline": 90,
-    "max_uptime_s": 16060,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 133,
-    "offline": 44,
-    "max_uptime_s": 20146,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1639572,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1639388,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1646729,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 1648044,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 534145,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 133,
-    "offline": 0,
-    "max_uptime_s": 172173,
-    "max_oops": 0
-   }
-  },
-  "2026-11-27": {
-   ".21": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 183946,
-    "max_oops": 0
-   },
-   ".23": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 192722,
-    "max_oops": 0
-   },
-   ".24": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 140371,
-    "max_oops": 0
-   },
-   ".25": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1732491,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 808369,
-    "max_oops": 0
-   },
-   ".28": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1313716,
-    "max_oops": 0
-   },
-   ".29": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1732853,
-    "max_oops": 0
-   },
-   ".30": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 173885,
-    "max_oops": 0
-   },
-   ".31": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 140423,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 132,
-    "offline": 132,
-    "max_uptime_s": 0,
-    "max_oops": 0
-   },
-   ".33": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1732113,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 132,
-    "offline": 5,
-    "max_uptime_s": 49403,
-    "max_oops": 0
-   },
-   ".107": {
-    "samples": 132,
-    "offline": 39,
-    "max_uptime_s": 13736,
-    "max_oops": 0
-   },
-   ".124": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1725511,
-    "max_oops": 0
-   },
-   ".145": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1725327,
-    "max_oops": 0
-   },
-   ".151": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1732668,
-    "max_oops": 0
-   },
-   ".163": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 1733983,
-    "max_oops": 0
-   },
-   ".184": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 620083,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 132,
-    "offline": 0,
-    "max_uptime_s": 258112,
-    "max_oops": 0
-   }
-  },
   "2026-11-28": {
    ".21": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 209288,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 225973,
     "max_oops": 0
    },
    ".23": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 6822,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 3981,
     "max_oops": 0
    },
    ".24": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 165712,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 544,
     "max_oops": 0
    },
    ".25": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1757833,
-    "max_oops": 0
-   },
-   ".26": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 833711,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1774518,
     "max_oops": 0
    },
    ".28": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1339058,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1355742,
     "max_oops": 0
    },
    ".29": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1758194,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1774880,
     "max_oops": 0
    },
    ".30": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 36690,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 53375,
     "max_oops": 0
    },
    ".31": {
-    "samples": 39,
+    "samples": 2,
     "offline": 0,
-    "max_uptime_s": 165765,
-    "max_oops": 0
-   },
-   ".32": {
-    "samples": 39,
-    "offline": 39,
-    "max_uptime_s": 0,
+    "max_uptime_s": 177829,
     "max_oops": 0
    },
    ".33": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1757455,
-    "max_oops": 0
-   },
-   ".34": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 74744,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1774140,
     "max_oops": 0
    },
    ".107": {
-    "samples": 39,
-    "offline": 39,
-    "max_uptime_s": 0,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 710,
     "max_oops": 0
    },
    ".124": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1750852,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1767537,
     "max_oops": 0
    },
    ".145": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1750669,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1767353,
     "max_oops": 0
    },
    ".151": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1758010,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1774694,
     "max_oops": 0
    },
    ".163": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 1759325,
+    "samples": 2,
+    "offline": 1,
+    "max_uptime_s": 1776009,
     "max_oops": 0
    },
    ".184": {
-    "samples": 39,
+    "samples": 2,
     "offline": 0,
-    "max_uptime_s": 645426,
-    "max_oops": 0
-   },
-   ".224": {
-    "samples": 39,
-    "offline": 0,
-    "max_uptime_s": 283453,
+    "max_uptime_s": 662110,
     "max_oops": 0
    }
   }
