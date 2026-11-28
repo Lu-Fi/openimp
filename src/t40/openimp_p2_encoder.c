@@ -3725,10 +3725,10 @@ int IMP_Encoder_UnRegisterChn(int channel)
 #if defined(PLATFORM_T31)
 /*
  * #974: the vendor encoder codes only the frames the FrameSource thread hands
- * it while the channel receives (T31 1.1.6 on_encoder_group_data_update,
- * file offset 0x7ece0, skips a channel whose +0x170 flag is 0;
- * IMP_Encoder_StartRecvPic 0x849c8 sets it to 1, StopRecvPic 0x9591c clears
- * it): a frame captured before StartRecvPic never reaches the stream, and
+ * it while the channel receives (T31 1.1.6, Ghidra addresses as elsewhere in
+ * this file = ELF symbol + 0x10000: on_encoder_group_data_update 0x8ece0
+ * skips a channel whose +0x170 word is 0, IMP_Encoder_StartRecvPic 0x949c8
+ * sets it to 1, StopRecvPic 0x9591c clears it): a frame captured before StartRecvPic never reaches the stream, and
  * the capture buffers stay with the driver.  OpenIMP encodes on demand from
  * the FrameSource ready queue, which without a reader keeps the frames it
  * dequeued (a 2-buffer main channel: both, capture stalls until the idle
