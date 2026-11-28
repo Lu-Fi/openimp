@@ -120,6 +120,16 @@ keeps only the number of writes and an FNV-1a digest of the register order.
   that band before QP moves. The log shows the rate control in effect
   (`T23 Helix rc ready:` / `rc reconfigured:`); `OPENIMP_T23_RC_STATS=<s>`
   adds bitrate and I/P QP statistics every `<s>` seconds.
+- Encoder rate below the output rate (#986): before every picture the
+  channel codes at min(sensor rate on the frame, output rate) and keeps the
+  GOP duration in whole seconds (gop = ceil(floor(gop * den / num) * new
+  rate)), like the vendor do_channel_process (0x4a194..0x4a300, i264e
+  FPS / GOP params at 0x4b510 / 0x4b234): a 25 fps channel on a 15 fps
+  sensor runs the rate control at 15 fps with an IDR every 15 pictures at
+  GOP 25.  The channel attributes keep the configured values.  A GOP under
+  one second stays as configured (the vendor would pass 0).
+  `OPENIMP_T23_ENC_RATE=0` keeps the configured rate and GOP in the codec
+  (`src/t23/t23_enc_rate.h`, test `tests/t23/enc_rate_test.c`).
 - OEM picture rate control (`src/eprc`, `docs/T23_EPRC.md`): FIXQP, CBR,
   VBR and SMART run the reimplemented OEM controller (JZ_VPU_RC_*_T21) like
   the vendor (default since 2026-11-28, #986); `OPENIMP_T23_EPRC=0` keeps
