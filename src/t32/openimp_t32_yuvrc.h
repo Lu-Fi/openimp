@@ -19,15 +19,17 @@
 #define YUVRC_RC_MODES 6                  /* FUN_000e780c: rcMode < 6 (jump table), else 0x80040002 */
 
 /* YuvInit before the encoder init: codec 1 / 2 (log 0x22fb), width % 16 and odd height (0x2283 / 0x22c9),
- * rcMode (FUN_000e780c, 0x2150 / 0x2247), all 0x80040002.  NULL h / encIn: the vendor dereferences them
+ * rcMode (FUN_000e780c, 0x2150 / 0x2247), maxGop 0 (#998: FUN_000e780c, attr +76, H.264 0xd8498 beqz -> log
+ * 0x2157, H.265 0xd7a74 -> 0x224e; T32 2.2.0 IMP_Encoder_YuvCheckParam 0xd45d0 the same), all 0x80040002.
+ * A zero outFrmRate is no error (the vendor takes 25/1).  NULL h / encIn: the vendor dereferences them
  * (crash); here 0x80040002.  0: go on to the encoder init (failure 0x80048000). */
-static inline int yuvrc_init(int have_args, int type, int w, int h, uint32_t rc_mode)
+static inline int yuvrc_init(int have_args, int type, int w, int h, uint32_t rc_mode, uint32_t max_gop)
 {
     if (!have_args || (type != YUVRC_PT_H264 && type != YUVRC_PT_H265))
         return YUVRC_E_PARAM;
     if ((w & 0xf) != 0 || (h & 1) != 0)
         return YUVRC_E_PARAM;
-    if (rc_mode >= YUVRC_RC_MODES)
+    if (rc_mode >= YUVRC_RC_MODES || max_gop == 0)
         return YUVRC_E_PARAM;
     return 0;
 }

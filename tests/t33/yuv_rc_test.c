@@ -9,15 +9,17 @@ static int bad;
 
 int main(void)
 {
-    CHK(yuvrc_init(1, 1, 320, 192, 0) == 0);                     /* valid H.264 reaches the init */
-    CHK(yuvrc_init(1, 2, 1920, 1080, 1) == 0);                   /* valid H.265 */
-    CHK(yuvrc_init(1, 1, 320, 192, 5) == 0);
-    CHK(yuvrc_init(1, 1, 320, 192, 6) == (int)0x80040002);       /* rcMode >= 6 */
-    CHK(yuvrc_init(1, 0, 320, 192, 0) == (int)0x80040002);       /* JPEG / unknown codec */
-    CHK(yuvrc_init(1, 3, 320, 192, 0) == (int)0x80040002);
-    CHK(yuvrc_init(1, 1, 322, 192, 0) == (int)0x80040002);       /* width % 16 */
-    CHK(yuvrc_init(1, 2, 320, 191, 0) == (int)0x80040002);       /* odd height */
-    CHK(yuvrc_init(0, 1, 320, 192, 0) == (int)0x80040002);
+    CHK(yuvrc_init(1, 1, 320, 192, 0, 15) == 0);                     /* valid H.264 reaches the init */
+    CHK(yuvrc_init(1, 2, 1920, 1080, 1, 15) == 0);                   /* valid H.265 */
+    CHK(yuvrc_init(1, 1, 320, 192, 5, 15) == 0);
+    CHK(yuvrc_init(1, 1, 320, 192, 6, 15) == (int)0x80040002);       /* rcMode >= 6 */
+    CHK(yuvrc_init(1, 0, 320, 192, 0, 15) == (int)0x80040002);       /* JPEG / unknown codec */
+    CHK(yuvrc_init(1, 3, 320, 192, 0, 15) == (int)0x80040002);
+    CHK(yuvrc_init(1, 1, 322, 192, 0, 15) == (int)0x80040002);       /* width % 16 */
+    CHK(yuvrc_init(1, 2, 320, 191, 0, 15) == (int)0x80040002);       /* odd height */
+    CHK(yuvrc_init(0, 1, 320, 192, 0, 15) == (int)0x80040002);
+    CHK(yuvrc_init(1, 1, 320, 192, 0, 0) == (int)0x80040002);    /* #998: maxGop 0 (zeroed attribute), H.264 */
+    CHK(yuvrc_init(1, 2, 320, 192, 1, 0) == (int)0x80040002);    /* H.265 */
     CHK(yuvrc_handle(0, 0, 0) == (int)0x80040010);
     CHK(yuvrc_handle(1, 0, 7) == (int)0x80040002);
     CHK(yuvrc_handle(1, 1, 0) == (int)0x80040002);

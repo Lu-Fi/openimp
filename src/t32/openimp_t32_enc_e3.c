@@ -368,7 +368,7 @@ int IMP_Encoder_YuvInit(void **h, int inWidth, int inHeight, IMPEncoderYuvIn *en
     struct t32_yuv_handle *y;
     T32YuvCfg c;
     int r = yuvrc_init(h && encIn, encIn ? (int)encIn->type : 0, inWidth, inHeight,
-                       encIn ? (uint32_t)encIn->mode.rcMode : 0u);
+                       encIn ? (uint32_t)encIn->mode.rcMode : 0u, encIn ? (uint32_t)encIn->maxGop : 0u);
 
     if (r) {
         IMP_LOG_ERR(TAG, "YuvInit: %dx%d: 0x%x", inWidth, inHeight, r);

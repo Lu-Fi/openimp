@@ -260,6 +260,9 @@ int OpenIMP_T32_VpuBufAlloc(T32VpuBuf *b, uint32_t size, const char *tag)
     }
     b->size = size;
     memset(t32_vpu_buf_va(b), 0, size);
+    /* #788: the arena is a cached mapping; write the zeros back now so no dirty line is evicted later over
+     * what the engine wrote */
+    OpenIMP_T32_VpuFlush(t32_vpu_buf_va(b), size, OI_T32_VPU_FLUSH_WBACK);
     return 0;
 }
 
