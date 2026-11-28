@@ -247,7 +247,27 @@ static void fs_free_dma(IMPDMABufferInfo *d)
 {
     if (d->phys_addr)
         DMA_FreePhys(d->phys_addr);
+    else if (d->virt_addr)
+        free((void *)(uintptr_t)d->virt_addr);     /* a heap depth copy (fs_alloc_heap, #1004) */
     memset(d, 0, sizeof(*d));
+}
+
+/* GetFrame depth copies live in the heap, as the vendor: T33 2.0.2.1 SetFrameDepth 0x1397a0-0x1397c0 and T32 2.2.0
+ * 0x13f140-0x13f168 (objdump addresses) calloc(1, frame size at chn+0x1f0) per depth node, the pointer goes to the
+ * node frame's virAddr (+28), phyAddr (+24) stays 0.  In rmem two 1080p copies (3 MB each) did not fit next to the
+ * capture buffers on the T33L (rmem=13M: "fs-depth: cannot allocate 3133440 bytes", every GetFrame timed out, #1004). */
+static int fs_alloc_heap(IMPDMABufferInfo *d, uint32_t size)
+{
+    void *p = calloc(1, size);
+
+    memset(d, 0, sizeof(*d));
+    if (!p) {
+        IMP_LOG_ERR(TAG, "fs-depth: cannot allocate %u bytes", size);
+        return -1;
+    }
+    d->virt_addr = (uint32_t)(uintptr_t)p;
+    d->size = size;
+    return 0;
 }
 
 static int fs_alloc(IMPDMABufferInfo *d, uint32_t size, const char *tag)
@@ -366,16 +386,16 @@ static void fs_slots_sync_locked(struct t32_fs_chn *c)
             continue;
         }
         if (c->nocopy && !c->i2d_on) {
-            if (s->dma.phys_addr && s->state != SLOT_USER && s->state != SLOT_FILLING)
+            if (s->dma.virt_addr && s->state != SLOT_USER && s->state != SLOT_FILLING)
                 fs_free_dma(&s->dma);
             if (s->state != SLOT_USER && s->state != SLOT_FILLING)
                 s->state = SLOT_FREE;
             continue;
         }
-        if (want && !s->dma.phys_addr && c->alloc) {
-            if (fs_alloc(&s->dma, fs_slot_size(c), "fs-depth") == 0)
+        if (want && !s->dma.virt_addr && c->alloc) {
+            if (fs_alloc_heap(&s->dma, fs_slot_size(c)) == 0)
                 s->state = SLOT_FREE;
-        } else if (!want && s->dma.phys_addr && s->state != SLOT_USER &&
+        } else if (!want && s->dma.virt_addr && s->state != SLOT_USER &&
                    s->state != SLOT_FILLING) {
             fs_free_dma(&s->dma);
             s->state = SLOT_FREE;
@@ -402,7 +422,7 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
     int i;
 
     for (i = 0; i < c->depth && i < T32_FS_MAX_DEPTH; i++)
-        if ((c->slot[i].dma.phys_addr || (c->nocopy && !c->i2d_on)) && c->slot[i].state == SLOT_FREE)
+        if ((c->slot[i].dma.virt_addr || (c->nocopy && !c->i2d_on)) && c->slot[i].state == SLOT_FREE)
             return &c->slot[i];
     /* no copy: the vendor takes a free node only (the capture buffers held for GetFrame stay held) */
     if (c->nocopy && !c->i2d_on)
@@ -411,7 +431,7 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
     for (i = 0; i < c->depth && i < T32_FS_MAX_DEPTH; i++) {
         struct t32_fs_slot *s = &c->slot[i];
 
-        if (s->dma.phys_addr && s->state == SLOT_READY &&
+        if (s->dma.virt_addr && s->state == SLOT_READY &&
             (!best || (int32_t)(s->seq - best->seq) < 0))
             best = s;
     }
