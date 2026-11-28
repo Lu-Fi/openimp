@@ -68,7 +68,7 @@ gates:
     release_image: null
     rules:
       - id: release1.rc3
-        text: RC3 is green and published (tag); the stable days count only from then, on the image built from the RC3 tag.
+        text: RC3 is green and published (tag). Since 2026-11-28 the stable days count on the light-box camera after its box run (rule release1.lightbox-soak), not on an RC3 image.
       - id: release1.stable-days
         text: >-
           The release image ran at least 3 days (72 h) without a reset on the fleet (a reset is an unplanned reboot,
@@ -87,6 +87,14 @@ gates:
           T31: null
           T40: null
           T41: null
+      - id: release1.lightbox-soak
+        text: >-
+          Decision 2026-11-28: after its green light-box run the box camera runs a 3-day soak (no flash, no reboot test); only that
+          soak counts. lightbox_soak maps each gate SoC to the box camera and the end of the box run (time of the last report).
+        lightbox_soak:
+          T10: {camera: ".31", box_end: "2026-11-26 08:26"}
+          T20: {camera: ".107", box_end: "2026-11-27 13:02"}
+          T21: {camera: ".24", box_end: "2026-11-24 16:14"}
       - id: release1.cameras-per-soc
         text: At least 1 camera per gate SoC reaches the stable days (counted per camera; a SoC is as good as its best camera).
         min_cameras_per_soc: 1

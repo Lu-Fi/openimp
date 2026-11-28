@@ -67,6 +67,11 @@ def evaluate_rc3(cells_ok, issues, rel):
     return dict(ok=a and b and c, cells=a, severity=b, milestone=c, blockers=bl)
 
 
+def _ts(s):
+    import datetime
+    return datetime.datetime.strptime(s[:16], "%Y-%m-%d %H:%M").timestamp()
+
+
 class Gates:
     def __init__(self, model):
         self.m = model
@@ -128,11 +133,23 @@ class Gates:
         self.r1 = {}
         g = next(g for g in self.rel["gates"] if g["id"] == "release1")
         self.r1_tag, self.r1_image = g.get("rc3_tag"), g.get("release_image")
-        # counting starts only after RC3 is published, and only on the image built from the RC3 tag
-        self.r1_started = bool(self.r1_tag and self.r1_image and self.soak and self.soak.get("image") == self.r1_image)
-        cams = self.soak["cameras"] if self.r1_started else []
+        # Decision 2026-11-28 (user): per gate SoC the light-box camera runs a 3-day soak right after its green box run; only
+        # that soak counts. Stable days = from the later of the box-run end and the camera's last reset (unplanned reboot, oops,
+        # new image) to its last sample. No RC3 image is needed any more (release_image is informational).
+        self.lb_soak = rule(self.rel, "release1", "lightbox_soak") or {}
+        self.r1_started = bool(self.soak)
+        cams = self.soak["cameras"] if self.soak else []
         for s in self.socs:
-            cs = [c for c in cams if c["soc"] == s]
+            ls = self.lb_soak.get(s) or {}
+            cs = [dict(c) for c in cams if c["soc"] == s and c["camera"] == ls.get("camera")]
+            for c in cs:
+                since = max(x for x in (ls.get("box_end"), c.get("stable_since")) if x) if c.get("stable_since") else None
+                end = c.get("last_sample")
+                c["soak_since"] = since
+                c["stable_days"] = round(max(0.0, (_ts(end) - _ts(since)) / 86400.0), 2) if since and end else 0.0
+                c["events"] = [e for e in c["events"] if not since or e["time"] > since]
+                c["unplanned_reboots"] = sum(1 for e in c["events"] if e["kind"] == "reboot" and not e["planned"])
+                c["oops"] = sum(1 for e in c["events"] if e["kind"] == "oops")
             best = max([c["stable_days"] for c in cs], default=0.0)
             nok = sum(1 for c in cs if c["stable_days"] >= self.min_days)
             events = []
@@ -191,12 +208,10 @@ class Gates:
         o.append("  - (c) no open issue in milestone RC3: %s %d open" % ("🟢" if e["milestone"] else "🔴", len(bl["milestone"])))
         nsoc = sum(1 for v in self.r1.values() if v["ok"])
         asof = self.soak["asof"] if self.soak else "no soak data"
-        o.append("- **Release 1: %s %s** (%d of %d SoCs have a green light-box run and %d stable days; image %s, soak as of %s)" % (
-            "🟢" if self.r1_ok else "🔴", self.verdict(self.r1_ok), nsoc, len(self.socs), self.min_days,
-            self.r1_image or "–", asof))
-        if not self.r1_started:
-            o.append("  - Not started: the %d-day counter starts when RC3 is published (tag%s) and runs only on the image built "
-                     "from that tag." % (self.min_days, " " + self.r1_tag if self.r1_tag else " pending"))
+        o.append("- **Release 1: %s %s** (%d of %d SoCs have a green light-box run and a %d-day soak of the box camera; soak as of %s)" % (
+            "🟢" if self.r1_ok else "🔴", self.verdict(self.r1_ok), nsoc, len(self.socs), self.min_days, asof))
+        o.append("  - Counting (decision 2026-11-28): per SoC only the light-box camera, %d days from the end of its green box run "
+                 "(a later reset restarts it)." % self.min_days)
         o += ["", "### RC3: blocking issues", ""]
         titles = (("critical", "Critical (severity:critical)"), ("high", "High (severity:high)"), ("milestone", "RC3 milestone"))
         if not any(bl.values()):
@@ -231,9 +246,10 @@ class Gates:
                 items.append("`%s` (%s; %s; %s)" % (f["name"], f["cells"][s], self.m.ulabel(self.m.users(f, s)),
                                                     ", ".join(self.ilink(i) for i in iss) if iss else "no issue yet"))
             o.append("- **%s** (%d missing, %d rows): %s" % (s, v["total"] - v["ok"], len(v["missing"]), ", ".join(items)))
-        o += ["", "### Release 1: stable days on the release image", "",
-              "Stable days = days since the later of: the image first ran on the camera, its last unplanned reboot, its last oops "
-              "(the best camera of a SoC counts). Cameras are named by the last octet of their LAN address.", "",
+        o += ["", "### Release 1: 3-day soak of the light-box camera", "",
+              "Per SoC only the camera of the green light-box run counts. Stable days = from the later of: the end of its box run, "
+              "its last unplanned reboot, its last oops, a new image; to its last soak sample. Cameras are named by the last octet "
+              "of their LAN address.", "",
               "| SoC | light-box run | cameras | best stable days | progress | unplanned reboots | oops |", "|---|---|---|--:|---|--:|--:|"]
         for s in self.socs:
             v = self.r1[s]
@@ -316,10 +332,8 @@ class Gates:
             h.append('<details class="prio"><summary><b>%s</b> %d missing (%d rows)</summary><ul class="pl">%s</ul></details>' % (
                 s, v["total"] - v["ok"], len(v["missing"]), "".join(li)))
         asof = self.soak["asof"] if self.soak else "no soak data"
-        h.append(head(self.r1_ok, "Release 1", ("Not started: the %d-day counter starts when RC3 is published and runs only on the image "
-                      "built from the RC3 tag. " % self.min_days if not self.r1_started else "") +
-                      "Image %s, soak as of %s. Stable days = since the later of: image first ran, last unplanned reboot, "
-                      "last oops (best camera per SoC). Milestone Release 1." % (esc(self.r1_image or "-"), esc(asof))))
+        h.append(head(self.r1_ok, "Release 1", "Soak as of %s. Stable days = %d-day soak of the light-box camera from the later of: end of its green box run, last "
+                      "unplanned reboot, last oops, new image. Milestone Release 1." % (esc(asof), self.min_days)))
         rows = []
         for s in self.socs:
             v = self.r1[s]
