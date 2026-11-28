@@ -88,6 +88,9 @@ void OpenIMP_T32_EncSections(int jpeg, uint32_t jpeg_bs, uint32_t *section_kb, u
 #ifndef PLATFORM_T33
 int OpenIMP_T32_EncQpgAIOn(int encChn);         /* SetChnQpgAIEnable (openimp_t32_fs_enc_ext.c) */
 #endif
+#ifdef PLATFORM_T33
+#include "t32/openimp_t33_resize.h"
+#endif
 #include "t32/openimp_t32_gdr.h"
 
 #if !defined(PLATFORM_T32)
@@ -218,6 +221,13 @@ struct t32_enc_chn {
      * words at 0xdc504..0xdc520), and never sets work_done back to 1 */
     uint32_t q_packs, q_bytes, q_frames;
     int q_done, q_post;                 /* q_post: JPEG picture notified, words pending (T33) */
+    /* #99: a FrameSource picture of another size than the channel is scaled on the CPU like the vendor
+     * input thread (0xedba8, c_resize_c 0x34540): scratch picture in rmem + the coefficient table */
+    T32VpuBuf scl;
+    uint16_t *scl_tab;
+    uint32_t scl_pw, scl_ph;
+    int scl_cur;                        /* the picture being coded is the scaled one: its padding rows are computed */
+#endif
 };
 
 struct t32_enc_grp {
@@ -492,7 +502,11 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
         /* a caller's NV12 (YuvEncode / InputJpege, #752): UV after the even height, vendor 2.0.2.1
          * YuvEncode 0x104b4c job +0x64 = ((h + 1) & ~1) * ALIGN16(w) + Y, InputJpege 0x105430 C = Y + w * h */
         *c = f->phyAddr + *stride * (e->yuv ? (f->height + 1u) & ~1u : ALIGN16(f->height));
-        if (e->h264 && !e->yuv)
+        if (e->h264 && !e->yuv
+#ifdef PLATFORM_T33
+            && !e->scl_cur      /* c_resize_c computes the rows below the picture (QEMU A/B, crop run sc-v) */
+#endif
+            )
             enc_pad_rows(f, *stride);
     }
     e->vpu.node.frame_type = ivdc ? OI_T32_FRAME_TYPE_IVDC : 0;
@@ -1613,6 +1627,53 @@ static int slot_free_locked(struct t32_enc_chn *e)
     return t32_encq_free(&e->q);
 }
 
+#ifdef PLATFORM_T33
+/* The vendor encoder channel takes a picture of another size than the channel (FrameSource channel larger than
+ * picWidth x picHeight) through c_resize_c with the attribute crop window; ResizeMode (SetChnResizeMode) only
+ * decides where the vendor puts the result (1: into the capture buffer itself, 0: an rmem buffer), the picture is
+ * the same.  The scaled picture is built in the channel's own rmem buffer here.  *out is the picture handed to
+ * the codec (time stamp of the capture); NULL when it cannot be made. */
+static const IMPFrameInfo *t33_scale_frame(struct t32_enc_chn *e, const IMPFrameInfo *f, IMPFrameInfo *out)
+{
+    uint32_t pw = e->attr.encAttr.picWidth, ph = e->attr.encAttr.picHeight;
+    uint32_t sh16 = ALIGN16(f->height), ph16 = ALIGN16(ph), need = pw * ph16 * 3u / 2u;
+    const IMPEncoderCropCfg *c = &e->attr.encAttr.crop;
+    int crop = c->enable ? 1 : 0;
+
+    if (!f->virAddr || f->width < 4u || f->height < 4u || pw < 2u || ph < 2u)
+        return NULL;
+    if (crop && (c->w < 2u || c->h < 2u || c->x + c->w > f->width || c->y + c->h > sh16))
+        return NULL;                    /* the vendor reads outside the picture here */
+    if (e->scl_pw != pw || e->scl_ph != ph) {
+        OpenIMP_T32_VpuBufFree(&e->scl);
+        free(e->scl_tab);
+        e->scl_tab = NULL;
+        e->scl_pw = e->scl_ph = 0;
+        if (OpenIMP_T32_VpuBufAlloc(&e->scl, need, "enc-scale"))
+            return NULL;
+        e->scl_tab = calloc(T33_RESIZE_TAB(pw, ph16), sizeof(uint16_t));
+        if (!e->scl_tab) {
+            OpenIMP_T32_VpuBufFree(&e->scl);
+            return NULL;
+        }
+        e->scl_pw = pw;
+        e->scl_ph = ph;
+    }
+    /* the capture was written by the engine: drop the CPU's stale lines of it before reading (vendor: IMP_FlushCache) */
+    OpenIMP_T32_VpuFlush((const void *)(uintptr_t)f->virAddr, f->width * sh16 * 3u / 2u, OI_T32_VPU_FLUSH_INV);
+    openimp_t33_resize_c((const uint8_t *)(uintptr_t)f->virAddr, t32_vpu_buf_va(&e->scl), (int)f->width, (int)sh16,
+                         (int)pw, (int)ph16, crop, crop ? (int)(f->width * c->y + c->x) : 0,
+                         crop ? (int)((c->w + 1u) & ~1u) : 0, crop ? (int)((c->h + 1u) & ~1u) : 0, e->scl_tab);
+    OpenIMP_T32_VpuFlush(t32_vpu_buf_va(&e->scl), need, OI_T32_VPU_FLUSH_WBACK);
+    *out = *f;
+    out->width = pw;
+    out->height = ph;
+    out->phyAddr = t32_vpu_buf_pa(&e->scl);
+    out->virAddr = (uint32_t)(uintptr_t)t32_vpu_buf_va(&e->scl);
+    return out;
+}
+#endif
+
 static void *enc_thread(void *arg)
 {
     struct t32_enc_chn *e = arg;
@@ -1638,12 +1699,23 @@ static void *enc_thread(void *arg)
         si = slot_free_locked(e);       /* reserved by the sink */
         pthread_mutex_unlock(&enc_lock);
 
-        if (e->hevc)
-            ok = si >= 0 && frame && h265_encode(e, frame, &e->slot[si]) == 0;
-        else if (e->h264)
-            ok = si >= 0 && frame && h264_encode(e, frame, &e->slot[si]) == 0;
-        else
-            ok = si >= 0 && frame && jpeg_encode(e, frame, &e->slot[si], &len) == 0;
+        {
+            const IMPFrameInfo *ef = frame;
+#ifdef PLATFORM_T33
+            IMPFrameInfo sf;
+
+            if (frame && !e->yuv && (frame->width != e->attr.encAttr.picWidth ||
+                                     frame->height != e->attr.encAttr.picHeight))
+                ef = t33_scale_frame(e, frame, &sf);
+            e->scl_cur = ef != frame;
+#endif
+            if (e->hevc)
+                ok = si >= 0 && ef && h265_encode(e, ef, &e->slot[si]) == 0;
+            else if (e->h264)
+                ok = si >= 0 && ef && h264_encode(e, ef, &e->slot[si]) == 0;
+            else
+                ok = si >= 0 && ef && jpeg_encode(e, ef, &e->slot[si], &len) == 0;
+        }
 
         pthread_mutex_lock(&enc_lock);
         if (ok) {
@@ -1809,7 +1881,11 @@ static int enc_sink(void *ctx, int fs_chn, IMPFrameInfo *frame)
             continue;
         }
 #endif
-        if (frame->width != e->attr.encAttr.picWidth || frame->height != e->attr.encAttr.picHeight) {
+        if ((frame->width != e->attr.encAttr.picWidth || frame->height != e->attr.encAttr.picHeight)
+#ifdef PLATFORM_T33
+            && !(frame->virAddr && !e->ivdc && !e->yuv)     /* scaled in the encoder thread (#99) */
+#endif
+            ) {
             if (!e->size_logged++)
                 IMP_LOG_ERR(TAG, "chn %d: frame %ux%u, channel %ux%u (no scaling in the encoder)",
                             i, frame->width, frame->height, e->attr.encAttr.picWidth,
@@ -1988,6 +2064,12 @@ static void h264_free(struct t32_enc_chn *e)
 {
     int i;
 
+#ifdef PLATFORM_T33
+    OpenIMP_T32_VpuBufFree(&e->scl);
+    free(e->scl_tab);
+    e->scl_tab = NULL;
+    e->scl_pw = e->scl_ph = 0;
+#endif
     OpenIMP_T32_VpuBufFree(&e->avc.list);
     OpenIMP_T32_VpuBufFree(&e->avc.ring);
     OpenIMP_T32_VpuBufFree(&e->avc.grey);

@@ -113,6 +113,7 @@ objects="$objects $output_dir/t32_isp_osd.o"
 compile t32_fs src/t32/openimp_t32_fs.c
 # software rotation for SetChnRotate (#731, the unified OpenIMP path): NV12 kernels, MXU2 (T33 toolchain mxu2)
 compile nv12_rotate src/framesource/nv12_rotate.c -O2 -Werror
+compile t33_resize src/t32/openimp_t33_resize.c -O2 -Werror
 compile core_mxu2 src/core/openimp_mxu2.c -Werror
 # IVDC direct mode (#301): ISP channel 0 -> encoder without frame buffers
 compile t32_ivdc src/t32/openimp_t32_ivdc.c

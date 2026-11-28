@@ -179,6 +179,17 @@ static void stream_dump(int n, const IMPEncoderStream *st)
     /* pa 0: the stream buffer is process memory (T33 #391, T32 #743) */
     printf("T32J %d %u packs %u seq %u pa 0x%08x\n", n, total, st->packCount, st->seq,
            st->packCount ? st->pack[0].phyAddr : 0u);
+    /* JPEG: the frame size of the first pack's SOF0 (#99: encoder-side scaling, vendor vs OpenIMP) */
+    if (st->packCount && st->pack[0].length > 4) {
+        const uint8_t *j = (const uint8_t *)(uintptr_t)st->pack[0].virAddr;
+        uint32_t k;
+
+        for (k = 2; k + 9 < st->pack[0].length && j[0] == 0xff && j[1] == 0xd8; k++)
+            if (j[k] == 0xff && j[k + 1] == 0xc0) {
+                printf("T32J %d jpeg %ux%u\n", n, (unsigned)(j[k + 7] << 8 | j[k + 8]), (unsigned)(j[k + 5] << 8 | j[k + 6]));
+                break;
+            }
+    }
     fflush(stdout);
 }
 
@@ -911,6 +922,16 @@ again:
     if (enc) {
         MUST(IMP_Encoder_CreateGroup(0));
         MUST(IMP_Encoder_SetDefaultParam(&ea, prof, rc, enc_w, enc_h, 15, 1, 15, 0, qp_cur, kbps));
+        if (getenv("T32_ENC_CROP")) {   /* #99: encAttr.crop "x:y:w:h" (the source window of the encoder-side scaling) */
+            unsigned cx = 0, cy = 0, cw = 0, chh = 0;
+            if (sscanf(getenv("T32_ENC_CROP"), "%u:%u:%u:%u", &cx, &cy, &cw, &chh) == 4) {
+                ea.encAttr.crop.enable = 1;
+                ea.encAttr.crop.x = cx;
+                ea.encAttr.crop.y = cy;
+                ea.encAttr.crop.w = cw;
+                ea.encAttr.crop.h = chh;
+            }
+        }
         {                               /* the default channel attribute, as words */
             const uint32_t *w = (const uint32_t *)(const void *)&ea;
             unsigned k;
