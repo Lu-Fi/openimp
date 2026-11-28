@@ -676,6 +676,7 @@ void cs_t33l1(void)
     rep("IMP_ISP_LDC_OfflineUpdateLutToJob", rul, V_PASS, "NULL 0x%x; frames flow %d", X(rul), cases_flow());
 }
 
+static int t33_yuv_backend;     /* t33e3: the stand-alone encoder has a back end (hardware), set by the YuvInit line */
 /* ---- case "t33e3": kernel encoder and multi-process encoder clients (batch E3, #56 / #41) -------------------------------------------
  * After IMP_System_Init: MultiProcessInit refused (0x80040080), no server: the *_Ex clients fail (NULL / -1); /dev/kern_enc does not exist
  * on the T33 kernel: KernEnc_* 0x80048000, channel 16 0x80040001. */
@@ -729,22 +730,29 @@ void cs_t33e3(void)
         IMPEncoderYuvIn in;
         IMPEncoderYuvOut out;
         IMPFrameInfo f;
-        void *h = (void *)-7;
+        void *h = (void *)-7, *h0;
         int r_ok, r_jpg, r_w, r_e, r_x;
 
         memset(&in, 0, sizeof(in)); memset(&out, 0, sizeof(out)); memset(&f, 0, sizeof(f));
         in.type = PT_H264;
         r_ok = IMP_Encoder_YuvInit(&h, 320, 192, &in);
+        h0 = h;
         r_w = IMP_Encoder_YuvInit(&h, 322, 192, &in);
         in.type = PT_JPEG;
         r_jpg = IMP_Encoder_YuvInit(&h, 320, 192, &in);
         r_e = IMP_Encoder_YuvEncode(NULL, f, &out);
         r_x = IMP_Encoder_YuvExit(NULL);
-        rep(FN(IMP_Encoder_YuvInit), r_ok, r_ok == (int)0x80048000 && h == (void *)-7 ? V_PASS : V_FAIL, "no back end: 0x%x, width 322 0x%x, JPEG type 0x%x (handle untouched)", X(r_ok), X(r_w), X(r_jpg));
+        /* guard (t33-proofs1128): on hardware the back end exists; vendor 2.0.2.1 rejects the zeroed attribute with 0x80040002 (T33L
+         * device 2026-11-28), QEMU stage 1 answers 0x80048000. An accepted call (OpenIMP, #998) is freed again, not leaked. */
+        t33_yuv_backend = r_ok != (int)0x80048000;
+        if (r_ok == 0) IMP_Encoder_YuvExit(h0);
+        rep(FN(IMP_Encoder_YuvInit), r_ok, (r_ok == (int)0x80048000 || r_ok == (int)0x80040002) && h0 == (void *)-7 ? V_PASS : V_FAIL, "zeroed attribute: 0x%x (QEMU no back end 0x80048000, device vendor 0x80040002), width 322 0x%x, JPEG type 0x%x (handle %s)", X(r_ok), X(r_w), X(r_jpg), h0 == (void *)-7 ? "untouched" : "set, freed");
         rep(FN(IMP_Encoder_YuvEncode), r_e, r_e == (int)0x80040010 && r_w == (int)0x80040002 && r_jpg == (int)0x80040002 ? V_PASS : V_FAIL, "NULL handle 0x%x", X(r_e));
         rep(FN(IMP_Encoder_YuvExit), r_x, r_x == (int)0x80040010 ? V_PASS : V_FAIL, "NULL handle 0x%x", X(r_x));
     }
-    NEED(IMP_Encoder_InputJpege) {
+    /* guard (t33-proofs1128, #996): with a back end the vendor passes the NULL source to the rmem cache flush and the T33 kernel oopses */
+    if (t33_yuv_backend) rep("IMP_Encoder_InputJpege", 0, V_SKIP, "NULL source not called on hardware (vendor oopses the kernel, #996); codes: tests/t33/devtest/yuv_devtest codes");
+    else NEED(IMP_Encoder_InputJpege) {
         int len = -7, r_ok = IMP_Encoder_InputJpege(NULL, NULL, 320, 192, 75, &len);
         int r_w = IMP_Encoder_InputJpege(NULL, NULL, 100, 192, 75, &len);
         rep(FN(IMP_Encoder_InputJpege), r_ok, r_ok == (int)0x80048000 && r_w == (int)0x80040002 && len == -7 ? V_PASS : V_FAIL, "no back end: 0x%x, width 100 0x%x", X(r_ok), X(r_w));
