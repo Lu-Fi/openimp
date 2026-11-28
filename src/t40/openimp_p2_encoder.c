@@ -4785,8 +4785,9 @@ static int p2_ivdc_pick(int channel, int source, void **frame,
  * keep mask (p2_fps_mask.h): the source rate is the sensor rate the ISP
  * hands to the FrameSource (set_framesource_fps, carried on every vendor
  * frame), one mask step per frame the encoder takes, a skipped frame goes
- * back at once.  Without a known sensor rate, with out >= src or a window
- * over 64 frames the wall-clock pacing below stays.  Video channels only
+ * back at once; out >= src codes every frame as it comes (the vendor mask
+ * is all ones then).  Without a known sensor rate or with a window over 64
+ * frames (both a vendor error) the wall-clock pacing below stays.  Video channels only
  * (the vendor JPEG path has no mask).  OPENIMP_ENC_FPS_MASK=0: old pacing.
  */
 extern int OpenIMP_EncoderSourceFps(uint32_t *num, uint32_t *den)
@@ -4814,8 +4815,10 @@ static int p2_fps_mask_poll(int channel, const P2EncoderChannel *ch,
         !OpenIMP_EncoderSourceFps ||
         OpenIMP_EncoderSourceFps(&src_num, &src_den) != 0)
         return 0;
+    /* 1: mask, 0: out >= src, every frame as it comes (vendor len ==
+     * keep); -1: the vendor rule does not apply, wall-clock pacing */
     return p2_fps_mask_update(&p2_fps_masks[channel], src_num, src_den,
-                              out_num, out_den) == 1;
+                              out_num, out_den) >= 0;
 }
 
 /* One frame the poll took: 1 = code it, 0 = skipped by the mask. */
