@@ -958,6 +958,8 @@ int OpenIMP_P1_GetDefaultBinPath(IMPVI_NUM num, char *path, size_t size)
     return 0;
 }
 
+extern void OpenIMP_P3_TuningEnabledFps(void) __attribute__((weak));
+
 int IMP_ISP_EnableTuning(void)
 {
     int fd;
@@ -981,6 +983,8 @@ int IMP_ISP_EnableTuning(void)
     p1.tuning_fd = fd;
     p1.tuning_enabled = 1;
     unlock_p1();
+    if (OpenIMP_P3_TuningEnabledFps)
+        OpenIMP_P3_TuningEnabledFps();      /* vendor: set_framesource_fps (#962) */
     return 0;
 }
 
