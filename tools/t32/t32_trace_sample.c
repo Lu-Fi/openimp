@@ -953,6 +953,10 @@ again:
             int rv = atoi(getenv("T32_ENC_RDBS"));
             printf("T32S rdbufshare %d ret %d\n", rv, IMP_Encoder_SetRdBufShare(0, rv));
         }
+        if (getenv("T32_ENC_QPGAI")) {  /* #99: SetChnQpgAIEnable must precede CreateChn */
+            int (*qe)(int, int) = (int (*)(int, int))dlsym(RTLD_DEFAULT, "IMP_Encoder_SetChnQpgAIEnable");
+            printf("T32C pre SetChnQpgAIEnable = %d\n", qe ? qe(0, 1) : -999);
+        }
         MUST(IMP_Encoder_CreateChn(0, &ea));
         MUST(IMP_Encoder_RegisterChn(0, 0));
         if (getenv("T32_ENC_FRMUSED")) {        /* #784: "E:M:T" SetChnFrmUsedMode after CreateChn */
@@ -1072,6 +1076,8 @@ again:
                             { "maproi", "IMP_Encoder_SetChnMapRoi", 4, { 0, 0x2a } },
                             { "maproiq", "IMP_Encoder_SetChnMapRoi", 4, { 0, 0x29 } },
                             { "maproid", "IMP_Encoder_SetChnMapRoi", 4, { 1, 0x2a } },
+                            /* #99: QpgAI map (T32_ENC_QPGAI=1 enables it before CreateChn): left half mode 1, right half 2 of the 16x16 blocks */
+                            { "qpgai", "IMP_Encoder_SetChnQpgAI", 5, { 1, 3 } },
                         };
                         unsigned xi;
                         for (xi = 0; xi < sizeof(xt) / sizeof(xt[0]); xi++) {
@@ -1097,6 +1103,17 @@ again:
                                 mc.map = mrmap; mc.size = (uint32_t)(mw * mh); mc.type = w[0]; mc.res = 0;
                                 ml.data = mrtab; ml.len = 16;
                                 r = ((int (*)(int, void *, void *))fp)(0, &mc, &ml);
+                            } else if (xt[xi].kind == 5) {
+                                static uint8_t qmap[(4096 / 16) * (2304 / 16)];
+                                struct { uint8_t *map; uint32_t width, height; uint8_t fore, mark; int32_t reserved; } qc;
+                                int qw = ((getenv("T32_ENC_W") ? atoi(getenv("T32_ENC_W")) : 1920) + 15) / 16;
+                                int qh = ((getenv("T32_ENC_H") ? atoi(getenv("T32_ENC_H")) : 1080) + 15) / 16;
+                                for (int y = 0; y < qh; y++)
+                                    for (int x = 0; x < qw; x++)
+                                        qmap[y * qw + x] = x < qw / 2 ? 1 : 2;
+                                memset(&qc, 0, sizeof(qc));
+                                qc.map = qmap; qc.width = (uint32_t)qw; qc.height = (uint32_t)qh; qc.fore = (uint8_t)w[0]; qc.mark = (uint8_t)w[1];
+                                r = ((int (*)(int, void *))fp)(0, &qc);
                             } else if (xt[xi].kind == 2)
                                 r = ((int (*)(int, uint32_t, int))fp)(0, (uint32_t)w[0], w[1]);
                             else

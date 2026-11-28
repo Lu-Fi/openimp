@@ -1662,6 +1662,65 @@ int IMP_FrameSource_GetI2dAttr(int chnNum, IMPFSI2DAttr *attr)
     return 0;
 }
 
+#if !defined(PLATFORM_T33)
+/* ---- T32 LDC channel attribute (vendor 2.2.0, #99) --------------------------------------------------------------------------------
+ * IMP_FrameSource_Set/GetChnAttr_Expand (@ 0x0014dd38 / 0x0014dffc): 140 bytes {enable, priority, block size, lut_name[128]} in the
+ * vendor's per-channel table (channel + 0x450): NULL 0x80010010, channel >= 12 0x80010001, no frame source 0x80010008 (not reachable
+ * here), else copy and 0.  IMP_FrameSource_UpdateChnLut (@ 0x0014e2c0): channel >= 12 0x80010001, no frame source 0x80010008, else
+ * IMP_ISP_LDC_OfflineUpdateLutToJob({the channel's job handle, 1, lut_name}) (result ignored) and the name goes to the stored attribute.
+ * The vendor EnableChn turns an enabled attribute into an offline LDC job (+ per-frame OfflineSubmitTask in the frame thread): that data
+ * path is not ported, so the attribute is kept and the job handle stays 0. */
+struct t32_fs_ldc_attr { int enable, priority, size; char lut_name[128]; };
+static struct t32_fs_ldc_attr fs_ldc_attr[FS_VENDOR_CHNS];
+
+int IMP_FrameSource_SetChnAttr_Expand(int chnNum, struct t32_fs_ldc_attr *attr)
+{
+    if (!attr)
+        return FS_ERR_NULL;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    fs_ldc_attr[chnNum] = *attr;
+    pthread_mutex_unlock(&fs_lock);
+    return 0;
+}
+
+int IMP_FrameSource_GetChnAttr_Expand(int chnNum, struct t32_fs_ldc_attr *attr)
+{
+    if (!attr)
+        return FS_ERR_NULL;
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    *attr = fs_ldc_attr[chnNum];
+    pthread_mutex_unlock(&fs_lock);
+    return 0;
+}
+
+extern int32_t IMP_ISP_LDC_OfflineUpdateLutToJob(void *attr);
+int IMP_FrameSource_UpdateChnLut(int chnNum, char lut_name[128])
+{
+    uint32_t upd[34];
+
+    if (chnNum < 0 || chnNum >= FS_VENDOR_CHNS)
+        return FS_ERR_CHN;
+    if (!lut_name)
+        return FS_ERR_NULL;
+    memset(upd, 0, sizeof(upd));
+    upd[0] = 0;                         /* the channel's job handle: no LDC job without the EnableChn data path */
+    upd[1] = 1;
+    memcpy(&upd[2], lut_name, 128);
+    (void)IMP_ISP_LDC_OfflineUpdateLutToJob(upd);
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    memcpy(fs_ldc_attr[chnNum].lut_name, lut_name, 128);
+    pthread_mutex_unlock(&fs_lock);
+    return 0;
+}
+#endif
+
 int IMP_FrameSource_SetPool(int chnNum, int poolID)
 {
     uint8_t info[256];

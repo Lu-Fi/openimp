@@ -260,6 +260,15 @@ int IMP_Encoder_SetH264Vui(int encChn, const IMPEncoderH264Vui *v)
             x->vui.matrix = v->vuiVideoSignal.matrix_coefficients;
 #endif
         }
+#if !defined(PLATFORM_T33)
+        else {
+            /* vendor 2.2.0 (QEMU A/B apitest t33e1, #99): a signal flag of 0 returns the SPS to the default (no video signal
+             * type, no colour description) instead of keeping the fields an earlier call set */
+            x->vui.format = 5;
+            x->vui.full = 0;
+            x->vui.desc = x->vui.prim = x->vui.trans = x->vui.matrix = 0;
+        }
+#endif
         x->vui.signal = x->vui.format != 5 || x->vui.full;
         x->vui.restriction = v->vuiBitstreamRestric.bitstream_restriction_flag ? 1 : 0;
         x->v4_pend.vuiVideoSignal.video_signal_type_present_flag = x->vui.signal;
@@ -271,6 +280,8 @@ int IMP_Encoder_SetH264Vui(int encChn, const IMPEncoderH264Vui *v)
             x->v4_pend.vuiVideoSignal.colour_primaries = x->vui.prim;
             x->v4_pend.vuiVideoSignal.transfer_characteristics = x->vui.trans;
             x->v4_pend.vuiVideoSignal.matrix_coefficients = x->vui.matrix;
+        } else {
+            x->v4_pend.vuiVideoSignal.colour_description_present_flag = 0;
         }
 #endif
         x->v4_pend.vuiAspectRatio.sar_width = x->vui.sar_w;
@@ -446,9 +457,13 @@ int IMP_Encoder_SetH264TransCfg(int encChn, const IMPEncoderH264TransCfg *t)
         return E1_ERR_NULL;
     pthread_mutex_lock(&e1_lock);
     int ok = e1_get(encChn, &ci) == 0;
-    if (ok && ci.codec == 1)               /* vendor: no channel or another codec answers 0 */
+    if (ok && ci.codec == 1) {             /* vendor: no channel or another codec answers 0 */
         E1.trans264_pend = t->chroma_qp_index_offset < -12 ? -12 : t->chroma_qp_index_offset > 12 ? 12 :
                               t->chroma_qp_index_offset;
+#if !defined(PLATFORM_T33)
+        E1.rc_new |= T32_E1RC_RESTART;      /* vendor 2.2.0 (QEMU A/B, CBR): the controller restarts at the next IDR */
+#endif
+    }
     pthread_mutex_unlock(&e1_lock);
     return 0;
 }
@@ -481,20 +496,14 @@ int IMP_Encoder_SetH265TransCfg(int encChn, const IMPEncoderH265TransCfg *t)
     pthread_mutex_lock(&e1_lock);
     int ok = e1_get(encChn, &ci) == 0;
     if (ok && ci.codec == 2) {
-        /* vendor 2.0.2.1 (#784, QEMU v265t / v265n): the pictures and the PPS use the larger of the two
-         * offsets, clipped to -12..12, for cb and cr ({13, 0} -> 12/12, {-2, 3} -> 3/3, {-5, -2} -> -2) */
-#if defined(PLATFORM_T33)
+        /* vendor 2.0.2.1 (#784, QEMU v265t / v265n) and 2.2.0 (#99, QEMU apitest t33e1 get-back "cr 3 cb 3" after set 3/-2): the
+         * pictures and the PPS use the larger of the two offsets, clipped to -12..12, for cb and cr ({13, 0} -> 12/12,
+         * {-2, 3} -> 3/3, {-5, -2} -> -2) */
         int m = t->chroma_cr_qp_offset > t->chroma_cb_qp_offset ? t->chroma_cr_qp_offset : t->chroma_cb_qp_offset;
 
         m = m < -12 ? -12 : m > 12 ? 12 : m;
         E1.trans265_pend.chroma_cr_qp_offset = m;
         E1.trans265_pend.chroma_cb_qp_offset = m;
-#else                                   /* T32 2.2.0: not compared with its vendor library, per field */
-        E1.trans265_pend.chroma_cr_qp_offset = t->chroma_cr_qp_offset < -12 ? -12 : t->chroma_cr_qp_offset > 12 ? 12 :
-                                                  t->chroma_cr_qp_offset;
-        E1.trans265_pend.chroma_cb_qp_offset = t->chroma_cb_qp_offset < -12 ? -12 : t->chroma_cb_qp_offset > 12 ? 12 :
-                                                  t->chroma_cb_qp_offset;
-#endif
     }
     pthread_mutex_unlock(&e1_lock);
     return 0;
@@ -921,6 +930,9 @@ int IMP_Encoder_SetChnCrop(int encChn, const IMPEncoderCropCfg *c)
     if (!rc && ci.codec != 0) {
         E1.crop_pend = *c;
         E1.crop_pend.enable = c->enable ? 1 : 0;
+#if !defined(PLATFORM_T33)
+        E1.rc_new |= T32_E1RC_RESTART;      /* vendor 2.2.0 (QEMU A/B, CBR): the controller restarts at the next IDR */
+#endif
         if (ci.codec != 2)                   /* H.264 reads back at once, H.265 from the next IDR */
             E1.crop = E1.crop_pend;
     }

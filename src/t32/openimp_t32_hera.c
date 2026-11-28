@@ -199,6 +199,12 @@ static uint32_t hera_field(const T32HeraH264Pic *p, uint32_t reg, uint32_t v, co
         const uint8_t *sl = p->rc_slice;
 
         switch (reg) {
+        /* P-skip / intra refresh (#784 T33; T32 #99, QEMU A/B gd1 / g3 vs vendor 2.2.0): the controller's skipped picture clears
+         * s+0x42c, a refresh or skipped picture s+0x2c4 */
+        case 0x40438u:
+            return (v & ~1u) | (sl[0x42c] & 1u);
+        case 0x30048u:
+            return rd32(sl + 0x2c4) ? v : v & ~(1u << 23);
         case EFE_FRM_QP:                /* QP, MB QP min, max (vendor: s+0x153; the slice header's QP) */
             return (sl[0x18] & 0x1fu) | qp << 8 | (uint32_t)sl[0x826] << 16 | (uint32_t)sl[0x825] << 24;
         case EFE_MBQP_CFG:
@@ -353,6 +359,9 @@ size_t t32_hera_h264_list(const T32HeraH264Pic *p, uint32_t *list)
             continue;
         /* SetRdBufShare(0): the vendor 2.2.0 H.264 list has no reference look-up (QEMU, #99 row 37) */
         if (p->noshare && (e->reg == MCE_RLUT_Y || e->reg == MCE_RLUT_C))
+            continue;
+        /* a skipped picture (RequestPskip): no MCE 0x30048 (the controller zeroes s+0x2c0 / 0x2c4 for it) */
+        if (e->reg == 0x30048u && p->rc_slice && p->rc_slice[0x874] == 6u && !rd32(p->rc_slice + 0x2c0))
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->reg == SDE_CTX_TBL ? e->reg + 4u * k : e->reg;

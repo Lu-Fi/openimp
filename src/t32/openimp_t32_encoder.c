@@ -363,12 +363,11 @@ static void e1_at_idr(struct t32_enc_chn *e)
     T32Vui v;
     int n = chn_no(e);
     int vui = OpenIMP_T32_E1AtIdr(n, &v), chg = vui;
-#ifdef PLATFORM_T33
     T32E1Hdr hd;
 
-    /* #784: SetChnCrop (SPS frame cropping / conformance window) and SetH264TransCfg (PPS + HERA
-     * chroma QP offset) from this IDR on, as vendor 2.0.2.1 (QEMU t33-cache runs vfx / v265).
-     * T32 2.2.0: not verified against its vendor library, kept stored only. */
+    /* #784: SetChnCrop (SPS frame cropping / conformance window), SetH264/H265TransCfg (PPS chroma QP offset) and
+     * MotionQuality from this IDR on, as vendor 2.0.2.1 (QEMU t33-cache runs vfx / v265) and, checked against the
+     * vendor 2.2.0 library in QEMU (#99, 2026-11-28: apitest t33e1 SPS / PPS bytes equal), on the T32 */
     OpenIMP_T32_E1Hdr(n, &hd);
     if (e->hevc) {
         /* the vendor keeps conformance_window_flag 1 with a zero window once a crop was switched
@@ -404,7 +403,6 @@ static void e1_at_idr(struct t32_enc_chn *e)
             a->pps_len = t32_h264_pps(&a->seq, a->pps);
         }
     }
-#endif
     if (!chg)
         return;
     if (e->hevc) {
@@ -915,23 +913,20 @@ static int rc_picture_qp(struct t32_enc_chn *e, int idr)
 #endif
             }
     }
-#ifdef PLATFORM_T33
     /* #784 group 2: QpgMode before every picture, RcTrigLevel / SuperFrameCfg at the IDR
-     * (vendor 2.0.2.1 i264e_reconfig / i264e_idr_reconfig: controller restart) */
+     * (vendor 2.0.2.1 i264e_reconfig / i264e_idr_reconfig: controller restart); on the T32 (#99, QEMU A/B against the vendor 2.2.0
+     * library, CBR 640x368: Color2Grey, HSkip, SetChnCrop and SetH264TransCfg restart the controller at the next IDR) */
     T32E1Rc rcp;
     int rc_flags = OpenIMP_T32_E1RcTake(chn_no(e), idr, &rcp);
     int rc_again = t32_rc_idr_params(&a->rc, (unsigned)rc_flags, rcp.trig, rcp.sf, rcp.qpg);
-#endif
     if (idr) {
         IMPEncoderAttrRcMode m;
         int restart;
 
         pthread_mutex_lock(&enc_lock);
         restart = a->rc_restart;
-#ifdef PLATFORM_T33
         if (rc_again && a->rc.on)
             restart = 1;
-#endif
         a->rc_restart = 0;
         a->rb_hold = 0;                 /* the setters are live from this IDR on */
         m = e->attr.rcAttr.attrRcMode;

@@ -33,8 +33,8 @@
  *   the file cannot be written).  Resume needs a suspended channel
  *   (0x80011000): the frame thread runs again, "FS_PM" goes to
  *   /sys/power/wake_lock (0x80014000 when the file cannot be written) and,
- *   when no channel is suspended any more, IMP_ISP_OneShotTick (T32 only,
- *   the T33 is a "t32v" chip for the vendor library; failure: 0x80012000).
+ *   when no channel is suspended any more nothing else (the vendor's one-shot
+ *   tick runs only on the T33-V chips, cpu id 0x13 / 0x14).
  */
 
 #define FS_ERR_NOTREADY ((int)0x80011000)
@@ -518,13 +518,8 @@ int IMP_FrameSource_PM_Resume(int chnNum)
     pthread_mutex_unlock(&fs_lock);
     if (fs_pm_write("/sys/power/wake_lock") < 0)
         return FS_ERR_RESOURCE;
-#if !defined(PLATFORM_T33)
-    /* T32: one-shot tick after the last resume; the T33 is a "t32v" chip
-     * for the vendor library (no tick, as its PM_SetMode path) */
-    if (left == 0 && IMP_ISP_OneShotTick() != 0)
-        return FS_ERR_TIMEOUT;     /* vendor: 0x80012000 */
-#else
+    /* vendor 2.2.0 (IMP_FrameSource_PM_Resume @ 0x00158af8): the one-shot tick after the last resume runs only when is_t32v_chip()
+     * is 0 (get_cpu_id 0x13 / 0x14 = T33-VL / T33-VN); T32 and the other T33 return 0 here */
     (void)left;
-#endif
     return 0;
 }

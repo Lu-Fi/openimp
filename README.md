@@ -59,7 +59,7 @@ Vendor IMP/SU functions per SoC on 2026-11-27, `next` after RC3 `v2026.11.07-rc3
 | T31 | 401 | 401 (100.0 %) | 0 | 0 | 0 | RC3 gate |
 | T40 | 389 | 389 (100.0 %) | 0 | 0 | 0 | RC3 gate |
 | T41 | 427 | 417 (97.7 %) | 10 | 0 | 0 | RC3 gate |
-| T32 | 610 | 343 (56.2 %) | 222 | 45 | 0 | Release 1 gate (device: PRJ007 module; streamer functions 258/258; light box and 72 h open) |
+| T32 | 605 | 343 (56.7 %) | 253 | 9 | 0 | Release 1 gate (device: PRJ007 module; streamer functions 258/258; light box and 72 h open) |
 | T33 | 573 | 497 (86.7 %) | 67 | 9 | 0 | Release 1 gate (device: T33L module; streamer functions 258/258; light box and 72 h open) |
 
 T32 and T33 joined the Release 1 gate on 2026-11-25; the "implemented" cells are checked in QEMU against the vendor libraries. T32 runs the open stack on the PRJ007 module since 2026-11-24 (first device API test the same day, 64 of its 343 "works" cells API round trips only; bench, no light box yet). T33 runs the open stack on a T33L module since 2026-11-14; its 497 "works" cells are device-tested (first full device API test on the module 2026-11-17, plus the later device checks; 63 of them API round trips only) or vendor no-ops; the module is on the bench, not in the light box.

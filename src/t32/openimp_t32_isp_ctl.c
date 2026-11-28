@@ -40,6 +40,7 @@
 #include "dma_alloc.h"
 #include "imp_log_int.h"
 #include "t32/openimp_t32_isp.h"
+#include "t32/openimp_t32_ioctl.h"
 
 #if !defined(PLATFORM_T32)
 #error "openimp_t32_isp_ctl.c is the PLATFORM_T32 build only"
@@ -133,7 +134,6 @@ int32_t IMP_ISP_OneShotTick(void)    { return oneshot(2, "OneShotTick"); }
 #if !defined(PLATFORM_T33)
 static void (*onebyone_cb)(IMPVI_NUM num, IMPISPOneByOneMode mode, void *data);
 #endif
-#if defined(PLATFORM_T33)
 static int32_t pm_ioctl(unsigned vinum, uint32_t req, int32_t *mode, const char *name)
 {
     int32_t a[2];
@@ -149,50 +149,23 @@ static int32_t pm_ioctl(unsigned vinum, uint32_t req, int32_t *mode, const char 
     *mode = a[0];
     return 0;
 }
-#endif
 
+/* vendor 2.2.0 (IMP_ISP_PM_SetMode @ 0x00142f34, GetMode @ 0x00143530): is_t32v_chip() is 0 only for get_cpu_id 0x13 / 0x14
+ * (T33-VL / T33-VN); every T32 and the other T33 take the driver path: VI >= 4 f00c, sensor state < 3 f009, ioctl 0xc0045431 /
+ * 0xc0045432 {mode, vinum}, failure f001.  (An earlier T32 build took the one-shot path of the T33-V chips, whose ONEBYONE
+ * callback therefore never runs here: QEMU A/B 2026-11-28, the vendor library on the open module echoes the caller's value.) */
 int32_t IMP_ISP_PM_SetMode(IMPVI_NUM num, IMPISPPMAttr *attr)
 {
-#if defined(PLATFORM_T33)
     int32_t m;
 
     if (!attr)
         return E_STATE;
     m = (int32_t)*attr;
     return pm_ioctl((unsigned)num, IOC_PM_SET, &m, "PM_SET_MODE");
-#else
-    IMPISPDriverMode cur;
-    int32_t rc;
-
-    if (!attr)
-        return E_STATE;
-    rc = IMP_ISP_GET_DriverMode(&cur);
-    if (rc)
-        return rc;
-    /* vendor 2.2.0 (0x132f34): the ONEBYONE callback of IMP_ISP_PM_SetOneByOneCallback runs around the
-     * switch: (num, 1, 0) before the one-shot disable, (num, 0, 0) after the enable and before the tick */
-    if (*attr == TISP_NORMAL_MODE) {
-        if (cur == IMPISP_DRIVER_NORMAL_MODE)
-            return 0;
-        if (onebyone_cb)
-            onebyone_cb(num, IMPISP_ONEBYONE_MODE_SLAVE, NULL);
-        return IMP_ISP_OneShotDisable();
-    }
-    if (*attr == TISP_AOV_MODE) {
-        if (cur == IMPISP_DRIVER_ONESHOT_MODE)
-            return 0;
-        rc = IMP_ISP_OneShotEnable();
-        if (onebyone_cb)
-            onebyone_cb(num, IMPISP_ONEBYONE_MODE_MASTER, NULL);
-        return rc + IMP_ISP_OneShotTick();
-    }
-    return -0xfff;
-#endif
 }
 
 int32_t IMP_ISP_PM_GetMode(IMPVI_NUM num, IMPISPPMAttr *attr)
 {
-#if defined(PLATFORM_T33)
     int32_t m, rc;
 
     if (!attr)
@@ -202,19 +175,6 @@ int32_t IMP_ISP_PM_GetMode(IMPVI_NUM num, IMPISPPMAttr *attr)
     if (rc == 0)
         *attr = (IMPISPPMAttr)m;
     return rc;
-#else
-    IMPISPDriverMode cur;
-    int32_t rc;
-
-    (void)num;
-    if (!attr)
-        return E_STATE;
-    rc = IMP_ISP_GET_DriverMode(&cur);
-    if (rc)
-        return rc;
-    *attr = cur == IMPISP_DRIVER_ONESHOT_MODE ? TISP_AOV_MODE : TISP_NORMAL_MODE;
-    return 0;
-#endif
 }
 
 #if !defined(PLATFORM_T33)
@@ -343,10 +303,41 @@ int OpenIMP_T32_CameraInputMode(IMPISPCameraInputMode *mode)
 
 int32_t IMP_ISP_WDR_OPEN(IMPVI_NUM num, IMPISPWdrOpenAttr *attr)
 {
+#ifdef PLATFORM_T33
     (void)num; (void)attr;
-    /* vendor: chip class without WDR (T32/T33): log and 0 before any argument check */
+    /* vendor T33 class (get_cpu_id >= 0xd, device word 0 == 1): log and 0 before any argument check */
     IMP_LOG_INFO(TAG, "IMP_ISP_WDR_OPEN: no WDR on this chip (no-op, as the vendor)");
     return 0;
+#else
+    /* vendor T32 2.2.0 (IMP_ISP_WDR_OPEN @ 0x0011864c, cpu class below 0xd = device word 0 == 0): NULL f009, VI >= 4 f00c, init mode
+     * 1 / 3 f008; run mode LINEAR(0): the init mode goes to the driver (ioctl 0xc00454ca, 4 bytes), failure f006; run mode WDR(1):
+     * IMP_ISP_WDR_ENABLE(num, ENABLE), result ignored; any other run mode f009 */
+    uint32_t imode, rmode;
+    IMPISPTuningOpsMode en;
+    int fd;
+
+    if (!attr)
+        return E_STATE;
+    if ((unsigned)num >= 4)
+        return E_VI;
+    rmode = ((const uint32_t *)attr)[0];
+    imode = ((const uint32_t *)attr)[1];
+    if ((imode & ~2u) == 1)
+        return E_OPEN;
+    if (rmode == 0) {
+        fd = OpenIMP_T32_IspFd();
+        if (fd < 0 || ioctl(fd, OI_T32_IOC_SET_WDR_ENABLE, &imode) != 0) {
+            IMP_LOG_ERR(TAG, "IMP_ISP_WDR_OPEN: SET_WDR_ENABLE: %s", fd < 0 ? "ISP not open" : strerror(errno));
+            return (int32_t)0xfffff006;
+        }
+        return 0;
+    }
+    if (rmode != 1)
+        return E_STATE;
+    en = IMPISP_TUNING_OPS_MODE_ENABLE;
+    (void)IMP_ISP_WDR_ENABLE(num, &en);
+    return 0;
+#endif
 }
 
 /* ---- custom AE / AWB records ------------------------------------------- */
@@ -1473,6 +1464,18 @@ int32_t IMP_ISP_LDC_OfflineCreateJob(void *attr)
     }
     pthread_mutex_unlock(&ctl_lock);
     return 0;
+}
+
+/* vendor 2.2.0 (IMP_ISP_LDC_OfflineCreateJobExt @ 0x0010cb54): the full-featured job needs the dev kind 1 of the T33-V class; the
+ * header says "not supported on T32V": on the dev kind 0 of every T32 the vendor logs and answers 0xffffffff, whatever the attribute.
+ * (Its unopened-device case dereferences a NULL pointer; here f008 like CreateJob.) */
+int32_t IMP_ISP_LDC_OfflineCreateJobExt(void *attr)
+{
+    (void)attr;
+    if (!ldc32.open)
+        return E_OPEN;
+    IMP_LOG_ERR(TAG, "LDC_OfflineCreateJobExt: not supported on this chip");
+    return -1;
 }
 
 int32_t IMP_ISP_LDC_OfflineDestroyJob(uint32_t job)

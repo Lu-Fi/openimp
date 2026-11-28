@@ -224,6 +224,29 @@ functions:
     returns: "0 on success. Errors are the codes 0x80010001 (channel number 7 or more), 0x80010002 (NULL pointer) and 0x80010040 (channel does not exist or is not supported, or a forbidden flag combination)."
     notes: "The call only stores the attribute in the channel; `EnableChn` applies it, so a running channel takes a new attribute at its next enable. Flip together with mirror, or flip or mirror together with rotate, is refused. For a rotation the frame width and height must be multiples of 8 (width of 16 for 90 and 270 degrees) and the angle 0, 90, 180 or 270, otherwise `EnableChn` fails. The encoder size has to follow a rotation by 90 degrees."
     soc: "T40 and T41"
+  FrameSource_SetChnAttr_Expand:
+    group: i2d
+    summary: "Stores the LDC attribute of a channel (enable, priority, LUT block size, LUT file name; 140 bytes)."
+    params:
+      chnNum: "Channel number."
+      ldc_attr: "`IMPFSChnLdcAttr`."
+    returns: "0 on success, 0x80010010 for NULL, 0x80010001 for a channel number of 12 or more."
+    notes: "Stored only: the vendor `EnableChn` turns an enabled attribute into an offline LDC job and the frame thread submits it per frame; OpenIMP does not port that data path yet (matrix cell cache)."
+    soc: "T32"
+  FrameSource_GetChnAttr_Expand:
+    group: i2d
+    summary: "Reads the LDC attribute of a channel back (see `SetChnAttr_Expand`)."
+    returns: "0 on success, 0x80010010 for NULL, 0x80010001 for a channel number of 12 or more."
+    soc: "T32"
+  FrameSource_UpdateChnLut:
+    group: i2d
+    summary: "Replaces the LUT file name of the LDC attribute of a channel and passes it to `ISP_LDC_OfflineUpdateLutToJob`."
+    params:
+      chnNum: "Channel number."
+      lut_name: "Absolute path of the LUT table (128 bytes)."
+    returns: "0 on success (the result of the job update is ignored, as the vendor), 0x80010001 for a channel number of 12 or more, 0x80010010 for NULL."
+    notes: "Without the LDC job of the data path (see `SetChnAttr_Expand`) the job handle is 0 and the update only stores the name."
+    soc: "T32"
   FrameSource_Get/SetPool:
     group: mem
     summary: Binds a channel to a memory pool (created with `IMP_System_MemPoolRequest`) so its capture buffers come from
