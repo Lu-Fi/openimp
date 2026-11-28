@@ -14,9 +14,8 @@
  *
  * What is stored but not yet used by the T32/T33 encoder / FrameSource (matrix cell "cache"):
  * fisheye, read-buffer share, motion quality, QP-group AI, resize mode, frame-used mode, the
- * HERA / JPEG bitstream sizes and multi-section modes, the YUV alignment, the depth copy type,
- * and the joint composition (the vendor composes joined channels in its frame path; the API
- * state is here, the composition is not).
+ * HERA / JPEG bitstream sizes and multi-section modes, the YUV alignment, the depth copy type.
+ * Joints are applied (#784, openimp_t32_fs_joint.inc).
  */
 #include <errno.h>
 #include <pthread.h>
@@ -107,134 +106,54 @@ int IMP_FrameSource_ClearPoolId(void)
     return 0;
 }
 
-#define JOINTS 12
-struct fs_joint {
-    IMPFSJointAttr attr;        /* the board as created, width / height filled in */
-    sem_t sem;
-};
-static struct fs_joint *joints[JOINTS];
-static struct fs_joint *joint_of[FS_CHNS];   /* vendor chn+0x428: the joint a channel is in */
-static uint32_t joint_bg;
-
-static int joint_find_locked(int32_t h)
-{
-    int i;
-
-    for (i = 0; i < JOINTS; i++)
-        if (joints[i] && (int32_t)(intptr_t)joints[i] == h)
-            return i;
-    return -1;
-}
+/* joints (#784): applied in openimp_t32_fs.c (the channels' buffers become views into shared joint frames, the
+ * board's first channel hands out the whole frame; vendor 2.0.2.1 VBMCreateJointPool, see openimp_t32_fs_joint.inc);
+ * here the vendor-header API */
+int OpenIMP_T32_FsJointCreate(const uint8_t *board, int16_t *w, int16_t *h, int32_t *handle);
+int OpenIMP_T32_FsJointDestroy(int32_t handle);
+int OpenIMP_T32_FsJointGet(int32_t handle, uint8_t *board, int16_t *w, int16_t *h);
+void OpenIMP_T32_FsJointBackground(uint32_t color);
 
 int IMP_FrameSource_CreateJoint(IMPFSJointAttr *joint_attr)
 {
-    struct fs_joint *j;
-    int r, c, slot, w = 0, h = 0;
+    int16_t w = 0, h = 0;
+    int32_t hnd = 0;
+    int rc;
 
     if (!joint_attr)
         return E_FS_NULL;
-    j = calloc(1, sizeof(*j));
-    if (!j)
-        return E_FS_NOMEM;
-    /* rows of channel numbers from the top left, 0xff ends a row / the board; a channel already
-     * in another joint is refused (vendor 0x80010004) */
-    for (r = 0; r < 12 && joint_attr->position[r][0] != 0xff; r++) {
-        int rw = 0, rh = 0;
-
-        for (c = 0; c < 12 && joint_attr->position[r][c] != 0xff; c++) {
-            unsigned ch = joint_attr->position[r][c];
-            int cw, chh;
-
-            if (ch >= FS_CHNS) {
-                free(j);
-                return E_FS_BUSY;
-            }
-            if (OpenIMP_T32_FsChnSize((int)ch, &cw, &chh) == 0) {
-                rw += cw;
-                if (chh > rh)
-                    rh = chh;
-            }
-        }
-        if (rw > w)
-            w = rw;
-        h += rh;
-    }
-    pthread_mutex_lock(&ext_lock);
-    /* vendor 2.0.2.1 CreateJoint: a channel already in a joint -> 0x80010004 (checked under the
-     * lock here, so a refused board leaves no channel marked; the vendor marks the ones before) */
-    for (r = 0; r < 12 && joint_attr->position[r][0] != 0xff; r++)
-        for (c = 0; c < 12 && joint_attr->position[r][c] != 0xff; c++)
-            if (joint_of[joint_attr->position[r][c]]) {
-                pthread_mutex_unlock(&ext_lock);
-                free(j);
-                return E_FS_BUSY;
-            }
-    for (slot = 0; slot < JOINTS && joints[slot]; slot++)
-        ;
-    if (slot == JOINTS) {
-        pthread_mutex_unlock(&ext_lock);
-        free(j);
-        return E_FS_NOMEM;
-    }
-    memcpy(j->attr.position, joint_attr->position, sizeof(j->attr.position));
-    j->attr.width = (int16_t)w;
-    j->attr.height = (int16_t)h;
-    j->attr.handler = (int32_t)(intptr_t)j;
-    sem_init(&j->sem, 0, 0);
-    joints[slot] = j;
-    for (r = 0; r < 12 && joint_attr->position[r][0] != 0xff; r++)
-        for (c = 0; c < 12 && joint_attr->position[r][c] != 0xff; c++)
-            joint_of[joint_attr->position[r][c]] = j;
-    pthread_mutex_unlock(&ext_lock);
-    joint_attr->width = (int16_t)w;
-    joint_attr->height = (int16_t)h;
-    joint_attr->handler = j->attr.handler;
+    rc = OpenIMP_T32_FsJointCreate(&joint_attr->position[0][0], &w, &h, &hnd);
+    if (rc)
+        return rc;
+    joint_attr->width = w;
+    joint_attr->height = h;
+    joint_attr->handler = hnd;
     return 0;
 }
 
 int IMP_FrameSource_DestroyJoint(int32_t handler)
 {
-    struct fs_joint *j;
-    int i;
-
-    pthread_mutex_lock(&ext_lock);
-    i = joint_find_locked(handler);
-    if (i < 0) {
-        pthread_mutex_unlock(&ext_lock);
-        return E_FS_NULL;
-    }
-    j = joints[i];
-    joints[i] = NULL;
-    /* the vendor frees the board but keeps chn+0x428 and the table slot (stale pointer);
-     * here the channels are free for a new joint again */
-    for (i = 0; i < FS_CHNS; i++)
-        if (joint_of[i] == j)
-            joint_of[i] = NULL;
-    pthread_mutex_unlock(&ext_lock);
-    sem_destroy(&j->sem);
-    free(j);
-    return 0;
+    return OpenIMP_T32_FsJointDestroy(handler);
 }
 
 int IMP_FrameSource_GetJointByHandler(IMPFSJointAttr *joint_attr)
 {
-    int i;
+    int16_t w, h;
+    int rc;
 
     if (!joint_attr)
         return E_FS_NULL;
-    pthread_mutex_lock(&ext_lock);
-    i = joint_find_locked(joint_attr->handler);
-    if (i >= 0)
-        *joint_attr = joints[i]->attr;
-    pthread_mutex_unlock(&ext_lock);
-    return i < 0 ? E_FS_NULL : 0;
+    rc = OpenIMP_T32_FsJointGet(joint_attr->handler, &joint_attr->position[0][0], &w, &h);
+    if (rc == 0) {
+        joint_attr->width = w;
+        joint_attr->height = h;
+    }
+    return rc;
 }
 
 int IMP_FrameSource_SetJointBackground(uint32_t color)
 {
-    pthread_mutex_lock(&ext_lock);
-    joint_bg = color;
-    pthread_mutex_unlock(&ext_lock);
+    OpenIMP_T32_FsJointBackground(color);
     return 0;
 }
 
