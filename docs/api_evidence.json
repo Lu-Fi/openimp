@@ -1,6 +1,6 @@
 {
   "_comment": "Machine-readable evidence for the API coverage tables of docs/FEATURE_MATRIX.md (generated section) and docs/feature-matrix.html. Edit THIS file, then run python3 tools/gen_feature_matrix_html.py. cells: dev (device-tested), host (host tests only), aud (connected per static audit, no device test), nohw (implemented and vendor-equal on the board, but no test board has the hardware: counted as done, not verified on hardware), no-op (vendor no-op, matched), cache, stub, err, miss (not exported), n.a. (not in that SoC's vendor API), ? (not determined), nob (no OpenIMP build for this SoC yet). better: SoCs where OpenIMP is better than the vendor (dev only). ref: evidence reference per SoC. used: streamers per SoC (p prudynt, r raptor, t timps; a dagger = source only, no binary checked). feature_links: a function cell 'aud' becomes 'dev' while the linked main-matrix feature cell is device-tested (supported).",
-  "asof": "2026-11-27",
+  "asof": "2026-11-28",
   "socs": [
     "T10",
     "T20",
@@ -9180,17 +9180,17 @@
         "T30": "dev",
         "T31": "dev",
         "T32": "qemu",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "dev",
         "T41": "dev"
       },
-      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run in QEMU. The vendor 1.0.5 (0xc44c8) accepts any value (non-zero = on) for channel < 6; ALIGNED: OpenIMP's T30 build now accepts any value (host test p2_gap_test_t30). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x254 read by __jz_enc_msg_process and DestroyChn -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (#784, 2026-11-25, QEMU 0731, vendor 2.0.2.1): SetChnResizeMode(0, 1) at picture 4 with the FrameSource size equal to the encoder size: 0 HERA register differences (H.264, H.265). The mode is read by __jz_enc_msg_process for a size mismatch, which the QEMU sample does not set up: stays cache.",
+      "note": "audit: userspace implementation. T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp and by OpenIMP's T30 build. Not run in QEMU. The vendor 1.0.5 (0xc44c8) accepts any value (non-zero = on) for channel < 6; ALIGNED: OpenIMP's T30 build now accepts any value (host test p2_gap_test_t30). T33 (2026-11-13, #54-#60): return codes and check order equal to vendor libimp 2.0.2.1 in QEMU (apitest t33pass, same lines on the vendor and the open module); the value is stored, the T32/T33 encoder / FrameSource / algorithm path does not use it yet (cache). T32: same source (src/t32, build-t32.sh exports it), no T32 QEMU run yet. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x254 read by __jz_enc_msg_process and DestroyChn -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (#784, 2026-11-25, QEMU 0731, vendor 2.0.2.1): SetChnResizeMode(0, 1) at picture 4 with the FrameSource size equal to the encoder size: 0 HERA register differences (H.264, H.265). The mode is read by __jz_enc_msg_process for a size mismatch, which the QEMU sample does not set up: stays cache. | T33 (2026-11-28, #972, QEMU A/B): the consumer is the encoder-side scaling of a FrameSource picture of another size (vendor input thread 0xedba8, c_resize_c 0x34540): implemented, HERA input pictures bit-identical for 1280x720 -> 640x360, 960x540 and crop 64,32 800x450 -> 640x360 (JPEG 640x360). The mode only decides where the vendor puts the result (1: into the capture buffer, 0: rmem); OpenIMP always uses its own rmem buffer, same picture. H.265 scaled: the vendor QEMU run fails (i265e releaseFunc), not compared.",
       "ref": {
         "T31": "apitest rc3gaps2 2026-10-27 .26",
         "T40": "apitest t40pass 2026-11-04 .184",
         "T41": "apitest t41pass 2026-11-04 .34",
         "T30": "T30X b62 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, apitest enc, sc4236, binary 04bedc26): on 0, off 0, value 5 0 (any non-zero = on), chn 99 -1: PASS on open and vendor, vendor-equal. Earlier: static audit + host test p2_gap_test_t30 2026-11-01 (OpenIMP claude/t30-audit)",
-        "T33": "apitest t33pass 2026-11-13 QEMU (no camera), vendor 2.0.2.1 reference run",
+        "T33": "QEMU 1127 #99 T33 gap 2026-11-28 (audit/t33-gap-1128: t33e1 PadFrame lines, sample pad-v1 / pad-o2, rz*, st-*, sc-*)",
         "T32": "apitest t33pass / t33f1 / t33l1 / t33e1 / t33e3 / t33last3 / t33i2d / t33drv / t33drop / t33l2 / t33gaps / t32avui / t32gap / t32l2 / t32i2d / t32rest and the sys / fs / ivs / audio / isp / su areas 2026-11-28 QEMU -M ingenic-t32 (no camera), same apitest binary, fresh boot per run: vendor libimp 2.2.0 vs OpenIMP (PRJ007 image with the open module, areas on the 4.4 kernel with the vendor module), lines identical (audit t32-gap-1128 g_* / a2_*, OpenIMP #99)"
       }
     },
@@ -20257,15 +20257,15 @@
         "T30": "n.a.",
         "T31": "n.a.",
         "T32": "qemu",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
       "ref": {
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)",
+        "T33": "QEMU 1127 #99 T33 gap 2026-11-28 (audit/t33-gap-1128: t33e1 PadFrame lines, sample pad-v1 / pad-o2, rz*, st-*, sc-*)",
         "T32": "QEMU -M ingenic-t32, vendor libimp 2.2.0 vs OpenIMP, same module (audit t32-gap-1128 encab.sh / enc.sh, 2026-11-28, #99): HERA register capture of every picture equal at FIXQP 640x368 (H.264, one setter per 3 pictures); CBR QP sequence equal for the setters that restart the controller"
       },
-      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (H.264 0x80040080; H.265 from the next IDR); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): H.265 i265e_get_param -> the vendor applies it; still cache in OpenIMP (port open in #784). | T32 2026-11-28 (#99, #976): SrdCfg read-back equal (apitest t33e1 lines). QEMU only; the picture effect needs the device."
+      "note": "T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and read-back equal (H.264 0x80040080; H.265 from the next IDR); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): H.265 i265e_get_param -> the vendor applies it; still cache in OpenIMP (port open in #784). | T32 2026-11-28 (#99, #976): SrdCfg read-back equal (apitest t33e1 lines). QEMU only; the picture effect needs the device. | T33 (2026-11-28, #99): H.265 get_param 0x11 returns what SetSrdCfg stored (QEMU t33e1 read-back equal); the setter has no HERA effect at FIXQP / CBR on the vendor either (#784 batch 3)."
     },
     "Encoder_KernEnc_GetStatus": {
       "area": "Encoder",
@@ -20420,7 +20420,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20430,9 +20430,9 @@
         "T10": "apitest t2xcov 2026-10-29 .31 (case padframe_t23: free mode encodes the pad frames, scene 1032 B, black pad frames 51 B; stale frames in time-stamp mode are refused and released)",
         "T20": "apitest t2xcov 2026-10-29 .107 (case padframe_t23: free mode encodes the pad frames, scene 3120 B, black pad frames 39 B; stale frames in time-stamp mode are refused and released)",
         "T30": "apitest T30X b67 2026-11-12 (vendor 1.0.5 and OpenIMP on the same camera, one power cycle, 0 oopses): padframe_t23: vendor and open PASS; difference by design: stock vendor hands pad frames back (0 black pad frames encoded, 99 released), open encodes them (31 frames, 40 B avg) = same API contract, open does more",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "QEMU 1127 #99 T33 gap 2026-11-28 (audit/t33-gap-1128: t33e1 PadFrame lines, sample pad-v1 / pad-o2, rz*, st-*, sc-*)"
       },
-      "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp; NOT exported by OpenIMP's T30 build. Vendor-exported (6 channels, same queue design as T21), not exported by OpenIMP's T30 build; the pad-frame code of the P2 encoder is compiled for T21/T23 only and the T30 frame record layout is unchecked. 2026-11-11 (#308): vendor-exported on T30 1.0.5 (fixture); effort M (pad-frame queue exists for T21/T23 only, T30 frame record layout unchecked). T30 2026-11-12 (#308, claude/t30-gaps): exported, the T21 pad-frame queue built for the real T30. Vendor 1.0.5 PadFrame 0xc2d2c / do_channel_process_h264e (Ghidra project t30lib): six channels, refusal order (frame NULL, group not registered or not receiving -> release callback and -1; channel not created 0; pad mode off -> release and -1), time stamp at +0x20 and the T21 tolerance test. Host test p2_t30_enc_test. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and release callbacks equal with pad frames off (H.264 0x80040080 + release, H.265 0 without release, not started 0x80040080); pad-frame encoding not implemented (refused); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): queues the pad frame to the encoder (__jz_imp_video_push_queue_tail) -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp; NOT exported by OpenIMP's T30 build. Vendor-exported (6 channels, same queue design as T21), not exported by OpenIMP's T30 build; the pad-frame code of the P2 encoder is compiled for T21/T23 only and the T30 frame record layout is unchecked. 2026-11-11 (#308): vendor-exported on T30 1.0.5 (fixture); effort M (pad-frame queue exists for T21/T23 only, T30 frame record layout unchecked). T30 2026-11-12 (#308, claude/t30-gaps): exported, the T21 pad-frame queue built for the real T30. Vendor 1.0.5 PadFrame 0xc2d2c / do_channel_process_h264e (Ghidra project t30lib): six channels, refusal order (frame NULL, group not registered or not receiving -> release callback and -1; channel not created 0; pad mode off -> release and -1), time stamp at +0x20 and the T21 tolerance test. Host test p2_t30_enc_test. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes and release callbacks equal with pad frames off (H.264 0x80040080 + release, H.265 0 without release, not started 0x80040080); pad-frame encoding not implemented (refused); cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): queues the pad frame to the encoder (__jz_imp_video_push_queue_tail) -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (2026-11-28, #99 / #973, vendor 2.0.2.1 0xfed28 / 0xedba8, QEMU A/B): with pad frames on the vendor pad queue does not exist (built only by CreateChn from an enable SetPadFrameAttr can set only on a created channel): PadFrame returns 0x80044000 at once with the release callback, and the encoder codes no picture (0 of 4 streams). OpenIMP now identical (t33e1 lines SAME, sample pad-v1 / pad-o2). Pad frame encoding is unreachable on the vendor, so nothing more to port."
     },
     "Encoder_RequestPskip": {
       "area": "Encoder",
@@ -20862,7 +20862,7 @@
         "T30": "dev",
         "T31": "n.a.",
         "T32": "cache",
-        "T33": "cache",
+        "T33": "qemu",
         "T40": "n.a.",
         "T41": "n.a."
       },
@@ -20872,9 +20872,9 @@
         "T10": "apitest t2xcov 2026-10-29 .31 (case padframe_t23: free mode encodes the pad frames, scene 1032 B, black pad frames 51 B; stale frames in time-stamp mode are refused and released)",
         "T20": "apitest t2xcov 2026-10-29 .107 (case padframe_t23: free mode encodes the pad frames, scene 3120 B, black pad frames 39 B; stale frames in time-stamp mode are refused and released)",
         "T30": "T30X b61 2026-11-12 (T30X lab camera, one power cycle, vendor stack then open stack by runtime swap, open-tx-isp 0fdfacb4 + OpenIMP 4aa7e40a, apitest padframe_t23): free mode on / time-stamp mode on / off: ret 0 0 0 on vendor and open, off again encodes 32 frames; vendor-equal. Earlier: apitest padframe_t23 + enchelp_t23 2026-11-12 QEMU T30 (OpenIMP claude/t30-gaps): free mode / time-stamp mode / off 0 0 0, chn 5 (idle) 0, chn 99 -1; see Encoder_PadFrame (size checks not meaningful in QEMU)",
-        "T33": "apitest t33e1 2026-11-14 QEMU -M ingenic-t33 (no camera): vendor 2.0.2.1 on the vendor module vs OpenIMP on the open-tx-isp next module (audit issue480/runs v3-vend, o2)"
+        "T33": "QEMU 1127 #99 T33 gap 2026-11-28 (audit/t33-gap-1128: t33e1 PadFrame lines, sample pad-v1 / pad-o2, rz*, st-*, sc-*)"
       },
-      "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp; NOT exported by OpenIMP's T30 build. Vendor-exported (6 channels, 32-byte attribute), not exported by OpenIMP's T30 build (see PadFrame). 2026-11-11 (#308): vendor-exported on T30 1.0.5 (fixture); effort M, same work as PadFrame. T30 2026-11-12 (#308, claude/t30-gaps): exported. Vendor 1.0.5 SetPadFrameAttr 0xc2bcc: channel < 6, an idle channel answers 0 with nothing stored, enable 0 clears the flag only, otherwise the 32-byte attribute is copied into the channel record. Host test p2_t30_enc_test. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x1388 .. (pad attribute), used by IMP_Encoder_PadFrame -> the vendor applies it; still cache in OpenIMP (port open in #784)."
+      "note": "T30 audit 2026-11-01 (OpenIMP claude/t30-audit, #24): Exported by the T30 1.0.5 vendor libimp; NOT exported by OpenIMP's T30 build. Vendor-exported (6 channels, 32-byte attribute), not exported by OpenIMP's T30 build (see PadFrame). 2026-11-11 (#308): vendor-exported on T30 1.0.5 (fixture); effort M, same work as PadFrame. T30 2026-11-12 (#308, claude/t30-gaps): exported. Vendor 1.0.5 SetPadFrameAttr 0xc2bcc: channel < 6, an idle channel answers 0 with nothing stored, enable 0 clears the flag only, otherwise the 32-byte attribute is copied into the channel record. Host test p2_t30_enc_test. T32/T33 (2026-11-14, #480, src/t32/openimp_t32_enc_e1.c): codes equal; cache. T32: same source, no T32 2.2.0 run. T33 vendor audit (2026-11-22, #784, vendor 2.0.2.1, Ghidra addresses): chn+0x1388 .. (pad attribute), used by IMP_Encoder_PadFrame -> the vendor applies it; still cache in OpenIMP (port open in #784). | T33 (2026-11-28, #973): stores enable + 32 bytes like the vendor (0xfead0); the consumer is the unreachable pad queue, see PadFrame. QEMU t33e1 lines identical."
     },
     "Encoder_SetPskipCfg": {
       "area": "Encoder",

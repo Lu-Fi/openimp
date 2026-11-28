@@ -502,11 +502,12 @@ static void enc_source(struct t32_enc_chn *e, const IMPFrameInfo *f, uint32_t *y
         /* a caller's NV12 (YuvEncode / InputJpege, #752): UV after the even height, vendor 2.0.2.1
          * YuvEncode 0x104b4c job +0x64 = ((h + 1) & ~1) * ALIGN16(w) + Y, InputJpege 0x105430 C = Y + w * h */
         *c = f->phyAddr + *stride * (e->yuv ? (f->height + 1u) & ~1u : ALIGN16(f->height));
-        if (e->h264 && !e->yuv
 #ifdef PLATFORM_T33
-            && !e->scl_cur      /* c_resize_c computes the rows below the picture (QEMU A/B, crop run sc-v) */
+        if (e->scl_cur)
+            ;                   /* c_resize_c computes the rows below the picture (QEMU A/B, crop run sc-v) */
+        else
 #endif
-            )
+        if (e->h264 && !e->yuv)
             enc_pad_rows(f, *stride);
     }
     e->vpu.node.frame_type = ivdc ? OI_T32_FRAME_TYPE_IVDC : 0;
