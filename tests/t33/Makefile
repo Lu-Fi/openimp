@@ -50,14 +50,18 @@ YP_SRC := yuvp904_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 MQ_BIN := $(BUILD)/t33-mq784-test
 MQ_SRC := mq784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
 MS_SRC := ms784_test.c $(filter-out hera_list_test.c,$(HERA_SRC))
+# #989 / #990: SetChnMapRoi into the controller and the HERA list enables, H.265 FIXQP controller vs vendor 2.0.2.1 (QEMU gm264* / gm265*)
+MR_BIN := $(BUILD)/t33-maproi99-test
+MR_SRC := maproi99_test.c $(filter-out pskip784_test.c,$(PSK_SRC)) $(filter-out hera_list_test.c,$(HERA_SRC))
 
 .PHONY: check
 # #805: the custom AE / AWB workers ask again on EAGAIN / EINTR (blocking open-tx-isp get), leave on other errors
 ALGO_BIN := $(BUILD)/t33-algo805-test
 ALGO_SRC := algo805_test.c $(PROJECT_DIR)/src/t40/openimp_p1_algo.c algo805_inc/imp/imp_isp.h
 
-check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(PSK5_BIN) $(RC_BIN) $(MS_BIN) $(YP_BIN) $(MQ_BIN) $(ALGO_BIN)
+check: $(HERA_BIN) $(OSD_BIN) $(YUV_BIN) $(HDR_BIN) $(GDR_BIN) $(PSK_BIN) $(PSK5_BIN) $(RC_BIN) $(MS_BIN) $(YP_BIN) $(MQ_BIN) $(MR_BIN) $(ALGO_BIN)
 	$(ALGO_BIN)
+	$(MR_BIN)
 	$(YUV_BIN)
 	$(HDR_BIN)
 	$(GDR_BIN)
@@ -94,6 +98,10 @@ $(PSK_BIN): $(PSK_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_pskip.h $(PROJECT_DIR)
 $(PSK5_BIN): $(PSK5_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/t32/openimp_t32_rc33.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off '-D_Static_assert(c,m)=' $(INC) -o $@ $(PSK5_SRC) -lm
+
+$(MR_BIN): $(MR_SRC) $(HERA_DEPS) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/t32/openimp_t32_rc33.h
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -std=gnu99 -ffp-contract=off '-D_Static_assert(c,m)=' $(INC) -o $@ $(MR_SRC) -lm
 
 $(RC_BIN): $(RC_SRC) $(PROJECT_DIR)/src/t32/openimp_t32_rc.h $(PROJECT_DIR)/src/t32/openimp_t32_rc33.h
 	@mkdir -p $(BUILD)

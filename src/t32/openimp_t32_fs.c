@@ -104,6 +104,7 @@ struct t32_fs_buf {
     int holds;                  /* sinks that kept it */
     int out;                    /* dequeued, not queued back yet */
     IMPDMABufferInfo i2d;       /* T32: the I2D output of this buffer (#445) */
+    IMPDMABufferInfo ldc;       /* T32: the offline LDC output of this buffer (#978) */
 };
 
 enum { SLOT_FREE, SLOT_FILLING, SLOT_READY, SLOT_USER };
@@ -160,6 +161,9 @@ struct t32_fs_chn {
     IMPFSI2DAttr i2d_attr;
     struct p1_i2d_geometry i2d_geom;
     uint32_t i2d_runs, i2d_errors;
+    /* T32 offline LDC (#978): EnableChn arms it from SetChnAttr_Expand */
+    int ldc_on, ldc_chn;
+    uint32_t ldc_runs, ldc_errors;
     int rot_mode;               /* T33 software rotation (#731): nv12_rotate mode, 0 off */
     uint32_t rot_frames;
     uint64_t rot_us;
@@ -402,9 +406,15 @@ static struct t32_fs_slot *fs_pick_slot_locked(struct t32_fs_chn *c)
 }
 
 /* the capture buffer (Y stride x ALIGN16(h), then UV) as packed NV12 */
+/* the picture the sinks see before I2D: the LDC output when the channel runs one (#978), else the capture */
+static const IMPDMABufferInfo *fs_pic_dma(const struct t32_fs_chn *c, const struct t32_fs_buf *b)
+{
+    return c->ldc_on ? &b->ldc : &b->dma;
+}
+
 static void fs_pack_nv12(const struct t32_fs_chn *c, const struct t32_fs_buf *b, uint8_t *dst)
 {
-    const uint8_t *y = (const uint8_t *)(uintptr_t)b->dma.virt_addr;
+    const uint8_t *y = (const uint8_t *)(uintptr_t)fs_pic_dma(c, b)->virt_addr;
     const uint8_t *uv = y + c->stride * ALIGN_UP(c->height, 16);
     uint32_t r;
 
@@ -718,6 +728,134 @@ static void fs_i2d_arm_locked(struct t32_fs_chn *c, int chn)
 }
 
 #if !defined(PLATFORM_T33)
+/* ---- T32 offline LDC of a channel (#978) ----------------------------------------------------------------------------------------
+ * Vendor 2.2.0 (system_get_cpu_type 0 / 1, every T32): IMP_FrameSource_EnableChn (0x00154b88) with no job yet (chn+0x44c) and the
+ * SetChnAttr_Expand attribute enabled (chn+0x450 == 1) marks the channel (chn+0x440 = 1, size = picWidth / picHeight), and for the
+ * first user (fs+0x39f4, under g_ldc_init_mutex) calls IMP_ISP_LDC_SetMode(1) + IMP_ISP_LDC_OfflineInit(1); then
+ * IMP_ISP_LDC_OfflineCreateJob({func 4, w | h << 16, block size, 1, lut_name[128] at word 4}) and keeps the handle (word 36; the
+ * result is not checked).  The frame thread (on_framesource_group_data_update 0x0014a404) runs every captured frame of a marked,
+ * non-direct channel through IMP_ISP_LDC_OfflineSubmitTask({job, Y in, UV in, Y out, UV out, stride in | out << 16, -, 4}) before the
+ * bound modules get it (the result not checked either), into the frame the sinks see; with the I2D on as well the LDC output goes
+ * to the I2D.  DisableChn keeps the job; DestroyChn (0x0015079c..) destroys it, clears the marks and, for the last user, calls
+ * OfflineInit(0).  Here: the LDC writes into a buffer of its own next to the capture buffer (as the I2D path does), GetFrame and
+ * the sinks get that one.  The delay FIFO and SnapFrame keep the capture (as for the I2D). */
+#define T32_FS_LDC_CHNS 12
+struct t32_fs_ldc_attr { int enable, priority, size; char lut_name[128]; };
+static struct t32_fs_ldc_attr fs_ldc_attr[T32_FS_LDC_CHNS];
+static uint32_t fs_ldc_job[T32_FS_LDC_CHNS];          /* chn+0x44c */
+static uint8_t fs_ldc_mark[T32_FS_LDC_CHNS];          /* chn+0x440 */
+static uint8_t fs_ldc_user[T32_FS_LDC_CHNS];          /* counted in fs_ldc_users */
+static pthread_mutex_t fs_ldc_mutex = PTHREAD_MUTEX_INITIALIZER;     /* g_ldc_init_mutex */
+static int fs_ldc_users, fs_ldc_inited;               /* fs+0x39f4 / fs+0x39f6 */
+
+extern int32_t IMP_ISP_LDC_SetMode(int mode);
+extern int32_t IMP_ISP_LDC_OfflineInit(int mode);
+extern int32_t IMP_ISP_LDC_OfflineCreateJob(void *attr);
+extern int32_t IMP_ISP_LDC_OfflineDestroyJob(uint32_t job);
+extern int32_t IMP_ISP_LDC_OfflineSubmitTask(void *task);
+
+/* EnableChn: lock held, capture buffers allocated */
+static void fs_ldc_arm_locked(struct t32_fs_chn *c, int chn)
+{
+    const IMPFSChnAttr *at = FS_LIVE(c);
+    uint32_t a[38];
+    int i;
+
+    c->ldc_on = 0;
+    c->ldc_runs = c->ldc_errors = 0;
+    if (chn < 0 || chn >= T32_FS_LDC_CHNS)
+        return;
+    if (!fs_ldc_job[chn]) {
+        if (fs_ldc_attr[chn].enable == 1)
+            fs_ldc_mark[chn] = 1;
+        if (fs_ldc_mark[chn]) {
+            pthread_mutex_lock(&fs_ldc_mutex);
+            if (!fs_ldc_users) {
+                (void)IMP_ISP_LDC_SetMode(1);
+                (void)IMP_ISP_LDC_OfflineInit(1);
+                fs_ldc_inited = 1;
+            }
+            if (!fs_ldc_user[chn]) {
+                fs_ldc_user[chn] = 1;
+                fs_ldc_users++;
+            }
+            pthread_mutex_unlock(&fs_ldc_mutex);
+            memset(a, 0, sizeof(a));
+            a[0] = 4;
+            a[1] = ((uint32_t)at->picHeight & 0xffffu) << 16 | ((uint32_t)at->picWidth & 0xffffu);
+            a[2] = (uint32_t)fs_ldc_attr[chn].size;
+            a[3] = 1;
+            memcpy(&a[4], fs_ldc_attr[chn].lut_name, sizeof(fs_ldc_attr[chn].lut_name));
+            (void)IMP_ISP_LDC_OfflineCreateJob(a);
+            fs_ldc_job[chn] = a[36];
+            IMP_LOG_INFO(TAG, "chn %d: offline LDC job 0x%x (%dx%d, block %d, lut %.128s)", chn, a[36], at->picWidth,
+                         at->picHeight, fs_ldc_attr[chn].size, fs_ldc_attr[chn].lut_name);
+        }
+    }
+    if (c->direct || !fs_ldc_mark[chn])
+        return;
+    for (i = 0; i < c->nbufs; i++) {
+        if (fs_alloc(&c->buf[i].ldc, c->alloc, "fs-ldc") < 0) {
+            IMP_LOG_ERR(TAG, "chn %d: no memory for the LDC buffers", chn);
+            for (i = 0; i < c->nbufs; i++)
+                fs_free_dma(&c->buf[i].ldc);
+            return;
+        }
+    }
+    c->ldc_on = 1;
+    c->ldc_chn = chn;
+    for (i = 0; i < c->nbufs; i++) {
+        c->buf[i].frame.phyAddr = c->buf[i].ldc.phys_addr;
+        c->buf[i].frame.virAddr = c->buf[i].ldc.virt_addr;
+    }
+}
+
+/* the frame thread, no lock: one captured buffer through the LDC job */
+static void fs_ldc_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
+{
+    uint32_t t[8], uv = c->stride * ALIGN_UP(c->height, 16);
+
+    t[0] = fs_ldc_job[c->ldc_chn];
+    t[1] = b->dma.phys_addr;
+    t[2] = b->dma.phys_addr + uv;
+    t[3] = b->ldc.phys_addr;
+    t[4] = b->ldc.phys_addr + uv;
+    t[5] = (c->stride & 0xffffu) << 16 | (c->stride & 0xffffu);
+    t[6] = 0;
+    t[7] = 4;
+    if (IMP_ISP_LDC_OfflineSubmitTask(t) != 0) {
+        if (!c->ldc_errors++)
+            IMP_LOG_ERR(TAG, "chn %d: LDC_OfflineSubmitTask failed (job 0x%x)", c->ldc_chn, t[0]);
+        return;
+    }
+    c->ldc_runs++;
+    DMA_RmemFlushCache((void *)(uintptr_t)b->ldc.virt_addr, c->alloc, 2);
+}
+
+/* DestroyChn: the job and the marks go, the last user closes the offline LDC */
+static void fs_ldc_destroy(int chn)
+{
+    if (chn < 0 || chn >= T32_FS_LDC_CHNS)
+        return;
+    if (fs_ldc_job[chn]) {
+        (void)IMP_ISP_LDC_OfflineDestroyJob(fs_ldc_job[chn]);
+        fs_ldc_job[chn] = 0;
+    }
+    fs_ldc_mark[chn] = 0;
+    pthread_mutex_lock(&fs_ldc_mutex);
+    if (fs_ldc_user[chn]) {
+        fs_ldc_user[chn] = 0;
+        if (fs_ldc_users < 2 && fs_ldc_inited) {
+            (void)IMP_ISP_LDC_OfflineInit(0);
+            fs_ldc_inited = 0;
+        }
+        fs_ldc_users--;
+    }
+    pthread_mutex_unlock(&fs_ldc_mutex);
+}
+#endif
+
+#if !defined(PLATFORM_T33)
 /* the frame thread, no lock: one buffer through the block */
 static void fs_i2d_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
 {
@@ -725,10 +863,10 @@ static void fs_i2d_run(struct t32_fs_chn *c, struct t32_fs_buf *b)
     const IMPFSI2DAttr *a = &c->i2d_attr;
 
     p1_i2d_fill(&p, c->width, c->height, a->flip_enable, a->mirr_enable, a->rotate_enable, a->rotate_angle,
-                &c->i2d_geom, b->dma.phys_addr, b->i2d.phys_addr);
+                &c->i2d_geom, fs_pic_dma(c, b)->phys_addr, b->i2d.phys_addr);
     /* the T32 driver takes dst_addr_uv as given (the T40 one derives it): 0 would
      * send the chroma to physical address 0; source UV as the driver derives it */
-    p.src_addr_uv = b->dma.phys_addr + c->stride * ALIGN_UP(c->height, 16);
+    p.src_addr_uv = fs_pic_dma(c, b)->phys_addr + c->stride * ALIGN_UP(c->height, 16);
     p.dst_addr_uv = b->i2d.phys_addr + c->i2d_geom.dst_pitch * ALIGN_UP(c->i2d_geom.out_h, 16);
     if (ioctl(fs_i2d_fd, P1_I2D_IOC_START, &p) < 0) {
         if (!c->i2d_errors++)
@@ -783,7 +921,7 @@ static void fs_deliver(int chn, struct t32_fs_chn *c, struct t32_fs_buf *b)
 #endif
         /* NV12 as captured: Y, then UV after ALIGN16(height) rows */
         memcpy((void *)(uintptr_t)slot->dma.virt_addr,
-               (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : b->dma.virt_addr),
+               (void *)(uintptr_t)(c->i2d_on ? b->i2d.virt_addr : fs_pic_dma(c, b)->virt_addr),
                c->i2d_on ? c->i2d_geom.dst_size : c->alloc);
         pthread_mutex_lock(&fs_lock);
         fs_fill_frame(c, chn, (int)(slot - c->slot), &slot->dma, &slot->frame);
@@ -883,6 +1021,8 @@ static void *fs_thread(void *arg)
         if (c->rot_mode)
             fs_rot_run(chn, c, b);
 #else
+        if (c->ldc_on)
+            fs_ldc_run(c, b);
         if (c->i2d_on)
             fs_i2d_run(c, b);
 #endif
@@ -1069,6 +1209,9 @@ int IMP_FrameSource_DestroyChn(int chnNum)
     c->maxdelay = c->delay = c->fifo_type = 0;
     memset(&c->attr, 0, sizeof(c->attr));
     pthread_mutex_unlock(&fs_lock);
+#if !defined(PLATFORM_T33)
+    fs_ldc_destroy(chnNum);             /* vendor 2.2.0 DestroyChn: OfflineDestroyJob, last user OfflineInit(0) (#978) */
+#endif
     return 0;
 }
 
@@ -1116,9 +1259,11 @@ static void fs_release_bufs_locked(struct t32_fs_chn *c)
     int i;
 
     c->i2d_on = 0;
+    c->ldc_on = 0;
     for (i = 0; i < T32_FS_MAX_BUFS; i++) {
         fs_free_dma(&c->buf[i].dma);
         fs_free_dma(&c->buf[i].i2d);
+        fs_free_dma(&c->buf[i].ldc);
         c->buf[i].holds = 0;
         c->buf[i].out = 0;
     }
@@ -1228,6 +1373,9 @@ int IMP_FrameSource_EnableChn(int chnNum)
         if (fs_qbuf(c, b) < 0)
             goto fail_bufs;
     }
+#if !defined(PLATFORM_T33)
+    fs_ldc_arm_locked(c, chnNum);       /* before the I2D: LDC first, I2D on its output (vendor order) */
+#endif
     fs_i2d_arm_locked(c, chnNum);
     if (FS_IOCTL(c->fd, FRAME_STREAMON, &on) < 0)
         goto fail_bufs;
@@ -1668,10 +1816,9 @@ int IMP_FrameSource_GetI2dAttr(int chnNum, IMPFSI2DAttr *attr)
  * vendor's per-channel table (channel + 0x450): NULL 0x80010010, channel >= 12 0x80010001, no frame source 0x80010008 (not reachable
  * here), else copy and 0.  IMP_FrameSource_UpdateChnLut (@ 0x0014e2c0): channel >= 12 0x80010001, no frame source 0x80010008, else
  * IMP_ISP_LDC_OfflineUpdateLutToJob({the channel's job handle, 1, lut_name}) (result ignored) and the name goes to the stored attribute.
- * The vendor EnableChn turns an enabled attribute into an offline LDC job (+ per-frame OfflineSubmitTask in the frame thread): that data
- * path is not ported, so the attribute is kept and the job handle stays 0. */
-struct t32_fs_ldc_attr { int enable, priority, size; char lut_name[128]; };
-static struct t32_fs_ldc_attr fs_ldc_attr[FS_VENDOR_CHNS];
+ * The vendor EnableChn turns an enabled attribute into an offline LDC job, the frame thread submits every frame to it: see "T32
+ * offline LDC of a channel" above (#978). */
+_Static_assert(T32_FS_LDC_CHNS == FS_VENDOR_CHNS, "LDC attribute table: one entry a vendor channel");
 
 int IMP_FrameSource_SetChnAttr_Expand(int chnNum, struct t32_fs_ldc_attr *attr)
 {
@@ -1709,11 +1856,13 @@ int IMP_FrameSource_UpdateChnLut(int chnNum, char lut_name[128])
     if (!lut_name)
         return FS_ERR_NULL;
     memset(upd, 0, sizeof(upd));
-    upd[0] = 0;                         /* the channel's job handle: no LDC job without the EnableChn data path */
+    pthread_once(&fs_once, fs_init_once);
+    pthread_mutex_lock(&fs_lock);
+    upd[0] = fs_ldc_job[chnNum];        /* the channel's job handle (chn+0x44c, EnableChn, #978); 0 before */
     upd[1] = 1;
     memcpy(&upd[2], lut_name, 128);
+    pthread_mutex_unlock(&fs_lock);
     (void)IMP_ISP_LDC_OfflineUpdateLutToJob(upd);
-    pthread_once(&fs_once, fs_init_once);
     pthread_mutex_lock(&fs_lock);
     memcpy(fs_ldc_attr[chnNum].lut_name, lut_name, 128);
     pthread_mutex_unlock(&fs_lock);

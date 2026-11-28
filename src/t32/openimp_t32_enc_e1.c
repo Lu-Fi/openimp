@@ -79,11 +79,13 @@ struct t32_e1 {
 
 static pthread_mutex_t e1_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct t32_e1 e1_tab[T32_E1_CHNS];
-#ifndef PLATFORM_T33
 /* #977: the map SetChnMapRoi copied (vendor 2.2.0 i264e_reconfig_roi_set 0x7fae0, kind 1:
  * h+0x2af4 = 1, a malloc'ed copy at h+0x2af8 of the h+0x2afc bytes, flag 4); outside the
- * E1 state: the buffer is kept, CreateChn (a new encoder) only forgets the map */
+ * E1 state: the buffer is kept, CreateChn (a new encoder) only forgets the map.  T33 (#99):
+ * vendor 2.0.2.1 i264e_reconfig_roi_set 0x82660 / I265eReconfig::setRoi 0x98ef8, the same
+ * offsets */
 static struct { uint8_t *map; uint32_t size, cap; int fresh; } e1_map[T32_E1_CHNS];
+#ifndef PLATFORM_T33
 /* #977: the SetChnQpgAI map (vendor 2.2.0 i264e_reconfig_qpgai_set 0x81874: a malloc'ed copy of
  * width x height bytes at h+0x2c4c, +0x2c50 width, +0x2c54 height, +0x2c58 / +0x2c59 the modes
  * clipped to 0..2 / 0..3, flag 0x200000) */
@@ -118,9 +120,9 @@ void OpenIMP_T32_E1Reset(int encChn, const T32EncChnInfo *ci)
     pthread_mutex_lock(&e1_lock);
     x = &E1;
     memset(x, 0, sizeof(*x));
-#ifndef PLATFORM_T33
     e1_map[encChn].size = 0;
     e1_map[encChn].fresh = 0;
+#ifndef PLATFORM_T33
     e1_qai[encChn].size = 0;
     e1_qai[encChn].fresh = 0;
 #endif
@@ -1188,7 +1190,6 @@ int IMP_Encoder_GetChnROI(int encChn, IMPEncoderROIAttr *r)
     return rc;
 }
 
-#ifndef PLATFORM_T33
 int OpenIMP_T32_E1MapTake(int encChn, int take, const uint8_t **map, uint32_t *size)
 {
     int n;
@@ -1209,6 +1210,7 @@ int OpenIMP_T32_E1MapTake(int encChn, int take, const uint8_t **map, uint32_t *s
     return n;
 }
 
+#ifndef PLATFORM_T33
 int OpenIMP_T32_E1QpgAITake(int encChn, int take, T32E1QpgAI *q)
 {
     int n;
@@ -1242,12 +1244,13 @@ int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiCfg *m, IMPEncoderMappi
         return E1_ERR_NULL;
     if ((uint32_t)m->type >= (uint32_t)IMP_MAPPINGTYPE_BUTT)
         return T32_ENC_ERR_PARAM;
-#ifndef PLATFORM_T33
-    /* vendor 2.2.0 IMP_Encoder_MappingTransform (0xf5d9c), DEVIOUS only and before the channel
-     * checks: every map byte (at most 0x10) becomes list->mapdata[byte], in the caller's map */
+    /* vendor 2.2.0 IMP_Encoder_MappingTransform (0xf5d9c; T33 2.0.2.1 0xfd32c), DEVIOUS only and
+     * before the channel checks: every map byte (at most 0x10) becomes list->mapdata[byte], in the
+     * caller's map.  Any transform failure, a NULL list too (the transform's own 0x80040010), is
+     * 0x80040002 to the caller (SetChnMapRoi 0xf6xxx / T33 0xfd52c: "iVar3 < 0" -> 0x80040002) */
     if (m->type == IMP_MAPPINGTYPE_DEVIOUS) {
         if (!list)
-            return E1_ERR_NULL;
+            return T32_ENC_ERR_PARAM;
         if (list->length > 0x10u)
             return T32_ENC_ERR_PARAM;
         for (uint32_t i = 0; i < m->mapSize; i++) {
@@ -1256,14 +1259,10 @@ int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiCfg *m, IMPEncoderMappi
             m->map[i] = list->mapdata[m->map[i]];
         }
     }
-#else
-    (void)list;
-#endif
     pthread_mutex_lock(&e1_lock);
     rc = e1_get(encChn, &ci);
-#ifndef PLATFORM_T33
-    /* #977: i264e_set_param(2, {1, map, size}) / i265e_set_param(2) (I265eReconfig_setRoi 0x959ac);
-     * a JPEG channel: 0x80040002 */
+    /* #977: i264e_set_param(2, {1, map, size}) / i265e_set_param(2) (I265eReconfig_setRoi 0x959ac;
+     * T33 #99: 0x82660 / 0x98ef8); a JPEG channel: 0x80040002 */
     if (!rc && ci.codec == 0)
         rc = T32_ENC_ERR_PARAM;
     if (!rc && ci.codec != 0 && encChn < T32_E1_CHNS && m->mapSize) {
@@ -1281,7 +1280,6 @@ int IMP_Encoder_SetChnMapRoi(int encChn, IMPEncoderMapRoiCfg *m, IMPEncoderMappi
             e1_map[encChn].fresh = 1;
         }
     }
-#endif
     pthread_mutex_unlock(&e1_lock);
     return rc;
 }

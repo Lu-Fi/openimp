@@ -729,11 +729,10 @@ int t32_rc_init(T32Rc *rc, const IMPEncoderAttrRcMode *m, uint32_t pic_w, uint32
             free(c);
             return -1;
         }
-        if (
-#ifdef PLATFORM_T33
-            m->rcMode == IMP_ENC_RC_MODE_FIXQP ||
-#endif
-            t32_rc65_params(c, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, NULL) != 0) {
+        /* T33 (#99): vendor 2.0.2.1 i265e_encode starts the controller in every mode, FIXQP
+         * too (as 2.2.0, #977): the SetChnMapRoi enables, the CPLX QP words and the
+         * per-picture QP come from it */
+        if (t32_rc65_params(c, m, pic_w, pic_h, bufsize, gop, fps_num, fps_den, NULL) != 0) {
             t32_rc65_close(c);
             free(c);
             return 0;

@@ -154,6 +154,13 @@ static uint32_t t33_field(const T33HeraH264Pic *t, uint32_t reg, uint32_t v, con
         /* P-skip / intra refresh (#784, QEMU A/B vps2 and vgc vs vendor
          * 2.0.2.1): the controller's skipped picture clears s+0x42c, a
          * refresh or skipped picture s+0x2c4 */
+        /* SetChnMapRoi (#99): H264E_T32V_SliceInit 0x4b6c8 revision 7 sums 0x20038 from
+         * s+0x152 + s+0x159 * 2 + ..., 0x90000 from 3 + s+0x260 * 4 + .. + s+0x159 * 0x40 + ..:
+         * the byte map's enable s+0x159 the controller sets while a map is in */
+        case 0x20038u:
+            return (v & ~2u) | (sl[0x159] & 1u) << 1;
+        case 0x90000u:
+            return (v & ~0x40u) | (sl[0x159] & 1u) << 6;
         case VMAU_MD_CFG10:
             return (v & ~1u) | (sl[0x42c] & 1u);
         case MCE_CFG48:
