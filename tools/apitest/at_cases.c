@@ -446,6 +446,57 @@ void cs_t32rest(void)
 #undef MS_ONE
     (void)r5;
 }
+
+/* ---- case "t32ldc": the FrameSource LDC channel attribute as a data path (vendor 2.2.0, #978; explicit only) -----------------------
+ * ch1 off, SetChnAttr_Expand(ch1, {enable 1, priority 0, block 16, /tmp/t32ldc.lut}) with a 0x444-byte parameter file of a fixed
+ * pattern, ch1 on (the vendor: LDC_SetMode(1), OfflineInit(1), OfflineCreateJob(func 4), then OfflineSubmitTask(func 4) for every
+ * frame of ch1), 15 s of frames, ch1 off, UpdateChnLut(ch1, /tmp/t32ldc2.lut), ch1 on, 15 s more; the area teardown destroys the job.  QEMU has no
+ * LDC engine: every task ends in the driver's 10 s timeout, so the verdict is the ioctl trace (LD_PRELOAD libt32trace with
+ * T32_TRACE_LDC=1: the /dev/offline_ldc task words and a hash of the parameter block), vendor library vs OpenIMP. */
+static void t32ldc_file(const char *path, uint32_t seed)
+{
+    FILE *f = fopen(path, "wb");
+    uint32_t w[0x444 / 4], i;
+
+    for (i = 0; i < 0x444 / 4; i++)
+        w[i] = seed + i * 0x01010101u;
+    if (f) {
+        fwrite(w, 1, sizeof(w), f);
+        fclose(f);
+    }
+}
+
+void cs_t32ldc(void)
+{
+    struct { int enable, priority, size; char lut_name[128]; } la, lb;
+    char name2[128];
+    int rd, rs, re, ru, rg, rd2, re2;
+
+    wdog("t32ldc", 600);                /* every LDC task waits out the QEMU driver timeout */
+    t32ldc_file("/tmp/t32ldc.lut", 0x00100020u);
+    t32ldc_file("/tmp/t32ldc2.lut", 0x00300040u);
+    rd = IMP_FrameSource_DisableChn(1);
+    memset(&la, 0, sizeof(la)); la.enable = 1; la.priority = 0; la.size = 16; strcpy(la.lut_name, "/tmp/t32ldc.lut");
+    rs = IMP_FrameSource_SetChnAttr_Expand(1, (void *)&la);
+    re = IMP_FrameSource_EnableChn(1);
+    printf("[T] t32ldc: ch1 on with LDC (off 0x%x, expand 0x%x, on 0x%x)\n", T32G_X(rd), T32G_X(rs), T32G_X(re));
+    fflush(stdout);
+    sleep(15);
+    /* the update with ch1 off (the job stays): in QEMU every task holds the vendor's LDC device lock for the 10 s driver
+     * timeout and the frame thread takes it again at once, so an update while frames run waits for minutes there */
+    rd2 = IMP_FrameSource_DisableChn(1);
+    memset(name2, 0, sizeof(name2)); strcpy(name2, "/tmp/t32ldc2.lut");
+    ru = IMP_FrameSource_UpdateChnLut(1, name2);
+    re2 = IMP_FrameSource_EnableChn(1);
+    printf("[T] t32ldc: ch1 off 0x%x, UpdateChnLut 0x%x, ch1 on 0x%x\n", T32G_X(rd2), T32G_X(ru), T32G_X(re2));
+    fflush(stdout);
+    sleep(15);
+    memset(&lb, 0, sizeof(lb));
+    rg = IMP_FrameSource_GetChnAttr_Expand(1, (void *)&lb);
+    rep(FN(IMP_FrameSource_SetChnAttr_Expand), re, V_PASS, "ch1 off 0x%x, expand 0x%x, on with LDC 0x%x", T32G_X(rd), T32G_X(rs), T32G_X(re));
+    rep(FN(IMP_FrameSource_UpdateChnLut), ru, V_PASS, "ch1 off 0x%x, update 0x%x, on 0x%x", T32G_X(rd2), T32G_X(ru), T32G_X(re2));
+    rep(FN(IMP_FrameSource_GetChnAttr_Expand), rg, V_PASS, "ch1 0x%x: en %d size %d lut \"%s\"", T32G_X(rg), lb.enable, lb.size, lb.lut_name);
+}
 #endif
 
 #if defined(APITEST_T32) && !defined(APITEST_T33)
@@ -8111,7 +8162,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap", "t32avui", "t32rest", "carrier", "carrier_a2", "carrier_a3", "carrier_a5", "carrier_a7", "carrier_a9", "carrier_a1", "carrier_a4", "carrier_a6", "carrier_a8", "carrier_a10", "carrier_a11", "carrier_a12" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap", "t32avui", "t32rest", "t32ldc", "carrier", "carrier_a2", "carrier_a3", "carrier_a5", "carrier_a7", "carrier_a9", "carrier_a1", "carrier_a4", "carrier_a6", "carrier_a8", "carrier_a10", "carrier_a11", "carrier_a12" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -8243,6 +8294,7 @@ void t_cases(void)
     if (getenv("APITEST_CASES") && cs_on("t32gap")) { cs_t32gap(); wdog("cases", 60); }   /* explicit only (#99) */
     if (getenv("APITEST_CASES") && cs_on("t32avui")) { cs_t32avui(); wdog("cases", 120); }   /* explicit only (#930) */
     if (getenv("APITEST_CASES") && cs_on("t32rest")) { cs_t32rest(); wdog("cases", 60); }   /* explicit only (#99) */
+    if (getenv("APITEST_CASES") && cs_on("t32ldc")) { cs_t32ldc(); wdog("cases", 900); }   /* explicit only (#978) */
 #endif
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);

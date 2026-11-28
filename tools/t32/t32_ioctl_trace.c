@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,7 @@
 
 static FILE *log_file;
 static unsigned dump_bytes;
+static int ldc_trace;           /* T32_TRACE_LDC=1 (#978): /dev/offline_ldc task words + parameter block */
 static unsigned vpu_bytes;
 static unsigned long seq;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -60,6 +62,7 @@ static void trace_init(void)
     if (log_file)
         setvbuf(log_file, NULL, _IOLBF, 0);
     dump_bytes = dump ? (unsigned)strtoul(dump, NULL, 0) : 0;
+    ldc_trace = getenv("T32_TRACE_LDC") != NULL;
     osd_ids = getenv("T32_TRACE_OSD") != NULL;
     if (dump_bytes > 1024)
         dump_bytes = 1024;
@@ -137,6 +140,30 @@ static void dump_words(unsigned long s, const char *tag, const void *arg, unsign
         unsigned v;
         memcpy(&v, buf + i, 4);
         fprintf(log_file, " %08x", v);
+    }
+    fputc('\n', log_file);
+}
+
+/* #978: a T32 offline LDC task (/dev/offline_ldc request 2, 28 bytes: size, strides, four planes, parameter block pointer):
+ *   L <seq> <7 task words> <FNV-1a of the 1076-byte parameter block> <its first 8 words> */
+static void dump_ldc(unsigned long s, const void *arg)
+{
+    uint32_t t[7], w[1076 / 4], h = 2166136261u;
+    unsigned i;
+
+    if ((unsigned long)arg < 0x1000 || safe_copy(t, arg, sizeof(t)))
+        return;
+    fprintf(log_file, "L %lu", s);
+    for (i = 0; i < 7; i++)
+        fprintf(log_file, " %08x", t[i]);
+    if (t[6] >= 0x1000 && !safe_copy(w, (const void *)(uintptr_t)t[6], sizeof(w))) {
+        const unsigned char *b = (const unsigned char *)w;
+
+        for (i = 0; i < sizeof(w); i++)
+            h = (h ^ b[i]) * 16777619u;
+        fprintf(log_file, " fnv %08x", h);
+        for (i = 0; i < 8; i++)
+            fprintf(log_file, " %08x", w[i]);
     }
     fputc('\n', log_file);
 }
@@ -242,6 +269,8 @@ int ioctl(int fd, unsigned long req, ...)
         s = ++seq;
         if ((dir & 4) || req == 0x2000496aUL || req == 0x20004976UL)
             dump_words(s, "in", arg, n);
+        if (ldc_trace && req == 2UL && !strcmp(path, "/dev/offline_ldc"))
+            dump_ldc(s, arg);
         if (vpu_bytes && (req == 0xc0406302UL || req == 0xc0406303UL))
             dump_vpu_job(s, arg);
         if (req == 0xc0105467UL && !tuning_bytes && osd_ids)
