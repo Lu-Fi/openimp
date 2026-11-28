@@ -128,7 +128,8 @@ void VBMNotePull(int chn);
  * GetTimedFrame) */
 int VBMDelayConfigure(int chn, int max, int delay);
 int VBMDelaySetDelay(int chn, int delay);
-#if defined(PLATFORM_T20) || defined(PLATFORM_T30) || defined(PLATFORM_T31) /* T31: #974 VBMReadyTag/VBMExpireReadyUpTo */
+#if defined(PLATFORM_T20) || defined(PLATFORM_T30) || defined(PLATFORM_T31) || \
+    defined(PLATFORM_T21) || defined(PLATFORM_T23) /* T21/T23/T31: #974 VBMReadyTag/VBMExpireReadyUpTo */
 int VBMBuffersInDriver(int chn);
 /* #420: ready frames older than max_age_ms go back to the bank ring (0 none
  * ready, -1 the newest is younger, else the count; `query`: count only). */

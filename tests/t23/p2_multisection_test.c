@@ -112,6 +112,8 @@ int VBMWaitReady(int chn, unsigned int seq, uint32_t us)
     return -1;
 }
 void VBMWakeReaders(int chn) { (void)chn; }
+unsigned int VBMReadyTag(int chn) { (void)chn; return 0; }  /* #974 */
+int VBMExpireReadyUpTo(int chn, unsigned int tag) { (void)chn; (void)tag; return 0; }
 int AL_Codec_Encode_InsertUserData(void *c, const void *d, unsigned int s, unsigned int n, unsigned int m)
 { (void)c; (void)d; (void)s; (void)n; (void)m; return 0; }
 int AL_Codec_Encode_SetJpegSkip(void *c, int a) { (void)c; (void)a; return 0; }

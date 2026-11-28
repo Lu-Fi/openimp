@@ -3722,7 +3722,14 @@ int IMP_Encoder_UnRegisterChn(int channel)
     return 0;
 }
 
-#if defined(PLATFORM_T31)
+/* #974: T31 and the T21/T23 builds (their FrameSource thread parks ready frames
+ * the same way; the T20 build defines PLATFORM_T21 too but pushes). */
+#if defined(PLATFORM_T31) || \
+    ((defined(PLATFORM_T21) || defined(PLATFORM_T23)) && !defined(PLATFORM_T20))
+#define P2_START_FRESH 1
+#endif
+
+#if defined(P2_START_FRESH)
 /*
  * #974: the vendor encoder codes only the frames the FrameSource thread hands
  * it while the channel receives (T31 1.1.6, Ghidra addresses as elsewhere in
@@ -3792,7 +3799,7 @@ int IMP_Encoder_StartRecvPic(int channel)
     memset(&p2_fps_masks[channel], 0, sizeof(p2_fps_masks[channel]));
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
-#if defined(PLATFORM_T31)
+#if defined(P2_START_FRESH)
     if (!ch->receiving && p2_start_drop_stale_on())
         p2_start_drop_stale(channel, ch->source_channel);
 #endif
