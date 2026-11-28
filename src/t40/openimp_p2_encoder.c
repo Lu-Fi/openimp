@@ -101,6 +101,9 @@
 #define P2_FRAME_WAIT_SLICE_US 20000u
 #endif
 #include "t40/p2_fps_mask.h"   /* #962: vendor keep mask, every SoC */
+#if defined(PLATFORM_T23)
+#include "t23/t23_enc_rate.h"   /* #986: encoder rate = min(sensor, output) */
+#endif
 #if defined(PLATFORM_T40)
 /* the next frame wait starts this long before the capture is due (#149) */
 #define P2_T40_ARRIVAL_MARGIN_US 2000u
@@ -647,6 +650,10 @@ static P2EncoderChannel p2_channels[P2_ALL_CHANNELS];
 /* #962: vendor keep mask per channel (p2_fps_mask_poll) */
 static P2FpsMask p2_fps_masks[P2_ALL_CHANNELS];
 static unsigned int p2_fps_mask_kept[P2_ALL_CHANNELS];
+#if defined(PLATFORM_T23)
+/* #986: effective encoder rate / GOP per channel (vendor do_channel_process) */
+static T23EncRate p2_t23_enc_rates[P2_ALL_CHANNELS];
+#endif
 static unsigned int p2_fps_mask_skips[P2_ALL_CHANNELS];
 static P2Bind p2_binds[P2_MAX_BINDS];
 static pthread_mutex_t p2_state_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -3797,6 +3804,9 @@ int IMP_Encoder_StartRecvPic(int channel)
     ch->next_frame_due_us = 0;
     ch->output_timestamp_us = 0;
     memset(&p2_fps_masks[channel], 0, sizeof(p2_fps_masks[channel]));
+#if defined(PLATFORM_T23)
+    p2_t23_enc_rates[channel].valid = 0;
+#endif
     if (ch->codec_type == IMP_ENC_TYPE_JPEG)
         ch->jpeg_fanout = p2_jpeg_frames_from_fanout(ch);
 #if defined(P2_START_FRESH)
@@ -4883,6 +4893,44 @@ static int p2_fps_mask_poll(int channel, const P2EncoderChannel *ch,
                               out_num, out_den) >= 0;
 }
 
+#if defined(PLATFORM_T23)
+/* #986, called with ch->lock held before the picture: the vendor T23
+ * do_channel_process codes at min(sensor rate, output rate) and keeps the
+ * GOP duration in whole seconds (src/t23/t23_enc_rate.h); the channel
+ * attributes keep the configured values.  OPENIMP_T23_ENC_RATE=0: the
+ * codec keeps the configured rate and GOP. */
+static void p2_t23_enc_rate_poll(int channel, P2EncoderChannel *ch,
+                                 uint32_t out_num, uint32_t out_den)
+{
+    static int on = -1;
+    T23EncRate *r = &p2_t23_enc_rates[channel];
+    uint32_t src_num, src_den;
+    IMPEncoderFrmRate rate;
+
+    if (on < 0) {
+        const char *e = getenv("OPENIMP_T23_ENC_RATE");
+
+        on = !(e && e[0] == '0');
+    }
+    if (!on || ch->codec_type != IMP_ENC_TYPE_AVC || !ch->codec ||
+        !OpenIMP_EncoderSourceFps ||
+        OpenIMP_EncoderSourceFps(&src_num, &src_den) != 0)
+        return;
+    if (!r->valid)
+        t23_enc_rate_init(r, out_num, out_den, ch->attr.rcAttr.maxGop);
+    if (!t23_enc_rate_step(r, src_num, src_den, out_num, out_den))
+        return;
+    rate.frmRateNum = r->num;
+    rate.frmRateDen = r->den;
+    (void)AL_Codec_Encode_SetFrameRate(ch->codec, &rate);
+    if (r->gop)
+        (void)AL_Codec_Encode_SetGopLength(ch->codec, (int)r->gop);
+    IMP_LOG_INFO("Encoder", "ch %d encoder rate %u/%u gop %u (sensor %u/%u, "
+                 "output %u/%u, gop %u)", channel, r->num, r->den, r->gop,
+                 src_num, src_den, out_num, out_den, ch->attr.rcAttr.maxGop);
+}
+#endif
+
 /* One frame the poll took: 1 = code it, 0 = skipped by the mask. */
 static int p2_fps_mask_frame(int channel)
 {
@@ -5043,6 +5091,7 @@ static int p2_polling_stream(int channel, uint32_t timeout_ms, int push)
     if (fps_mask)
         wait_us = 0;
 #if defined(PLATFORM_T23)
+    p2_t23_enc_rate_poll(channel, ch, fps_num, fps_den);
     /* #807: IVDC direct: kicked by the frame-start event, no timer */
     if (p2_ivdc_push_on() && ch->codec_type != IMP_ENC_TYPE_JPEG &&
         OpenIMP_T23_IvdcChnDirect(ch->source_channel)) {
@@ -6744,6 +6793,9 @@ int IMP_Encoder_SetChnFrmRate(int channel, IMPEncoderFrmRate *rate,
     const IMPEncoderFrmRate t31_old_rate = ch->attr.rcAttr.outFrmRate;
 #endif
     ch->attr.rcAttr.outFrmRate = *rate;
+#if defined(PLATFORM_T23)
+    p2_t23_enc_rates[channel].valid = 0;    /* #986: derived again */
+#endif
     ch->next_frame_due_us = 0;
     ch->output_timestamp_us = 0;
     if (AL_Codec_Encode_SetFrameRate(ch->codec, (void *)rate) != 0) {
@@ -7324,6 +7376,9 @@ int IMP_Encoder_SetChnGopLength(int channel, int length)
 #endif
 #if defined(PLATFORM_T23) || defined(PLATFORM_T30)
     p2_channels[channel].attr.rcAttr.maxGop = (uint32_t)length;
+#if defined(PLATFORM_T23)
+    p2_t23_enc_rates[channel].valid = 0;    /* #986: derived again */
+#endif
 #else
     p2_channels[channel].attr.gopAttr.uGopLength = (uint16_t)length;
 #endif
