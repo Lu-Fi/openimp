@@ -2200,8 +2200,11 @@ static void t23_rc_stats(T30HelixEncoder *encoder, uint32_t qp, int idr,
 
 /* Which rate-control modes run the OEM picture rate controller (src/eprc),
  * and which revision.
- * T23 (OPENIMP_T23_EPRC): unset = SMART, "1" = FIXQP, CBR, VBR and SMART,
- * "0" = none (the GOP controller with the band mapping, t23_rc_config).
+ * T23 (OPENIMP_T23_EPRC): unset or "1" = FIXQP, CBR, VBR and SMART (the
+ * default, as the OEM: T23 1.3.0 i264e_ratecontrol_init 0x40c7c calls
+ * JZ_VPU_RC_VIDEO_CFG_T21 and i264e_ratecontrol_start 0x420e8
+ * JZ_VPU_RC_FRAME_START_T21 for every mode, #986), "0" = none (the GOP
+ * controller with the band mapping, t23_rc_config; A/B only).
  * T21 (OPENIMP_T21_EPRC): unset or "1" = FIXQP, CBR, VBR and SMART with the T21
  * 1.0.33 revision (eprc_t21.c, equal to the OEM T21 controller in
  * tools/eprc_oracle.py; the default, as the OEM), "0" = none (the old GOP
@@ -2215,11 +2218,10 @@ static int helix_eprc_wanted(const T30HelixEncoder *encoder)
                 (encoder->params.rc_flags & HW_RC_FLAG_SMART);
 
 #if defined(PLATFORM_T23)
+    (void)smart;
     if (env && env[0] == '0')
         return 0;
-    if (env && env[0] == '1')
-        return 2;
-    return smart ? 2 : 0;
+    return 2;
 #else
     (void)smart;
     if (env && strcmp(env, "0") == 0)

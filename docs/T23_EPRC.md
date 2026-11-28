@@ -190,7 +190,7 @@ period.**  This is vendor-identical and stays the default, but it is a
 visible change against older OpenIMP builds, which ignored the field: a
 channel created with skip type N1X / H1M and maxSameSceneCnt = n > 1 (the
 Ingenic sample code uses 6) gets an IDR only every n GOPs on T21 (eprc on
-by default) and on T23 SMART, apart from scene-cut IDRs.  RTSP clients
+by default) and on T23, apart from scene-cut IDRs.  RTSP clients
 then wait up to n x GOP for the first decodable picture and recorders
 segment on IDRs n times less often; the HSkip reference structure itself
 is not coded by the native encoder, so nothing is gained in return.
@@ -230,7 +230,7 @@ VIDEO_CFG (0xc7530: E+60/E+61 = min(qp - 3, 51) unsigned and min(qp, 51),
 so below QP 3 the I QP is 51), no model, no window, no QP range, no
 re-encode (FRAME_REPEATE_JUDGE needs a mode).  Ported in both revisions
 and in the vectors; the Helix encoder runs FIXQP through it where its mode
-set includes FIXQP (T21 by default, T23 with `OPENIMP_T23_EPRC=1`).
+set includes FIXQP (T21 and T23 by default).
 
 ## Macroblock rate control
 
@@ -529,8 +529,13 @@ so a P picture is never coded a second time in ring mode.  The OEM:
   not judged (`EPRC_FrameEndEx(.., may_repeat = 0)`); `OPENIMP_REF_SHARE=0`
   is the OEM behaviour.
 
-Switches: `OPENIMP_T23_EPRC` unset = SMART, `1` = FIXQP/CBR/VBR/SMART, `0`
-= off; `OPENIMP_T21_EPRC` unset/`1` = FIXQP/CBR/VBR/SMART with the T21 revision
+Switches: `OPENIMP_T23_EPRC` unset or `1` = FIXQP/CBR/VBR/SMART (the
+default since 2026-11-28, #986: the T23 1.3.0 i264e runs the controller for
+every mode, `i264e_ratecontrol_init` 0x40c7c -> `JZ_VPU_RC_VIDEO_CFG_T21`,
+`i264e_ratecontrol_start` 0x4222c -> `JZ_VPU_RC_FRAME_START_T21`; before,
+CBR/VBR/FIXQP ran OpenIMP's GOP controller, which moved one QP per GOP and
+settled 2-3 QP above the vendor: light box CBR 1000 / 2000 gave 487 / 1504
+kbit/s against vendor 1035 / 2036), `0` = off; `OPENIMP_T21_EPRC` unset/`1` = FIXQP/CBR/VBR/SMART with the T21 revision
 (`eprc_t21.c`, the default), `0` = off (the old T21 GOP controller), `23` =
 the same with the T23 controller (see "Other SoCs");
 `OPENIMP_T23_SMART_IDR_GOPS=n` overrides maxSameSceneCnt for SMART on T23.

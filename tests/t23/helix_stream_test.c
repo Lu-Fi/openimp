@@ -638,6 +638,10 @@ static int encode(const char *stream_path, const char *ref_path)
     unsigned int idrs = 0;
 
     assert(stream && ref);
+    /* job/bitstream path with the GOP controller: the fake core's pictures
+     * do not shrink with the QP, so the OEM controller (the default, #986;
+     * eprc_test) would code oversized pictures again */
+    setenv("OPENIMP_T23_EPRC", "0", 1);
     memset(&params, 0, sizeof(params));
     params.width = WIDTH;
     params.height = HEIGHT;
@@ -866,7 +870,8 @@ static uint32_t rc_run(const HWEncoderParams *params,
                        uint32_t *first_idr_qp);
 
 /* The OEM picture rate control (src/eprc) in the encoder: the default
- * runs it for SMART only, OPENIMP_T23_EPRC=1 for CBR/VBR too; the encoder
+ * runs it for every mode like the OEM (#986), OPENIMP_T23_EPRC=0 keeps the
+ * GOP controller; the encoder
  * reads the 25 Helix statistics registers after every picture and codes
  * with the controller's QPs (same sequence as the module on its own). */
 static void eprc_test(void)
@@ -877,12 +882,12 @@ static void eprc_test(void)
                                        HW_RC_MODE_VBR };
     unsigned int k, jobs_before;
 
-    unsetenv("OPENIMP_T23_EPRC");
+    setenv("OPENIMP_T23_EPRC", "0", 1);
     rc_params(&params, HW_RC_MODE_VBR);
     params.rc_flags = HW_RC_FLAG_APP;
     reads = reg_reads;
     (void)rc_run(&params, 3, 15, &first);
-    assert(reg_reads == reads);              /* VBR: GOP controller */
+    assert(reg_reads == reads);              /* =0: GOP controller */
 
     /* SMART: OEM controller.  The fake core's pictures do not shrink with
      * the QP and exceed the OEM limit (VBV size from the picture size), so
@@ -900,10 +905,10 @@ static void eprc_test(void)
         params.quality_level = 4;
         if (k == 3u)
             setenv("OPENIMP_T23_EPRC", "0", 1);
-        else if (k < 2u)
+        else if (k == 1u)
             setenv("OPENIMP_T23_EPRC", "1", 1);
         else
-            unsetenv("OPENIMP_T23_EPRC");
+            unsetenv("OPENIMP_T23_EPRC");   /* default: CBR and SMART */
         reads = reg_reads;
         jobs_before = jobs;
         qp_log_n = 0;

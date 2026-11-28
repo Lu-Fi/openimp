@@ -120,9 +120,10 @@ keeps only the number of writes and an FNV-1a digest of the register order.
   that band before QP moves. The log shows the rate control in effect
   (`T23 Helix rc ready:` / `rc reconfigured:`); `OPENIMP_T23_RC_STATS=<s>`
   adds bitrate and I/P QP statistics every `<s>` seconds.
-- OEM picture rate control (`src/eprc`, `docs/T23_EPRC.md`): SMART runs the
-  reimplemented OEM controller (JZ_VPU_RC_*_T21) instead of the band mapping
-  above; `OPENIMP_T23_EPRC=1` runs it for CBR and VBR too, `=0` for none.
+- OEM picture rate control (`src/eprc`, `docs/T23_EPRC.md`): FIXQP, CBR,
+  VBR and SMART run the reimplemented OEM controller (JZ_VPU_RC_*_T21) like
+  the vendor (default since 2026-11-28, #986); `OPENIMP_T23_EPRC=0` keeps
+  the band mapping above (A/B only).
   After each picture the encoder reads the 25 Helix statistics registers
   the OEM reads (soc_vpu `IOCTL_CHANNEL_WOR_VPU_REG`) and feeds them with the
   coded size to the controller; a picture the controller rejects as too
