@@ -58,3 +58,15 @@ entries:
   - match: ["IMP_AO_*", "IMP_AI_EnableAec*", "IMP_AI_DisableAec*", "IMP_AI_GetFrameAndRef", "IMP_AENC_*", "IMP_ADEC_*"]
     category: sound
     reason: "audio output / AEC / speaker path: no AO or AEC call at all until the user decides (no-sound rule, decision of 2026-10-26); AI microphone calls are tested"
+  - match: ["IMP_alloc_init", "IMP_alloc_unit", "IMP_create_units", "IMP_destroy_units", "IMP_free_unit"]
+    socs: [T32]
+    category: no-signature
+    reason: "vendor-internal pool-unit allocator behind IMP_Buf_CreatePool / IMP_Buf_Alloc / IMP_Buf_Free (libimp-2.2.0 Ghidra 0x32308 / 0x319fc / 0x31620 / 0x3189c / 0x31ec0; callers only IMP_Buf_CreatePool, alloc_bufunit, free_bufunit, IMP_alloc_init); declared in no SDK header (T32 2.2.0 and 2.1.0 checked), so there is no documented signature and no application call; the pool behaviour is tested through IMP_Buf_* (tools/t32/t32_misc_sample.c mode buf)"
+  - match: ["IMP_Buf_Alloc", "IMP_Buf_CreatePool", "IMP_Buf_DestroyPool", "IMP_Buf_Free", "IMP_Buf_Paddr2Vaddr", "IMP_Buf_Vaddr2Paddr"]
+    socs: [T32]
+    category: own-topology
+    reason: "IMP_Buf_* pools are compared vendor-vs-OpenIMP by tools/t32/t32_misc_sample.c mode buf (T32B lines, QEMU, #298/#299), a sample of their own that creates pools outside the apitest group topology"
+  - match: ["IMP_DMIC_DisableAgc", "IMP_DMIC_DisableHpf", "IMP_DMIC_DisableNs", "IMP_DMIC_EnableAgc", "IMP_DMIC_EnableHpf", "IMP_DMIC_EnableNs", "IMP_DMIC_SetHpfCoFrequency"]
+    socs: [T32]
+    category: hardware
+    reason: "digital microphone algorithm switches: the T32 test board (PRJ007) has no digital microphone and the QEMU model no DMIC, so no capture runs through the algorithm chain (the DMIC enable / frame calls are round trips only)"

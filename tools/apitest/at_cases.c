@@ -356,6 +356,96 @@ void cs_t32avui(void)
     wdog("cases", 120);
     av_one(1);
 }
+
+/* ---- case "t32rest": the T32 2.2.0 exports that had no QEMU line yet (#99, 2026-11-28; explicit only) -------------------------------
+ * Return codes and read-backs printed in hex, the same lines on the vendor library + module and on OpenIMP + the open module (QEMU, fresh
+ * boot): IMP_ISP_WDR_OPEN argument rules, IMP_FrameSource_Set/GetChnAttr_Expand + UpdateChnLut (stored LDC channel attribute),
+ * IMP_ISP_LDC_OfflineCreateJobExt (vendor T32: not supported, -1), BcshRGBOffsetAttr and the MultiSensor effect calls (VI argument and
+ * same-value round trips).  Every line is PASS; the vendor-vs-OpenIMP comparison is the verdict (audit t32-gap-1128/abfilter.py). */
+void cs_t32rest(void)
+{
+    unsigned wo[2], r;
+    int rn, rv, rb, r1, r2, r3, r4, r5;
+    IMPISPBCSHRGBOffsetAttr bo, bo2;
+    IMPISPSensorSyncEffect se, se2;
+    struct { int enable, priority, size; char lut_name[128]; } la, lb, lc;
+
+    /* WDR_OPEN: NULL, VI 5, init mode 1 / 3 (f008), unknown run mode, run mode LINEAR / init 0, run mode WDR */
+    rn = IMP_ISP_WDR_OPEN(IMPVI_MAIN, NULL);
+    wo[0] = 0; wo[1] = 0; rv = IMP_ISP_WDR_OPEN((IMPVI_NUM)5, (IMPISPWdrOpenAttr *)wo);
+    wo[1] = 1; rb = IMP_ISP_WDR_OPEN(IMPVI_MAIN, (IMPISPWdrOpenAttr *)wo);
+    wo[1] = 3; r1 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, (IMPISPWdrOpenAttr *)wo);
+    wo[0] = 7; wo[1] = 0; r2 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, (IMPISPWdrOpenAttr *)wo);
+    wo[0] = 0; wo[1] = 0; r3 = IMP_ISP_WDR_OPEN(IMPVI_MAIN, (IMPISPWdrOpenAttr *)wo);
+    rep(FN(IMP_ISP_WDR_OPEN), r3, V_PASS, "NULL 0x%x, VI 5 0x%x, init 1 0x%x, init 3 0x%x, run 7 0x%x, linear/0 0x%x; frames flow %d",
+        T32G_X(rn), T32G_X(rv), T32G_X(rb), T32G_X(r1), T32G_X(r2), T32G_X(r3), flow());
+
+    /* FrameSource LDC attribute (140 bytes) */
+    memset(&la, 0, sizeof(la)); la.enable = 1; la.priority = 0; la.size = 16; strcpy(la.lut_name, "/tmp/t32rest.lut");
+    memset(&lb, 0x5a, sizeof(lb)); memset(&lc, 0x5a, sizeof(lc));
+    r1 = IMP_FrameSource_SetChnAttr_Expand(12, (void *)&la);
+    r2 = IMP_FrameSource_SetChnAttr_Expand(0, NULL);
+    r3 = IMP_FrameSource_SetChnAttr_Expand(2, (void *)&la);
+    r4 = IMP_FrameSource_GetChnAttr_Expand(2, (void *)&lb);
+    r5 = IMP_FrameSource_GetChnAttr_Expand(12, (void *)&lc);
+    rep(FN(IMP_FrameSource_SetChnAttr_Expand), r3, V_PASS, "chn 12 0x%x, NULL 0x%x, chn 2 0x%x", T32G_X(r1), T32G_X(r2), T32G_X(r3));
+    rep(FN(IMP_FrameSource_GetChnAttr_Expand), r4, V_PASS, "chn 2 0x%x: en %d prio %d size %d lut \"%s\"; chn 12 0x%x, NULL 0x%x", T32G_X(r4), lb.enable,
+        lb.priority, lb.size, lb.lut_name, T32G_X(r5), T32G_X(IMP_FrameSource_GetChnAttr_Expand(2, NULL)));
+    memset(&lb, 0, sizeof(lb)); strcpy(lb.lut_name, "/tmp/t32rest2.lut");
+    r1 = IMP_FrameSource_UpdateChnLut(12, lb.lut_name);
+    r2 = IMP_FrameSource_UpdateChnLut(2, lb.lut_name);
+    memset(&lc, 0x5a, sizeof(lc));
+    r3 = IMP_FrameSource_GetChnAttr_Expand(2, (void *)&lc);
+    rep(FN(IMP_FrameSource_UpdateChnLut), r2, V_PASS, "chn 12 0x%x, chn 2 0x%x; stored lut \"%s\" (get 0x%x, en %d)", T32G_X(r1), T32G_X(r2), lc.lut_name,
+        T32G_X(r3), lc.enable);
+
+    /* LDC OfflineCreateJobExt (mode online, no OfflineInit: the vendor dereferences a NULL device pointer, so only after Init) */
+    if (IMP_ISP_LDC_OfflineCreateJobExt) {
+        uint32_t ja[40];
+        int rm, ri, rj, rd;
+
+        memset(ja, 0, sizeof(ja)); ja[0] = 1; ja[1] = 64; ja[2] = 32;
+        rm = IMP_ISP_LDC_SetMode((IMPISPLDCMode)1);
+        ri = IMP_ISP_LDC_OfflineInit((IMPISPLDCOfflineOpsMode)1);
+        rj = IMP_ISP_LDC_OfflineCreateJobExt((IMPISPLDCJobAttrExt *)ja);
+        rd = IMP_ISP_LDC_OfflineInit((IMPISPLDCOfflineOpsMode)0);
+        IMP_ISP_LDC_SetMode((IMPISPLDCMode)0);
+        rep(FN(IMP_ISP_LDC_OfflineCreateJobExt), rj, V_PASS, "mode offline 0x%x, init 0x%x, CreateJobExt 0x%x, init off 0x%x", T32G_X(rm), T32G_X(ri), T32G_X(rj), T32G_X(rd));
+    } else {
+        rep_na(FN(IMP_ISP_LDC_OfflineCreateJobExt));
+    }
+
+    /* BCSH RGB offset: VI 5 / NULL, round trip with the same value */
+    memset(&bo, 0xa5, sizeof(bo)); memset(&bo2, 0, sizeof(bo2));
+    rn = IMP_ISP_Tuning_GetBcshRGBOffsetAttr((IMPVI_NUM)5, &bo2);
+    rv = IMP_ISP_Tuning_GetBcshRGBOffsetAttr(IMPVI_MAIN, NULL);
+    rb = IMP_ISP_Tuning_GetBcshRGBOffsetAttr(IMPVI_MAIN, &bo);
+    r1 = IMP_ISP_Tuning_SetBcshRGBOffsetAttr(IMPVI_MAIN, &bo);
+    r2 = IMP_ISP_Tuning_SetBcshRGBOffsetAttr((IMPVI_NUM)5, &bo);
+    r3 = IMP_ISP_Tuning_SetBcshRGBOffsetAttr(IMPVI_MAIN, NULL);
+    usleep(100000);
+    memset(&bo2, 0, sizeof(bo2));
+    r4 = IMP_ISP_Tuning_GetBcshRGBOffsetAttr(IMPVI_MAIN, &bo2);
+    rep(FN(IMP_ISP_Tuning_GetBcshRGBOffsetAttr), rb, V_PASS, "VI 5 0x%x, NULL 0x%x, VI 0 0x%x r/g/b %u/%u/%u; get after set 0x%x same %d", T32G_X(rn), T32G_X(rv),
+        T32G_X(rb), bo.offset_r, bo.offset_g, bo.offset_b, T32G_X(r4), !memcmp(&bo, &bo2, sizeof(bo)));
+    rep(FN(IMP_ISP_Tuning_SetBcshRGBOffsetAttr), r1, V_PASS, "same value 0x%x, VI 5 0x%x, NULL 0x%x; frames flow %d", T32G_X(r1), T32G_X(r2), T32G_X(r3), flow());
+
+    /* MultiSensor effect (single sensor on this board: the calls only validate / store) */
+    memset(&se, 0, sizeof(se)); memset(&se2, 0xa5, sizeof(se2));
+#define MS_ONE(GET, SET) do { \
+        int g0 = GET(IMPVI_MAIN, &se2), g5 = GET((IMPVI_NUM)5, &se2), gn = GET(IMPVI_MAIN, NULL), s0, sn; \
+        memcpy(&se, &se2, sizeof(se)); \
+        s0 = SET(&se); sn = SET(NULL); \
+        rep(FN(GET), g0, V_PASS, #GET ": VI 0 0x%x (en %d master %d vinum %d), VI 5 0x%x, NULL 0x%x", T32G_X(g0), (int)se2.sync_effect_enable, (int)se2.master_mode, \
+            (int)se2.master_vinum, T32G_X(g5), T32G_X(gn)); \
+        rep(FN(SET), s0, V_PASS, #SET ": same value 0x%x, NULL 0x%x", T32G_X(s0), T32G_X(sn)); \
+    } while (0)
+    MS_ONE(IMP_ISP_Tuning_GetMultiSensorAeEffect, IMP_ISP_Tuning_SetMultiSensorAeEffect);
+    MS_ONE(IMP_ISP_Tuning_GetMultiSensorAWBEffect, IMP_ISP_Tuning_SetMultiSensorAWBEffect);
+    MS_ONE(IMP_ISP_Tuning_GetMultiSensorEffect, IMP_ISP_Tuning_SetMultiSensorEffect);
+#undef MS_ONE
+    (void)r5;
+}
 #endif
 
 #if defined(APITEST_T32) && !defined(APITEST_T33)
@@ -8021,7 +8111,7 @@ static void cs_rawvic_t41(void) {}
 
 void cases_list(void)
 {
-    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap", "t32avui", "carrier", "carrier_a2", "carrier_a3", "carrier_a5", "carrier_a7", "carrier_a9", "carrier_a1", "carrier_a4", "carrier_a6", "carrier_a8", "carrier_a10", "carrier_a11", "carrier_a12" };
+    static const char *n[] = { "sensorreg", "log", "logmacro", "waitframe", "videodrop", "movestate", "aefreeze", "aehistorigin", "autozoom", "framedrop", "cwf", "sinter", "temper", "process", "fwfreeze", "hilight", "inttime", "expr", "scene", "colorfx", "gamma", "modctl", "ccm", "autozoom_set", "isposd", "aeroi", "rawdrc", "wdr_t41", "bypass_t40", "camsel", "binpath", "rgbcoef", "ispbypass", "switchbin", "scalerlv", "contrast", "hue", "aecomp", "backlight", "dpc", "custom", "wdr", "wdrout", "ispflip", "hvflip", "ispbypass_old", "gamma_old", "csc", "awbct", "ctsweep", "scalerlv_old", "stalesnap", "aestats", "faceae", "aeexplist", "dmic", "fspool", "sensorflip", "aestrategy", "alloc", "decoder_t2x", "isposdapi", "inject_t40", "aeevlist", "faceaeweight", "tmofaceae", "drawblock", "scalerlv_t40", "fixedcontrast", "faceawb", "aeinfo_t40", "faceae_t40", "switchbin_t40", "itmax", "fixedcontrast_old", "poolid_t31", "ncu_t31", "fsset_t31", "fscb_t31", "extchn_t31", "extchn_t30", "evstart_t31", "shading_t31", "override_t31", "encgrp_t31", "osdhelp_t31", "ispcover_t23", "isppicupd_t23", "isposdflip_t23", "enchelp_t23", "t140c", "ispdraw_t23", "padframe_t23", "multisection_t23", "tisppar_t40", "tispminmax_t40", "tispawb_t40", "framedrop_t40", "ratiohang_t40", "awbctstart_t40", "ctmove_t40", "tisp2open_t40", "sensorattr_t40", "emu", "rgnisp", "dec", "framerel", "t41isp", "switchbin_t23", "osdalloc_t23", "decoder_t23", "wbalgo_t23", "customalgo_t40", "customalgo_t41", "rawvic_t41", "wdrtoggle_t41", "fscycle", "hskip", "push", "demask", "fisheye", "transcfg", "rctrig", "gopfps", "meshscale", "t41pass", "t30pass", "t30pass_csc", "t30pass2", "maskblock_t23", "ispcover1_t23", "secprobe_t23", "drawblock_t23", "ldc_t30", "attach_t30", "secsensor_t23", "secsensor_t31", "t33pass", "t33gaps", "t33f1", "t33l1", "t33e3", "t33e1", "t33last3", "t33i2d", "t33drv", "t32i2d", "t33l2", "t32l2", "t32gap", "t32avui", "t32rest", "carrier", "carrier_a2", "carrier_a3", "carrier_a5", "carrier_a7", "carrier_a9", "carrier_a1", "carrier_a4", "carrier_a6", "carrier_a8", "carrier_a10", "carrier_a11", "carrier_a12" };
     unsigned i;
 
     for (i = 0; i < sizeof(n) / sizeof(n[0]); i++) puts(n[i]);
@@ -8152,6 +8242,7 @@ void t_cases(void)
 #if defined(APITEST_T32_HDR220)
     if (getenv("APITEST_CASES") && cs_on("t32gap")) { cs_t32gap(); wdog("cases", 60); }   /* explicit only (#99) */
     if (getenv("APITEST_CASES") && cs_on("t32avui")) { cs_t32avui(); wdog("cases", 120); }   /* explicit only (#930) */
+    if (getenv("APITEST_CASES") && cs_on("t32rest")) { cs_t32rest(); wdog("cases", 60); }   /* explicit only (#99) */
 #endif
 #endif
     if (cs_on("t30pass")) cs_t30pass(); wdog("cases", 120);

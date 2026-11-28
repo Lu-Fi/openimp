@@ -8,7 +8,7 @@ import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
-SOCS = ["T10", "T20", "T21", "T23", "T31", "T40", "T41"]
+SOCS = ["T10", "T20", "T21", "T23", "T31", "T32", "T40", "T41"]     # T32 since 2026-11-28 (#99; T33 follows with its own entries)
 STRICT = ["T23", "T31", "T40", "T41"]     # SoCs whose backlog is closed: a function that is still category "backlog" fails the check (T41/T40 since 2026-10-28, T31/T23 since 2026-10-29)
 CATS = {"sound", "reboot", "power", "hardware", "wedges-isp", "no-signature", "own-topology", "not-in-soc-api", "backlog"}
 

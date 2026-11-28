@@ -211,6 +211,26 @@ static int h265_rc_field(const uint8_t *sl, uint32_t reg, uint32_t *v)
     return 0;
 }
 
+/* SetH265TransCfg chroma QP offset c (-12..12, cb = cr): the vendor lists carry it in the loop filter / SAO / DMA words (T33 2.0.2.1
+ * QEMU v265t / v265n, #784; T32 2.2.0 QEMU apitest t33e1 + trace sample 2026-11-28 #99: 0x38004 0x0306xxxx and 0x48004 0x03xxxxxx
+ * against none at c 3, equal rule): c 3 -> 0x38004 +0x03060000, 0x4001c +3, 0x50004 +0x03000000 */
+static uint32_t h265_cqp(int c, uint32_t reg, uint32_t v)
+{
+    if (!c)
+        return v;
+    switch (reg) {
+    case 0x38004u:
+        return v | ((uint32_t)c & 0x7fu) << 24 | ((uint32_t)(2 * c) & 0xffu) << 16;
+    case 0x4001cu:
+        return v | ((uint32_t)c & 0x1fu);
+    case 0x48004u:
+        return v | ((uint32_t)c & 0xffu) << 20;
+    case 0x50004u:
+        return v | ((uint32_t)c & 0xfu) << 24;
+    }
+    return v;
+}
+
 static uint32_t h265_field(const T32HeraH265Pic *p, uint32_t reg, uint32_t v, const uint8_t *st,
                            unsigned idx)
 {
@@ -354,7 +374,7 @@ size_t t32_hera_h265_list(const T32HeraH265Pic *p, uint32_t *list)
             continue;
         for (k = 0; k < e->n; k++) {
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
-            uint32_t v = h265_field(p, e->reg, def, st, k);
+            uint32_t v = h265_cqp(p->chroma_qp_offset, e->reg, h265_field(p, e->reg, def, st, k));
 
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
                 return 0;
