@@ -2431,6 +2431,8 @@ static void cs_isposd(void)
         {
             int noeff = getenv("APITEST_NOEFFECT") != NULL;      /* QEMU: no MSCA draw, return codes only */
             int appears = noeff || (dark ? shown > base + 40 : shown < base - 40), gone = noeff || dabs(hidden - base) < 20;
+            /* guard (t33-proofs1128): luma -1 = no frame could be read (ch0 in IVDC direct mode has no GetFrame): no verdict */
+            if (base < 0 || shown < 0) rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs, V_SKIP, "no frame to measure (region luma %.1f / %.1f, ch0 direct mode?)", base, shown); else
             rep(FN(IMP_ISP_Tuning_SetOsdRgnAttr), rs, (rs == 0 && appears) ? V_PASS : V_FAIL, "%s %dx%d ARGB picture at (64,64): region luma %.1f -> %.1f (%s)", dark ? "white" : "black", (int)PWD, (int)PHT, base, shown, appears ? "visible" : "NOT VISIBLE");
             rep(FN(IMP_ISP_Tuning_ShowOsdRgn), rsh | rhide, (rsh == 0 && rhide == 0 && gone) ? V_PASS : V_FAIL, "show ret %d, hide ret %d, hidden: region luma %.1f (base %.1f)", rsh, rhide, hidden, base);
             rep(FN(IMP_ISP_Tuning_DestroyOsdRgn), rd, (rd == 0 && flow()) ? V_PASS : V_FAIL, "handle %d destroyed, frames flow", h);
@@ -3763,6 +3765,8 @@ static void cs_drawblock(void)
         a->cfg.wind.enable = 0; r3 = IMP_ISP_Tuning_SetDrawBlock(IMPVI_MAIN, a);
         off = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
         usleep(1500000); late = region_y(x + 4, y + 2, x + w - 4, y + bw - 2);
+        /* guard (t33-proofs1128): luma -1 = no frame could be read (ch0 in IVDC direct mode): no verdict */
+        if (base < 0 || on < 0) rep(FN(IMP_ISP_Tuning_SetDrawBlock), r1 | r3, V_SKIP, "no frame to measure (top edge luma %.1f / %.1f, ch0 direct mode?)", base, on); else
         rep(FN(IMP_ISP_Tuning_SetDrawBlock), r1 | r3, (r1 == 0 && r3 == 0 && (getenv("APITEST_NOEFFECT") || ((base < 140 ? on > base + 30 : on < base - 30) && (dabs(off - base) < 20 || dabs(off - on) >= 0.75 * dabs(base - on)))) && flow()) ? V_PASS : V_FAIL,
             "window frame %d px at (%d,%d): top edge luma %.1f -> %.1f; disabled: %.1f (base %.1f, 1.5 s later %.1f); frames flow", bw, x, y, base, on, off, base, late);
         rep(FN(IMP_ISP_Tuning_GetDrawBlock), r2, (r2 == 0 && g->cfg.wind.enable == 1 && g->cfg.wind.left == x && g->cfg.wind.top == y && g->cfg.wind.width == w && g->cfg.wind.line_width == bw) ? V_PASS : V_FAIL,
