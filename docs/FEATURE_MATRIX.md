@@ -1117,15 +1117,15 @@ As of: 2026-11-28. One row per vendor IMP/SU function (a Get/Set row counts as t
 
 Per area and SoC: functions that work (device-tested or vendor no-op) / functions that exist in the SoC's vendor API; in brackets the functions that are implemented but not device-tested (🔧), the gaps (cache-only, stub, error, missing), functions of unknown state (?) and work in progress (🚧).
 
-- **ISP tuning:** T10 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 66/66 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 97/97 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 87/87 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 60/113 ✅ · 53 🔧 · 0 gaps · 0 ? · T33 95/101 ✅ · 6 🔧 · 0 gaps · 0 ? · T40 71/71 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 78/78 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **ISP tuning:** T10 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 66/66 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 97/97 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 67/67 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 87/87 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 60/113 ✅ · 53 🔧 · 0 gaps · 0 ? · T33 101/101 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 71/71 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 78/78 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **AE / AWB / AF:** T10 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 27/27 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 26/26 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 49/49 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 19/41 ✅ · 22 🔧 · 0 gaps · 0 ? · T33 37/37 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 29/29 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 39/39 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **Encoder:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 92/92 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 45/45 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 39/116 ✅ · 75 🔧 · 2 gaps · 0 ? · T33 101/115 ✅ · 14 🔧 · 0 gaps · 0 ? · T40 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 61/61 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 19/19 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 25/25 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 24/47 ✅ · 23 🔧 · 0 gaps · 0 ? · T33 39/44 ✅ · 1 🔧 · 4 gaps · 0 ? · T40 28/28 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 31/31 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **Encoder:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 92/92 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 69/69 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 45/45 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 39/116 ✅ · 75 🔧 · 2 gaps · 0 ? · T33 112/115 ✅ · 3 🔧 · 0 gaps · 0 ? · T40 51/51 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 61/61 ✅ · 0 🔧 · 0 gaps · 0 ?
+- **FrameSource:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 22/22 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 19/19 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 25/25 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 24/47 ✅ · 23 🔧 · 0 gaps · 0 ? · T33 40/44 ✅ · 0 🔧 · 4 gaps · 0 ? · T40 28/28 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 31/31 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **OSD:** T10 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 42/42 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 17/17 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 27/44 ✅ · 17 🔧 · 0 gaps · 0 ? · T33 43/44 ✅ · 1 🔧 · 0 gaps · 0 ? · T40 43/43 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 42/42 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **IVS:** T10 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T33 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 18/18 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 18/18 ✅ · 0 🔧 · 0 gaps · 0 ?
 - **Audio:** T10 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 68/68 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 70/70 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 77/77 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 90/90 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 96/96 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 122/127 ✅ · 5 🔧 · 0 gaps · 0 ? · T33 123/123 ✅ · 0 🔧 · 0 gaps · 0 ? · T40 99/99 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 107/107 ✅ · 0 🔧 · 0 gaps · 0 ?
-- **System:** T10 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 60/60 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 46/46 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 64/64 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 34/99 ✅ · 65 🔧 · 0 gaps · 0 ? · T33 41/91 ✅ · 50 🔧 · 0 gaps · 0 ? · T40 50/50 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 41/51 ✅ · 10 🔧 · 0 gaps · 0 ?
-- **All areas:** T10 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 335/335 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 459/459 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 352/352 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 401/401 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 343/605 ✅ · 260 🔧 · 2 gaps · 0 ? · T33 497/573 ✅ · 72 🔧 · 4 gaps · 0 ? · T40 389/389 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
+- **System:** T10 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 48/48 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 60/60 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 46/46 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 64/64 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 34/99 ✅ · 65 🔧 · 0 gaps · 0 ? · T33 60/91 ✅ · 31 🔧 · 0 gaps · 0 ? · T40 50/50 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 41/51 ✅ · 10 🔧 · 0 gaps · 0 ?
+- **All areas:** T10 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T20 331/331 ✅ · 0 🔧 · 0 gaps · 0 ? · T21 335/335 ✅ · 0 🔧 · 0 gaps · 0 ? · T23 459/459 ✅ · 0 🔧 · 0 gaps · 0 ? · T30 352/352 ✅ · 0 🔧 · 0 gaps · 0 ? · T31 401/401 ✅ · 0 🔧 · 0 gaps · 0 ? · T32 343/605 ✅ · 260 🔧 · 2 gaps · 0 ? · T33 534/573 ✅ · 35 🔧 · 4 gaps · 0 ? · T40 389/389 ✅ · 0 🔧 · 0 gaps · 0 ? · T41 417/427 ✅ · 10 🔧 · 0 gaps · 0 ?
 
 ### Priorities for streamers
 
@@ -1242,7 +1242,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_Get/SetSensorRegister` | ✅rt | ✅rt | ✅rt | ✅rt | ✅rt | ✅ | ✅rt | ✅ | ✅rt | ✅ | r† |
 | `ISP_GET_DriverMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_GetCameraInputMode` | · | · | · | · | · | · | ✅ | ✅ | ✅ | · | r† |
-| `ISP_GetFrameDropOnce` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_GetFrameDropOnce` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_GetRaw` | · | · | · | · | · | · | · | · | ✅ | · | – |
 | `ISP_GPIOSwitchConfig` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_GPIOSwitchTrigger` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
@@ -1258,15 +1258,15 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_LDC_OfflineSubmitTask` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_OfflineUpdateLutToJob` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_OnlineGetFunc` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
-| `ISP_LDC_OnlineGetLut` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_LDC_OnlineGetLut` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_OnlineGetLutBufMode` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
 | `ISP_LDC_OnlineGetState` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
-| `ISP_LDC_OnlineGetStrength` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_LDC_OnlineGetStrength` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_OnlineInit` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `ISP_LDC_OnlineSetLut` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_LDC_OnlineSetLut` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_OnlineSetLutBufMode` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
 | `ISP_LDC_OnlineSetState` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
-| `ISP_LDC_OnlineSetStrength` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_LDC_OnlineSetStrength` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_LDC_SetMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_OneShotDisable` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_OneShotDropCnt` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
@@ -1286,7 +1286,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `ISP_SetCameraInputMode` | · | · | · | ✅? | · | · | 🔧+ | ✅ | ✅ | · | – |
 | `ISP_SetCameraInputSelect` | · | · | · | · | · | · | · | · | ✅rt | · | r† |
 | `ISP_SetFixedContraster` | · | · | · | ✅ | · | ✅ | · | · | · | · | – |
-| `ISP_SetFrameDropOnce` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `ISP_SetFrameDropOnce` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `ISP_SetPreDqtime` | · | · | · | · | · | · | · | · | ✅ | · | – |
 | `ISP_SetScalerLv` | · | · | · | · | · | · | · | · | ✅ | · | – |
 | `ISP_SetStreamOut` | · | · | · | ✅? | · | · | · | · | · | · | – |
@@ -1732,7 +1732,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_Get/SetChnH264Demask` | ✅ | ✅ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnH264Denoise` | ✅ | ✅ | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnH264FrmUsedMode` | · | · | · | · | · | · | · | · | · | · | – |
-| `Encoder_Get/SetChnHSkip` | ✅ | ✅ | ✅ | ✅ | ✅ | · | 🔧+ | 🔧+ | · | · | – |
+| `Encoder_Get/SetChnHSkip` | ✅ | ✅ | ✅ | ✅ | ✅ | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_Get/SetChnRcAttr` | · | · | · | · | · | · | · | · | · | · | – |
 | `Encoder_Get/SetChnROI` | ✅ | ✅ | ✅+ | ✅ | ✅ | · | 🔧+ | ✅ | · | · | r† |
 | `Encoder_Get/SetChnRoiAttr` | · | · | · | · | · | · | · | · | ✅ | ✅+ | – |
@@ -1761,9 +1761,9 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_GetH264Vui` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_GetH265Vui` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_GetJpegQp` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_GetMotionQuality` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `Encoder_GetMotionQuality` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_GetPskipCfg` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_GetSrdCfg` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `Encoder_GetSrdCfg` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_GetStream` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
 | `Encoder_InputJpege` | · | · | · | ✅ | · | · | 🔧+ | ✅ | · | ✅ | t |
 | `Encoder_InputJpege_Ex` | · | · | · | · | · | · | 🔧+ | ✅ | · | ✅ | – |
@@ -1775,7 +1775,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_MappingTransform` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_MultiProcessExit` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_MultiProcessInit` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_PadFrame` | ✅ | ✅ | ✅ | ✅rt | ✅ | · | ⚠c | 🔧+ | · | · | – |
+| `Encoder_PadFrame` | ✅ | ✅ | ✅ | ✅rt | ✅ | · | ⚠c | ✅ | · | · | – |
 | `Encoder_PollingModuleStream` | · | · | ✅ | ✅ | · | ✅ | · | · | ✅ | ✅ | – |
 | `Encoder_PollingStream` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† t t† |
 | `Encoder_Query` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | r† t t† |
@@ -1805,7 +1805,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetChnQpgAIEnable_Yuv` | · | · | · | · | · | · | 🔧+ | ✅○ | · | · | – |
 | `Encoder_SetChnQpIPDelta` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `Encoder_SetChnRcTrigLevel` | ✅ | ✅ | ✅○ | ✅rt | ✅ | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_SetChnResizeMode` | · | · | · | · | ✅ | ✅ | 🔧+ | 🔧+ | ✅ | ✅ | – |
+| `Encoder_SetChnResizeMode` | · | · | · | · | ✅ | ✅ | 🔧+ | ✅ | ✅ | ✅ | – |
 | `Encoder_SetChnRfcDropFrameLines` | · | · | · | · | · | · | · | · | · | · | – |
 | `Encoder_SetChnRfcRatio` | · | · | · | · | · | · | · | · | · | · | – |
 | `Encoder_SetDefaultParam` | · | · | · | · | · | ✅ | ✅ | ✅ | ✅ | ✅ | t t† |
@@ -1817,12 +1817,12 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `Encoder_SetJpegBsSize` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_SetJpegMultiSectionMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_SetJpegQp` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_SetMotionQuality` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
-| `Encoder_SetMotionQuality_Yuv` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
-| `Encoder_SetMotionQualityEnable` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
-| `Encoder_SetMotionQualityEnable_Yuv` | · | · | · | · | · | · | 🔧+ | 🔧+ | · | · | – |
+| `Encoder_SetMotionQuality` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
+| `Encoder_SetMotionQuality_Yuv` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
+| `Encoder_SetMotionQualityEnable` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
+| `Encoder_SetMotionQualityEnable_Yuv` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_SetMultiSectionMode` | · | · | · | ✅ | · | · | 🔧+ | ✅ | · | · | – |
-| `Encoder_SetPadFrameAttr` | ✅ | ✅ | ✅ | ✅rt | ✅ | · | ⚠c | 🔧+ | · | · | – |
+| `Encoder_SetPadFrameAttr` | ✅ | ✅ | ✅ | ✅rt | ✅ | · | ⚠c | ✅ | · | · | – |
 | `Encoder_SetPskipCfg` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_SetRdBufShare` | · | · | · | ✅rt | · | · | 🔧+ | ✅ | · | · | – |
 | `Encoder_SetSrdCfg` | · | · | · | · | · | · | 🔧+ | ✅○ | · | · | – |
@@ -2027,7 +2027,7 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `FrameSource_SetChnAttr_Expand` | · | · | · | · | · | · | 🔧+ | · | · | · | – |
 | `FrameSource_SetChnRotate` | · | · | · | · | · | ✅ | · | · | · | · | t |
 | `FrameSource_SetDirectMode` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
-| `FrameSource_SetFrameDepthCopyType` | · | · | · | · | · | ✅rt | 🔧+ | 🔧+ | · | · | – |
+| `FrameSource_SetFrameDepthCopyType` | · | · | · | · | · | ✅rt | 🔧+ | ✅ | · | · | – |
 | `FrameSource_SetIvdcMemLine` | · | · | · | · | · | · | 🔧+ | ✅ | · | · | – |
 | `FrameSource_SetJointBackground` | · | · | · | · | · | · | 🔧+ | ⚠c | · | · | – |
 | `FrameSource_SetSource` | · | · | · | · | ✅+ | ✅ | · | · | · | · | – |
@@ -2434,29 +2434,29 @@ Completeness list, separate from the streamer priorities: every vendor function 
 | `PoolPhys_to_Virt` | · | · | · | ✅ | · | ✅ | ✅ | ✅ | · | · | – |
 | `PoolVirt_to_Phys` | · | · | · | ✅ | · | ✅ | ✅ | ✅ | · | · | – |
 | `Sp_Alloc` | ✅ | ✅ | ✅ | ✅ | ✅+ | ✅ | ✅ | ✅ | · | · | – |
-| `SU_ADC_DisableChn` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_ADC_EnableChn` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_ADC_Exit` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_ADC_GetChnValue` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_ADC_Init` | · | · | · | · | · | · | 🔧a | 🔧a | ✅? | ✅ | – |
-| `SU_Base_CtlPwrDown` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
-| `SU_Base_DisableAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_Base_DisableAlarmTimeMs` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
-| `SU_Base_EnableAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_Base_EnableAlarmTimeMs` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
-| `SU_Base_Get/SetAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_Base_Get/SetTime` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
-| `SU_Base_GetAlarmTimeMs` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
+| `SU_ADC_DisableChn` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_ADC_EnableChn` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_ADC_Exit` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_ADC_GetChnValue` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_ADC_Init` | · | · | · | · | · | · | 🔧a | ✅? | ✅? | ✅ | – |
+| `SU_Base_CtlPwrDown` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
+| `SU_Base_DisableAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_Base_DisableAlarmTimeMs` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
+| `SU_Base_EnableAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_Base_EnableAlarmTimeMs` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
+| `SU_Base_Get/SetAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_Base_Get/SetTime` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
+| `SU_Base_GetAlarmTimeMs` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
 | `SU_Base_GetDevID` | ✅ | ✅ | ✅ | ✅ | ✅? | ✅ | ✅ | ✅ | ✅ | ✅ | – |
 | `SU_Base_GetModelNumber` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | – |
-| `SU_Base_GetTimeMs` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
+| `SU_Base_GetTimeMs` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
 | `SU_Base_GetVersion` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | p† r† |
 | `SU_Base_GetWakeupCount` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
-| `SU_Base_GetWkupMode` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
-| `SU_Base_PollingAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | 🔧a | ✅? | ✅? | – |
+| `SU_Base_GetWkupMode` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
+| `SU_Base_PollingAlarm` | ✅? | ✅? | ✅? | ✅? | ✅? | ✅? | 🔧a | ✅? | ✅? | ✅? | – |
 | `SU_Base_Raw2SUTime` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | – |
 | `SU_Base_Reboot` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🔧a | ✅ | ✅ | ✅ | – |
-| `SU_Base_SetAlarmTimeMs` | · | · | · | · | · | · | 🔧a | 🔧a | · | · | – |
+| `SU_Base_SetAlarmTimeMs` | · | · | · | · | · | · | 🔧a | ✅? | · | · | – |
 | `SU_Base_SetWkupMode` | · | · | · | · | · | · | ✅ | ✅ | · | ✅? | – |
 | `SU_Base_Shutdown` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🔧a | 🔧a | ✅ | 🔧h | – |
 | `SU_Base_Suspend` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🔧a | 🔧a | ✅ | 🔧a | – |
