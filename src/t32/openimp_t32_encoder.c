@@ -221,6 +221,7 @@ struct t32_enc_chn {
      * words at 0xdc504..0xdc520), and never sets work_done back to 1 */
     uint32_t q_packs, q_bytes, q_frames;
     int q_done, q_post;                 /* q_post: JPEG picture notified, words pending (T33) */
+#ifdef PLATFORM_T33
     /* #99: a FrameSource picture of another size than the channel is scaled on the CPU like the vendor
      * input thread (0xedba8, c_resize_c 0x34540): scratch picture in rmem + the coefficient table */
     T32VpuBuf scl;
