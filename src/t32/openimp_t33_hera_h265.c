@@ -497,8 +497,17 @@ size_t t33_hera_h265_list(const T33HeraH265Pic *t, uint32_t *list)
             uint32_t reg = e->n > 1 ? e->reg + 4u * k : e->reg;
             uint32_t v = t33_h265_cqp(t->pic.chroma_qp_offset, e->reg, t33_h265_field(t, e->reg, def, st, k));
 
-            if (t33_rc_slice5(t))
-                v = t33_h265_skip_bits(t33_rc_slice5(t), e->reg, v);
+            if (t33_rc_slice5(t)) {
+                const uint8_t *sl = t33_rc_slice5(t);
+
+                v = t33_h265_skip_bits(sl, e->reg, v);
+                /* SetChnMapRoi (#99): the byte map's enables, s+0x1c8 into 0x20038 bit 1 and
+                 * s+0x2ae into 0x90000 bit 6 (H265E_T32V_SliceInit 0x59298, revision 7 sums) */
+                if (reg == 0x20038u)
+                    v = (v & ~2u) | (sl[0x1c8] & 1u) << 1;
+                else if (reg == EMC_CTRL)
+                    v = (v & ~0x40u) | (sl[0x2ae] & 1u) << 6;
+            }
             v = t33_h265_mq(p, reg, v);
 
             if (n >= T32_HERA5_LIST_MAX_PAIRS)
